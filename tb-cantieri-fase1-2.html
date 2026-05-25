@@ -365,7 +365,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
     <div id="fbDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.3)"></div>
     <span id="fbLabel">locale</span>
   </div>
-  <button onclick="openAzienda()" title="Gestione Aziendale" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer;margin-right:4px">🏢</button>
+  <button onclick="openAzienda()" title="Gestione Aziendale" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer;margin-right:4px">💼</button>
   <button class="tb-user" id="userBtn" onclick="openUserMenu()" title="Menu utente">?</button>
 </div>
 
@@ -382,22 +382,11 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
 <!-- APP BODY -->
 <div class="app-body">
 
-  <!-- SCREEN AZIENDA -->
-  <div class="screen" id="scrAzienda" style="display:none;flex-direction:column;width:100%;overflow-x:hidden">
-    <div style="display:flex;border-bottom:2px solid var(--s2);background:#fff;flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch">
-      <button class="az-tab active" id="azt-cruscotto" onclick="switchAzTab('cruscotto')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--g1);cursor:pointer;font-family:'Nunito',sans-serif;border-bottom:2px solid var(--g1);margin-bottom:-2px;white-space:nowrap;min-width:70px">📊 Cruscotto</button>
-      <button class="az-tab" id="azt-costi" onclick="switchAzTab('costi')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:70px">💼 Costi</button>
-      <button class="az-tab" id="azt-scadenziario" onclick="switchAzTab('scadenziario')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:80px">📅 Scadenze</button>
-      <button class="az-tab" id="azt-previsionale" onclick="switchAzTab('previsionale')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:80px">📈 Previs.</button>
-    </div>
-    <div id="azContent" style="flex:1;overflow-y:auto;overflow-x:hidden;width:100%;max-width:100%;box-sizing:border-box"></div>
-  </div>
-
   <!-- SCREEN CANTIERI -->
   <div class="screen" id="scrCantieri">
     <div style="padding:10px;display:flex;flex-direction:column;gap:10px">
 
-      <!-- 1. IMPRESA -->
+      <!-- IMPRESA -->
       <div style="background:#fff;border-radius:14px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden">
         <div onclick="toggleHomeSection('impresa')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none">
           <div style="width:36px;height:36px;border-radius:10px;background:#e8f0ff;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">💼</div>
@@ -419,7 +408,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
         </div>
       </div>
 
-      <!-- 2. CANTIERI -->
+      <!-- CANTIERI -->
       <div style="background:#fff;border-radius:14px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden">
         <div onclick="toggleHomeSection('cantieri')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none">
           <div style="width:36px;height:36px;border-radius:10px;background:#fff3e0;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🏗️</div>
@@ -433,7 +422,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
         </div>
       </div>
 
-      <!-- 3. OPERAI -->
+      <!-- OPERAI -->
       <div style="background:#fff;border-radius:14px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden">
         <div onclick="toggleHomeSection('operai')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none">
           <div style="width:36px;height:36px;border-radius:10px;background:#e8f5ed;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">👷</div>
@@ -452,7 +441,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
         </div>
       </div>
 
-      <!-- 4. IMPOSTAZIONI -->
+      <!-- IMPOSTAZIONI -->
       <div style="background:#fff;border-radius:14px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden">
         <div onclick="toggleHomeSection('impost')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none">
           <div style="width:36px;height:36px;border-radius:10px;background:#f3f3f3;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">⚙️</div>
@@ -461,10 +450,10 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
         </div>
         <div id="body-impost" style="max-height:0;overflow:hidden;transition:max-height .35s ease">
           <div style="border-top:1px solid var(--s1);padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <button onclick="openModal('mPassword')" style="background:#f5f8f5;border:1px solid var(--s2);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="font-size:20px">🔑</span><span style="font-size:9px;font-weight:700;color:var(--text);text-align:center">Password</span></button>
-            <button onclick="openModal('mBackup')" style="background:#f5f8f5;border:1px solid var(--s2);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="font-size:20px">💾</span><span style="font-size:9px;font-weight:700;color:var(--text);text-align:center">Backup</span></button>
-            <button onclick="changeUser()" style="background:#f5f8f5;border:1px solid var(--s2);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="font-size:20px">👤</span><span style="font-size:9px;font-weight:700;color:var(--text);text-align:center">Nome utente</span></button>
-            <button onclick="doLogout()" style="background:#fff0f0;border:1px solid var(--red-border);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="font-size:20px">🚪</span><span style="font-size:9px;font-weight:700;color:var(--red);text-align:center">Esci</span></button>
+            <button onclick="openModal('mPassword')" style="background:#f5f8f5;border:1px solid var(--s2);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="font-size:20px">🔑</span><span style="font-size:9px;font-weight:700;color:var(--text)">Password</span></button>
+            <button onclick="openModal('mBackup')" style="background:#f5f8f5;border:1px solid var(--s2);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="font-size:20px">💾</span><span style="font-size:9px;font-weight:700;color:var(--text)">Backup</span></button>
+            <button onclick="changeUser()" style="background:#f5f8f5;border:1px solid var(--s2);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="font-size:20px">👤</span><span style="font-size:9px;font-weight:700;color:var(--text)">Utente</span></button>
+            <button onclick="doLogout()" style="background:#fff0f0;border:1px solid var(--red-border);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="font-size:20px">🚪</span><span style="font-size:9px;font-weight:700;color:var(--red)">Esci</span></button>
           </div>
         </div>
       </div>
@@ -481,6 +470,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
       <button class="tab" id="t-operai" onclick="switchTab('operai')">👷 Operai <span class="tab-cnt" id="cnt-operai">0</span></button>
       <button class="tab" id="t-foto" onclick="switchTab('foto')">📷 Foto <span class="tab-cnt" id="cnt-foto">0</span></button>
       <button class="tab" id="t-margini" onclick="switchTab('margini')">📊 Margini</button>
+      <button class="tab" id="t-ordini" onclick="switchTab('ordini')">📦 Ordini <span class="tab-cnt" id="cnt-ordini">0</span></button>
       <button class="tab" id="t-documenti" onclick="switchTab('documenti')">🗂️ Docs <span class="tab-cnt" id="cnt-documenti">0</span></button>
     </div>
     <div id="detContent"></div>
@@ -498,6 +488,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
   <button class="nav-btn" id="n-operai" onclick="switchTab('operai')"><span class="nav-ic">👷</span><span class="nav-lb">Operai</span></button>
   <button class="nav-btn" id="n-foto" onclick="switchTab('foto')"><span class="nav-ic">📷</span><span class="nav-lb">Foto</span></button>
   <button class="nav-btn" id="n-margini" onclick="switchTab('margini')"><span class="nav-ic">📊</span><span class="nav-lb">Margini</span></button>
+  <button class="nav-btn" id="n-ordini" onclick="switchTab('ordini')"><span class="nav-ic">📦</span><span class="nav-lb">Ordini</span></button>
   <button class="nav-btn" id="n-documenti" onclick="switchTab('documenti')"><span class="nav-ic">🗂️</span><span class="nav-lb">Docs</span></button>
 </nav>
 
@@ -953,19 +944,26 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
   </div>
 </div>
 
-<!-- Nuovo Costo Fisso Aziendale -->
+<!-- SCREEN AZIENDA -->
+<div class="screen" id="scrAzienda" style="display:none;flex-direction:column;width:100%;overflow-x:hidden">
+  <div style="display:flex;border-bottom:2px solid var(--s2);background:#fff;flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch">
+    <button id="azt-cruscotto" onclick="switchAzTab('cruscotto')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--g1);cursor:pointer;font-family:'Nunito',sans-serif;border-bottom:2px solid var(--g1);margin-bottom:-2px;white-space:nowrap;min-width:70px">📊 Cruscotto</button>
+    <button id="azt-costi" onclick="switchAzTab('costi')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:70px">💼 Costi</button>
+    <button id="azt-scadenziario" onclick="switchAzTab('scadenziario')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:80px">📅 Scadenze</button>
+    <button id="azt-previsionale" onclick="switchAzTab('previsionale')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:80px">📈 Previs.</button>
+  </div>
+  <div id="azContent" style="flex:1;overflow-y:auto;overflow-x:hidden;width:100%;max-width:100%;box-sizing:border-box"></div>
+</div>
+
+<!-- Nuovo Costo Fisso -->
 <div class="overlay" id="mCostoFisso" onclick="closeOv(event,'mCostoFisso')">
   <div class="modal"><div class="modal-handle"></div>
     <div class="modal-title">COSTO FISSO AZIENDALE</div>
     <div class="modal-body">
       <div><label class="f-label">Descrizione *</label><input class="f-in" id="cf-desc" placeholder="es. Assicurazione RC, Leasing furgone..."></div>
       <div class="f-grid">
-        <div><label class="f-label">Categoria</label>
-          <select class="f-sel" id="cf-cat"><option>Affitti</option><option>Assicurazioni</option><option>Leasing/Noleggi</option><option>Utenze</option><option>Telefonia</option><option>Commercialista</option><option>INPS/Contributi</option><option>Banca/Interessi</option><option>Carburante</option><option>Altro</option></select>
-        </div>
-        <div><label class="f-label">Frequenza</label>
-          <select class="f-sel" id="cf-freq"><option value="mensile">Mensile</option><option value="bimestrale">Bimestrale</option><option value="trimestrale">Trimestrale</option><option value="semestrale">Semestrale</option><option value="annuale">Annuale</option><option value="una-tantum">Una tantum</option></select>
-        </div>
+        <div><label class="f-label">Categoria</label><select class="f-sel" id="cf-cat"><option>Affitti</option><option>Assicurazioni</option><option>Leasing/Noleggi</option><option>Utenze</option><option>Telefonia</option><option>Commercialista</option><option>INPS/Contributi</option><option>Banca/Interessi</option><option>Carburante</option><option>Altro</option></select></div>
+        <div><label class="f-label">Frequenza</label><select class="f-sel" id="cf-freq"><option value="mensile">Mensile</option><option value="bimestrale">Bimestrale</option><option value="trimestrale">Trimestrale</option><option value="semestrale">Semestrale</option><option value="annuale">Annuale</option><option value="una-tantum">Una tantum</option></select></div>
         <div><label class="f-label">Importo (€) *</label><input class="f-in" type="number" id="cf-importo" step="0.01" placeholder="0"></div>
         <div><label class="f-label">Prossima scadenza</label><input class="f-in" type="date" id="cf-scadenza"></div>
       </div>
@@ -984,16 +982,12 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
         <button id="scad-tipo-entrata" onclick="setScadTipo('entrata')" style="flex:1;padding:9px;border-radius:var(--r-sm);border:2px solid var(--g1);background:var(--g1);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">📥 Entrata</button>
         <button id="scad-tipo-uscita" onclick="setScadTipo('uscita')" style="flex:1;padding:9px;border-radius:var(--r-sm);border:2px solid var(--s3);background:#fff;color:var(--soft);font-size:12px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">📤 Uscita</button>
       </div>
-      <div><label class="f-label">Descrizione *</label><input class="f-in" id="scad-desc" placeholder="es. SAL 1 Palazzo Rossi..."></div>
+      <div><label class="f-label">Descrizione *</label><input class="f-in" id="scad-desc" placeholder="es. SAL 1 Palazzo Rossi, Fattura fornitore..."></div>
       <div class="f-grid">
         <div><label class="f-label">Importo (€) *</label><input class="f-in" type="number" id="scad-importo" step="0.01" placeholder="0"></div>
         <div><label class="f-label">Data prevista</label><input class="f-in" type="date" id="scad-data"></div>
-        <div><label class="f-label">Cantiere (opz.)</label>
-          <select class="f-sel" id="scad-cantiere"><option value="">-- Nessuno --</option></select>
-        </div>
-        <div><label class="f-label">Stato</label>
-          <select class="f-sel" id="scad-stato"><option value="previsto">Previsto</option><option value="fatturato">Fatturato/emesso</option><option value="incassato">Incassato/pagato</option><option value="anticipato">Anticipato in banca</option></select>
-        </div>
+        <div><label class="f-label">Cantiere (opz.)</label><select class="f-sel" id="scad-cantiere"><option value="">-- Nessuno --</option></select></div>
+        <div><label class="f-label">Stato</label><select class="f-sel" id="scad-stato"><option value="previsto">Previsto</option><option value="fatturato">Fatturato/emesso</option><option value="incassato">Incassato/pagato</option><option value="anticipato">Anticipato in banca</option></select></div>
       </div>
       <div><label class="f-label">Note</label><input class="f-in" id="scad-note" placeholder="Riferimento fattura..."></div>
       <button class="btn-prim" onclick="salvaScadenza()">SALVA</button>
@@ -1016,6 +1010,53 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
         <div><label class="f-label">Anno di riferimento</label><input class="f-in" type="number" id="az-anno" placeholder="2026"></div>
       </div>
       <button class="btn-prim" onclick="salvaImpostazioniAz()">SALVA IMPOSTAZIONI</button>
+    </div>
+  </div>
+</div>
+
+<!-- Nuovo Ordine -->
+<div class="overlay" id="mNuovoOrdine" onclick="closeOv(event,'mNuovoOrdine')">
+  <div class="modal"><div class="modal-handle"></div>
+    <div class="modal-title">NUOVO ORDINE</div>
+    <div class="modal-body">
+      <div><label class="f-label">Fornitore *</label>
+        <input class="f-in" id="ord-fornitore" list="ord-fornitori-list" placeholder="es. Edilizia Rossi...">
+        <datalist id="ord-fornitori-list"></datalist>
+      </div>
+      <div><label class="f-label">Descrizione materiali *</label><textarea class="f-ta" id="ord-desc" rows="2" placeholder="es. 50 sacchi cemento Portland 325..."></textarea></div>
+      <div class="f-grid">
+        <div><label class="f-label">Importo stimato (€)</label><input class="f-in" type="number" id="ord-importo" step="0.01" placeholder="0"></div>
+        <div><label class="f-label">Data ordine</label><input class="f-in" type="date" id="ord-data"></div>
+        <div><label class="f-label">Consegna prevista</label><input class="f-in" type="date" id="ord-consegna"></div>
+        <div><label class="f-label">Capitolo</label><select class="f-sel" id="ord-cap"><option value="">-- Nessun capitolo --</option></select></div>
+      </div>
+      <div><label class="f-label">Note</label><input class="f-in" id="ord-note" placeholder="Riferimento preventivo, colori, misure..."></div>
+      <div style="background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--r-sm);padding:10px 13px;font-size:12px;color:var(--blue)">📧 Dopo il salvataggio puoi inviare l'ordine via Email o WhatsApp</div>
+      <button class="btn-prim" onclick="salvaOrdine()">SALVA ORDINE</button>
+    </div>
+  </div>
+</div>
+
+<!-- Dettaglio / Aggiorna Ordine -->
+<div class="overlay" id="mDettaglioOrdine" onclick="closeOv(event,'mDettaglioOrdine')">
+  <div class="modal"><div class="modal-handle"></div>
+    <div class="modal-title">AGGIORNA ORDINE</div>
+    <div class="modal-body">
+      <div id="ord-detail-info" style="background:var(--s1);border-radius:var(--r-sm);padding:12px;font-size:12px;color:var(--text);margin-bottom:8px"></div>
+      <div><label class="f-label">Stato ordine</label>
+        <select class="f-sel" id="ord-stato-edit">
+          <option value="in_attesa">⏳ In attesa DDT</option>
+          <option value="consegnato">📦 Consegnato (DDT ricevuto)</option>
+          <option value="fatturato">🧾 Fatturato</option>
+          <option value="chiuso">✅ Chiuso</option>
+          <option value="annullato">❌ Annullato</option>
+        </select>
+      </div>
+      <div><label class="f-label">Importo reale (€) — da DDT o fattura</label><input class="f-in" type="number" id="ord-importo-reale" step="0.01" placeholder="0"></div>
+      <div><label class="f-label">Numero DDT / Fattura</label><input class="f-in" id="ord-rif-doc" placeholder="es. DDT 1234 / Fattura 567/2026"></div>
+      <div><label class="f-label">Note</label><input class="f-in" id="ord-note-edit" placeholder="Aggiornamento..."></div>
+      <button class="btn-prim" onclick="aggiornaOrdine()">SALVA AGGIORNAMENTO</button>
+      <button onclick="inviaOrdineFornitore()" style="width:100%;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:8px">📧 Invia al fornitore</button>
     </div>
   </div>
 </div>
@@ -1283,7 +1324,6 @@ function openCantiere(id) {
 }
 
 function goBack() {
-  // Se siamo nella schermata azienda, torna alla home
   const scrAz = $('scrAzienda');
   if(scrAz && scrAz.style.display !== 'none') {
     scrAz.style.display = 'none';
@@ -1315,7 +1355,7 @@ function switchTab(tab) {
 }
 
 function fabAction() {
-  const map = {computo:'mImportComputo',consuntivo:null,rapportini:'mRapportino',operai:'mOperaio',foto:'mFoto',documenti:'mDocumento',margini:'mSpesaGenerale'};
+  const map = {computo:'mImportComputo',consuntivo:null,rapportini:'mRapportino',operai:'mOperaio',foto:'mFoto',ordini:'mNuovoOrdine',documenti:'mDocumento',margini:'mSpesaGenerale'};
   if(map[S.tab]) openModal(map[S.tab]);
 }
 
@@ -1327,6 +1367,7 @@ function updateCounts() {
   $('cnt-operai').textContent = (c.operai||[]).length;
   $('cnt-foto').textContent = (c.foto||[]).length;
   $('cnt-documenti').textContent = (c.documenti||[]).length;
+  const cntOrd = $('cnt-ordini'); if(cntOrd) cntOrd.textContent = (c.ordini||[]).length;
 }
 
 // ════════════ MODALS ════════════
@@ -1380,6 +1421,14 @@ function openModal(id) {
         }).join('');
       }
     }
+  }
+  if(id==='mNuovoOrdine') {
+    const c = getCantiere();
+    const sel = $('ord-cap');
+    if(sel && c) { sel.innerHTML = '<option value="">-- Nessun capitolo --</option>'; (c.capitoli||[]).forEach(cap=>{const o=document.createElement('option');o.value=cap.id;o.textContent=cap.nome;sel.appendChild(o);}); }
+    const dl = $('ord-fornitori-list'); if(dl) { const f=getFornitori(); dl.innerHTML=f.map(x=>`<option value="${esc(x)}">`).join(''); }
+    const od=$('ord-data'); if(od&&!od.value) od.value=today();
+    _ordineId = null;
   }
   if(id==='mScadenza') { _popolaScadCantiere(); const sd=$('scad-data');if(sd&&!sd.value)sd.value=today(); setScadTipo(_scadTipo||'entrata'); }
   if(id==='mCostoFisso') { const sd=$('cf-scadenza');if(sd&&!sd.value)sd.value=today(); }
@@ -1462,6 +1511,45 @@ function closeOv(e, id) {
 function closeModal(id) { $(id).classList.remove('show'); }
 
 // ════════════ RENDER CANTIERI ════════════
+function toggleHomeOperai() {
+  const el = $('homeOperaiList');
+  const arrow = $('homeOpArrow');
+  if(!el) return;
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  if(arrow) arrow.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+function renderHomeOperai() {
+  const el = $('homeOperaiList');
+  const badge = $('homeOpCount');
+  if(!el) return;
+  const operai = S.operaiGlobali || [];
+  // Aggiorna il badge con il numero operai
+  if(badge) badge.textContent = operai.length;
+  if(!operai.length) {
+    el.innerHTML = `<div style="padding:14px 16px;font-size:12px;color:var(--soft);text-align:center">Nessun operaio in anagrafica.<br>Tocca + Aggiungi per crearne uno.</div>`;
+    return;
+  }
+  el.innerHTML = operai.map(op => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--s1)">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--g6);color:var(--g1);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${esc(op.nome.charAt(0).toUpperCase())}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(op.nome)}</div>
+        <div style="font-size:11px;color:var(--soft)">${esc(op.qualifica||'—')} · €${op.costo}/h</div>
+      </div>
+      <button onclick="eliminaOperaioGlobale('${op.id}')" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:'Nunito',sans-serif">✕</button>
+    </div>`).join('');
+}
+
+function eliminaOperaioGlobale(opId) {
+  if(!confirm('Rimuovere questo operaio dall\'anagrafica?')) return;
+  S.operaiGlobali = (S.operaiGlobali||[]).filter(o => o.id !== opId);
+  save();
+  renderHomeOperai();
+  toast('Operaio rimosso dall\'anagrafica');
+}
+
 function toggleHomeSection(id) {
   const body = document.getElementById('body-'+id);
   const arr  = document.getElementById('arr-'+id);
@@ -1471,36 +1559,6 @@ function toggleHomeSection(id) {
   if(arr) arr.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
 function toggleHomeOperai() { toggleHomeSection('operai'); }
-
-function renderHomeOperai() {
-  const el = $('homeOperaiList');
-  const badge = $('homeOpCount');
-  if(!el) return;
-  const operai = S.operaiGlobali || [];
-  if(badge) badge.textContent = operai.length;
-  if(!operai.length) {
-    el.innerHTML = `<div style="padding:14px 16px;font-size:12px;color:var(--soft);text-align:center">Nessun operaio. Tocca + Aggiungi per crearne uno.</div>`;
-    return;
-  }
-  el.innerHTML = operai.map(op => `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--s1)">
-      <div style="width:32px;height:32px;border-radius:50%;background:var(--g6);color:var(--g1);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${esc(op.nome.charAt(0).toUpperCase())}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(op.nome)}</div>
-        <div style="font-size:11px;color:var(--soft)">${esc(op.qualifica||'—')}</div>
-      </div>
-      <button onclick="eliminaOperaioGlobale('${op.id}')" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:'Nunito',sans-serif">✕</button>
-    </div>`).join('');
-}
-
-
-function eliminaOperaioGlobale(opId) {
-  if(!confirm('Rimuovere questo operaio dall\'anagrafica?')) return;
-  S.operaiGlobali = (S.operaiGlobali||[]).filter(o => o.id !== opId);
-  save();
-  renderHomeOperai();
-  toast('Operaio rimosso dall\'anagrafica');
-}
 
 function renderCantieri() {
   renderHomeOperai();
@@ -1549,6 +1607,7 @@ function renderTab(tab) {
     case 'operai':     el.innerHTML = renderOperai(c); break;
     case 'foto':       el.innerHTML = renderFoto(c); break;
     case 'margini':    el.innerHTML = renderMargini(c); break;
+    case 'ordini':     el.innerHTML = renderOrdini(c); break;
     case 'documenti':  el.innerHTML = renderDocumenti(c); break;
   }
 }
@@ -1945,7 +2004,7 @@ function saveCantiere() {
     pctCostiGenerali: parseFloat(v('nc-pctcg'))||18,
     targetMargine: parseFloat(v('nc-target'))||20,
     capitoli: [], rapportini: [], operai: [], foto: [], documenti: [],
-    speseGenerali: [], speseMateriali: [],
+    speseGenerali: [], speseMateriali: [], ordini: [],
     created: Date.now()
   });
   save(); closeModal('mNuovoCantiere');
@@ -2973,110 +3032,68 @@ document.addEventListener('DOMContentLoaded', () => {
 // MODULO AZIENDA
 // ════════════════════════════════════════════
 function getAzienda() {
-  if(!S.azienda) S.azienda = { nome:'Tecnobase Restauri Srl', fido:200000, fidoUsato:0, cassa:0, soglia:20000, tasso:5.0, anno:new Date().getFullYear(), costiFissi:[], scadenzario:[] };
+  if(!S.azienda) S.azienda={nome:'Tecnobase Restauri Srl',fido:200000,fidoUsato:0,cassa:0,soglia:20000,tasso:5.0,anno:new Date().getFullYear(),costiFissi:[],scadenzario:[]};
   return S.azienda;
 }
-
 function openAzienda() {
-  closeUserMenu();
-  $('scrCantieri').style.display = 'none';
-  $('scrDettaglio').style.display = 'none';
-  $('scrAzienda').style.display = 'flex';
-  $('scrAzienda').style.flexDirection = 'column';
-  $('backBtn').classList.add('show');
-  $('fab').classList.remove('show');
-  $('bottomNav').style.display = 'none';
-  $('tbSub').textContent = 'Gestione Aziendale';
-  switchAzTab('cruscotto');
+  closeUserMenu&&closeUserMenu();
+  $('scrCantieri').style.display='none';$('scrDettaglio').style.display='none';
+  const az=$('scrAzienda'); az.style.display='flex'; az.style.flexDirection='column';
+  $('backBtn').classList.add('show');$('fab').classList.remove('show');$('bottomNav').style.display='none';
+  $('tbSub').textContent='Gestione Aziendale'; switchAzTab('cruscotto');
 }
-
 function switchAzTab(tab) {
-  document.querySelectorAll('.az-tab').forEach(b => { b.style.color='var(--soft)'; b.style.borderBottom='none'; b.classList.remove('active'); });
-  const btn = $('azt-'+tab);
-  if(btn) { btn.style.color='var(--g1)'; btn.style.borderBottom='2px solid var(--g1)'; btn.style.marginBottom='-2px'; btn.classList.add('active'); }
-  const az = getAzienda();
-  const el = $('azContent'); if(!el) return;
-  switch(tab) {
-    case 'cruscotto':    el.innerHTML = renderCruscotto(az); break;
-    case 'costi':        el.innerHTML = renderCostiFissi(az); break;
-    case 'scadenziario': el.innerHTML = renderScadenziario(az); break;
-    case 'previsionale': el.innerHTML = renderPrevisionale(az); break;
-  }
+  ['cruscotto','costi','scadenziario','previsionale'].forEach(t=>{
+    const b=$('azt-'+t); if(!b) return;
+    b.style.color=t===tab?'var(--g1)':'var(--soft)';
+    b.style.borderBottom=t===tab?'2px solid var(--g1)':'none';
+    b.style.marginBottom=t===tab?'-2px':'0';
+  });
+  const az=getAzienda(), el=$('azContent'); if(!el) return;
+  switch(tab){case 'cruscotto':el.innerHTML=renderCruscotto(az);break;case 'costi':el.innerHTML=renderCostiFissi(az);break;case 'scadenziario':el.innerHTML=renderScadenziario(az);break;case 'previsionale':el.innerHTML=renderPrevisionale(az);break;}
 }
-
-function getCostiFissiMensili(az) {
-  const fm = {mensile:1,bimestrale:2,trimestrale:3,semestrale:6,annuale:12,'una-tantum':0};
-  return (az.costiFissi||[]).reduce((s,c)=>{ const m=fm[c.freq]||0; return s+(m>0?(+c.importo||0)/m:0); },0);
-}
-function getRicaviCantieri() {
-  return S.cantieri.reduce((s,c)=>s+(c.capitoli||[]).reduce((a,cap)=>a+(cap.voci||[]).reduce((b,v)=>{ const q=v.qtyEff!==undefined&&v.qtyEff!==null?+v.qtyEff:+v.qty; return b+(q||0)*(+v.pu||0); },0),0),0);
-}
-function getCostiDirectiCantieri() {
-  return S.cantieri.reduce((s,c)=>{ const mdo=(c.rapportini||[]).reduce((a,r)=>(r.oreOperai||[]).reduce((b,x)=>{ const op=(c.operai||[]).find(o=>o.id===x.opId); return b+(+x.ore||0)*(+op?.costo||0); },a),0); const mat=(c.speseMateriali||[]).reduce((a,x)=>a+(+x.importo||0),0); return s+mdo+mat; },0);
-}
+function getCostiFissiMensili(az){const fm={mensile:1,bimestrale:2,trimestrale:3,semestrale:6,annuale:12,'una-tantum':0};return(az.costiFissi||[]).reduce((s,c)=>{const m=fm[c.freq]||0;return s+(m>0?(+c.importo||0)/m:0);},0);}
+function getRicaviCantieri(){return S.cantieri.reduce((s,c)=>s+(c.capitoli||[]).reduce((a,cap)=>a+(cap.voci||[]).reduce((b,v)=>{const q=v.qtyEff!==undefined&&v.qtyEff!==null?+v.qtyEff:+v.qty;return b+(q||0)*(+v.pu||0);},0),0),0);}
 
 function renderCruscotto(az) {
-  const fE = n => '€ '+Math.round(n).toLocaleString('it-IT');
-  const cfMensili = getCostiFissiMensili(az);
-  const ricavi = getRicaviCantieri();
-  const fidoDisp = (+az.fido||0)-(+az.fidoUsato||0);
-  const liquiditaTot = (+az.cassa||0)+fidoDisp;
-  const soglia = +az.soglia||0;
-  const semLiq = liquiditaTot>=soglia*2?'#22c55e':liquiditaTot>=soglia?'#f59e0b':'#dc2626';
-  const oggi = Date.now(), tra30 = oggi+30*86400000;
-  const entrate30 = (az.scadenzario||[]).filter(x=>x.tipo==='entrata'&&x.stato!=='incassato'&&new Date(x.data).getTime()<=tra30).reduce((s,x)=>s+(+x.importo||0),0);
-  const uscite30 = (az.scadenzario||[]).filter(x=>x.tipo==='uscita'&&x.stato!=='incassato'&&new Date(x.data).getTime()<=tra30).reduce((s,x)=>s+(+x.importo||0),0);
-  const interessi = (+az.fidoUsato||0)*(+az.tasso||5)/100/12;
-  return `<div style="padding:10px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;width:100%;max-width:100%;overflow:hidden">
-    <div style="background:var(--g1);border-radius:var(--r);padding:14px;color:#fff;box-sizing:border-box">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px">
-        <div><div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:.5px">POSIZIONE FINANZIARIA</div><div style="font-size:10px;color:rgba(255,255,255,.5)">${esc(az.nome||'Azienda')}</div></div>
-        <button onclick="apriImpostazioniAz()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:6px 10px;font-size:11px;cursor:pointer;font-family:'Nunito',sans-serif;flex-shrink:0">⚙️ Impostazioni</button>
+  const fE=n=>'€ '+Math.round(n).toLocaleString('it-IT');
+  const cfMensili=getCostiFissiMensili(az),ricavi=getRicaviCantieri();
+  const fidoDisp=(+az.fido||0)-(+az.fidoUsato||0),liquiditaTot=(+az.cassa||0)+fidoDisp,soglia=+az.soglia||0;
+  const semLiq=liquiditaTot>=soglia*2?'#22c55e':liquiditaTot>=soglia?'#f59e0b':'#dc2626';
+  const oggi=Date.now(),tra30=oggi+30*86400000;
+  const e30=(az.scadenzario||[]).filter(x=>x.tipo==='entrata'&&x.stato!=='incassato'&&new Date(x.data).getTime()<=tra30).reduce((s,x)=>s+(+x.importo||0),0);
+  const u30=(az.scadenzario||[]).filter(x=>x.tipo==='uscita'&&x.stato!=='incassato'&&new Date(x.data).getTime()<=tra30).reduce((s,x)=>s+(+x.importo||0),0);
+  const interessi=(+az.fidoUsato||0)*(+az.tasso||5)/100/12;
+  return `<div style="padding:10px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;width:100%;overflow:hidden">
+    <div style="background:var(--g1);border-radius:var(--r);padding:14px;color:#fff">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div><div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700">POSIZIONE FINANZIARIA</div><div style="font-size:10px;color:rgba(255,255,255,.5)">${esc(az.nome||'')}</div></div>
+        <button onclick="apriImpostazioniAz()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:6px 10px;font-size:11px;cursor:pointer;font-family:'Nunito',sans-serif">⚙️</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <div style="background:rgba(255,255,255,.1);border-radius:8px;padding:10px;min-width:0">
-          <div style="font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Cassa</div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fE(az.cassa||0)}</div>
-        </div>
-        <div style="background:rgba(255,255,255,.1);border-radius:8px;padding:10px;min-width:0">
-          <div style="font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Fido libero</div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${fidoDisp<soglia?'#ff9b9b':'var(--g5)'}">${fE(fidoDisp)}</div>
-          <div style="font-size:9px;color:rgba(255,255,255,.4)">su ${fE(az.fido||0)}</div>
-        </div>
+        <div style="background:rgba(255,255,255,.1);border-radius:8px;padding:10px;min-width:0"><div style="font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase;margin-bottom:3px">Cassa</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fE(az.cassa||0)}</div></div>
+        <div style="background:rgba(255,255,255,.1);border-radius:8px;padding:10px;min-width:0"><div style="font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase;margin-bottom:3px">Fido libero</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${fidoDisp<soglia?'#ff9b9b':'var(--g5)'}">${fE(fidoDisp)}</div><div style="font-size:9px;color:rgba(255,255,255,.4)">su ${fE(az.fido||0)}</div></div>
       </div>
-      <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <div style="min-width:0">
-          <div style="font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Liquidità totale</div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:${semLiq};white-space:nowrap">${fE(liquiditaTot)}</div>
-          <div style="font-size:10px;color:rgba(255,255,255,.5)">${liquiditaTot<soglia?'⚠️ Sotto soglia '+fE(soglia):'Soglia min: '+fE(soglia)}</div>
-        </div>
-        <div style="width:16px;height:16px;border-radius:50%;background:${semLiq};flex-shrink:0;box-shadow:0 0 8px ${semLiq}80"></div>
+      <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:12px;display:flex;align-items:center;justify-content:space-between">
+        <div><div style="font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase;margin-bottom:2px">Liquidità totale</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:${semLiq}">${fE(liquiditaTot)}</div><div style="font-size:10px;color:rgba(255,255,255,.5)">Soglia min: ${fE(soglia)}</div></div>
+        <div style="width:16px;height:16px;border-radius:50%;background:${semLiq};box-shadow:0 0 8px ${semLiq}80"></div>
       </div>
-      ${interessi>0?`<div style="margin-top:8px;font-size:10px;color:rgba(255,255,255,.5)">⚠️ Interessi anticipo: ${fE(interessi)}/mese · ${az.tasso||5}% su ${fE(az.fidoUsato||0)}</div>`:''}
+      ${interessi>0?`<div style="margin-top:8px;font-size:10px;color:rgba(255,255,255,.5)">⚠️ Interessi anticipo: ${fE(interessi)}/mese</div>`:''}
     </div>
-    <div style="background:#fff;border-radius:var(--r);border:1px solid var(--s2);padding:12px;box-sizing:border-box">
-      <div style="font-size:11px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📅 Prossimi 30 giorni</div>
+    <div style="background:#fff;border-radius:var(--r);border:1px solid var(--s2);padding:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--soft);text-transform:uppercase;margin-bottom:8px">📅 Prossimi 30 giorni</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <div style="background:var(--g6);border-radius:var(--r-sm);padding:10px;text-align:center;min-width:0">
-          <div style="font-size:9px;color:var(--g2);font-weight:600;text-transform:uppercase;margin-bottom:3px">Entrate</div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--g2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fE(entrate30)}</div>
-        </div>
-        <div style="background:var(--red-bg);border-radius:var(--r-sm);padding:10px;text-align:center;min-width:0">
-          <div style="font-size:9px;color:var(--red);font-weight:600;text-transform:uppercase;margin-bottom:3px">Uscite</div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--red);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fE(uscite30)}</div>
-        </div>
+        <div style="background:var(--g6);border-radius:var(--r-sm);padding:10px;text-align:center"><div style="font-size:9px;color:var(--g2);font-weight:600;text-transform:uppercase;margin-bottom:3px">Entrate</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--g2)">${fE(e30)}</div></div>
+        <div style="background:var(--red-bg);border-radius:var(--r-sm);padding:10px;text-align:center"><div style="font-size:9px;color:var(--red);font-weight:600;text-transform:uppercase;margin-bottom:3px">Uscite</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--red)">${fE(u30)}</div></div>
       </div>
-      <div style="background:var(--s1);border-radius:var(--r-sm);padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:12px;color:var(--soft)">Saldo netto</span>
-        <span style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:${entrate30-uscite30>=0?'var(--g2)':'var(--red)'}">${entrate30-uscite30>=0?'+':''}${fE(entrate30-uscite30)}</span>
-      </div>
+      <div style="background:var(--s1);border-radius:var(--r-sm);padding:8px 12px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;color:var(--soft)">Saldo netto</span><span style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:${e30-u30>=0?'var(--g2)':'var(--red)'}">${e30-u30>=0?'+':''}${fE(e30-u30)}</span></div>
     </div>
-    <div style="background:#fff;border-radius:var(--r);border:1px solid var(--s2);padding:12px;box-sizing:border-box">
-      <div style="font-size:11px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🏗️ Cantieri attivi</div>
+    <div style="background:#fff;border-radius:var(--r);border:1px solid var(--s2);padding:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--soft);text-transform:uppercase;margin-bottom:8px">🏗️ Cantieri</div>
       <div style="display:flex;flex-direction:column;gap:6px">
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--s1)"><span style="font-size:12px;color:var(--soft)">Cantieri aperti</span><span style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--g1)">${S.cantieri.length}</span></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--s1)"><span style="font-size:12px;color:var(--soft)">Ricavi effettivi</span><span style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--g2)">${fE(ricavi)}</span></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0"><span style="font-size:12px;color:var(--soft)">CG fissi/mese</span><span style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--amber)">${fE(cfMensili)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--s1)"><span style="font-size:12px;color:var(--soft)">Cantieri aperti</span><span style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--g1)">${S.cantieri.length}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--s1)"><span style="font-size:12px;color:var(--soft)">Ricavi effettivi</span><span style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--g2)">${fE(ricavi)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0"><span style="font-size:12px;color:var(--soft)">CG fissi/mese</span><span style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--amber)">${fE(cfMensili)}</span></div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -3088,181 +3105,128 @@ function renderCruscotto(az) {
   </div>`;
 }
 
-function renderCostiFissi(az) {
-  const fE = n=>'€ '+Math.round(n).toLocaleString('it-IT');
-  const cfMensili = getCostiFissiMensili(az);
-  const freqMap = {mensile:'Mensile',bimestrale:'Bimestrale',trimestrale:'Trimestrale',semestrale:'Semestrale',annuale:'Annuale','una-tantum':'Una tantum'};
-  const catColors = {Affitti:'#6366f1',Assicurazioni:'#f59e0b','Leasing/Noleggi':'#3b82f6',Utenze:'#10b981',Telefonia:'#8b5cf6',Commercialista:'#ec4899','INPS/Contributi':'#ef4444','Banca/Interessi':'#f97316',Carburante:'#84cc16',Altro:'#6b7280'};
-  const rows = (az.costiFissi||[]).map(c=>{
-    const freqN = {mensile:1,bimestrale:2,trimestrale:3,semestrale:6,annuale:12,'una-tantum':0}[c.freq]||0;
-    const mensile = freqN>0?(+c.importo||0)/freqN:0;
-    const col = catColors[c.cat]||'#6b7280';
-    return `<div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);overflow:hidden">
-      <div style="display:flex;align-items:center;gap:12px;padding:11px 14px">
-        <div style="width:4px;height:36px;border-radius:4px;background:${col};flex-shrink:0"></div>
-        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">${esc(c.desc)}</div><div style="font-size:10px;color:var(--soft)">${esc(c.cat)} · ${freqMap[c.freq]||c.freq}${c.scadenza?' · scad. '+c.scadenza:''}</div></div>
-        <div style="text-align:right;flex-shrink:0"><div style="font-size:14px;font-weight:700;color:var(--red)">−${fE(+c.importo||0)}</div>${mensile>0&&c.freq!=='mensile'?`<div style="font-size:10px;color:var(--soft)">${fE(mensile)}/mese</div>`:''}</div>
-        <button onclick="eliminaCostoFisso('${c.id}')" style="background:none;border:none;color:var(--s4);cursor:pointer;font-size:16px;padding:4px;flex-shrink:0">✕</button>
-      </div>
-    </div>`;
+function renderCostiFissi(az){
+  const fE=n=>'€ '+Math.round(n).toLocaleString('it-IT'),cfM=getCostiFissiMensili(az);
+  const fMap={mensile:'Mensile',bimestrale:'Bimestrale',trimestrale:'Trimestrale',semestrale:'Semestrale',annuale:'Annuale','una-tantum':'Una tantum'};
+  const cCol={Affitti:'#6366f1',Assicurazioni:'#f59e0b','Leasing/Noleggi':'#3b82f6',Utenze:'#10b981',Telefonia:'#8b5cf6',Commercialista:'#ec4899','INPS/Contributi':'#ef4444','Banca/Interessi':'#f97316',Carburante:'#84cc16',Altro:'#6b7280'};
+  const rows=(az.costiFissi||[]).map(c=>{const fm={mensile:1,bimestrale:2,trimestrale:3,semestrale:6,annuale:12,'una-tantum':0}[c.freq]||0,m=fm>0?(+c.importo||0)/fm:0,col=cCol[c.cat]||'#6b7280';
+    return `<div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);overflow:hidden"><div style="display:flex;align-items:center;gap:12px;padding:11px 14px"><div style="width:4px;height:36px;border-radius:4px;background:${col};flex-shrink:0"></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">${esc(c.desc)}</div><div style="font-size:10px;color:var(--soft)">${esc(c.cat)} · ${fMap[c.freq]||c.freq}</div></div><div style="text-align:right"><div style="font-size:14px;font-weight:700;color:var(--red)">−${fE(+c.importo||0)}</div>${m>0&&c.freq!=='mensile'?`<div style="font-size:10px;color:var(--soft)">${fE(m)}/mese</div>`:''}</div><button onclick="eliminaCostoFisso('${c.id}')" style="background:none;border:none;color:var(--s4);cursor:pointer;font-size:16px;padding:4px">✕</button></div></div>`;
   }).join('')||'<div style="text-align:center;padding:24px;color:var(--soft);font-size:13px">Nessun costo fisso. Aggiungi affitti, assicurazioni, leasing...</div>';
-  return `<div>
-    <div style="margin:12px 10px;background:var(--g1);border-radius:var(--r);padding:14px;color:#fff;display:flex;align-items:center;justify-content:space-between">
-      <div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700">COSTI FISSI</div><div style="font-size:10px;color:rgba(255,255,255,.5)">Incidenza mensile</div></div>
-      <div style="text-align:right"><div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;color:#ff9b9b">${fE(cfMensili)}/mese</div><div style="font-size:11px;color:rgba(255,255,255,.5)">${fE(cfMensili*12)}/anno</div></div>
-    </div>
-    <div style="padding:0 10px 8px;display:flex;align-items:center;justify-content:space-between">
-      <div style="font-size:11px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.5px">Voci costi fissi</div>
-      <button onclick="openModal('mCostoFisso')" style="background:var(--g1);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">+ Aggiungi</button>
-    </div>
-    ${rows}
-  </div>`;
+  return `<div><div style="margin:12px 10px;background:var(--g1);border-radius:var(--r);padding:14px;color:#fff;display:flex;align-items:center;justify-content:space-between"><div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700">COSTI FISSI</div><div style="font-size:10px;color:rgba(255,255,255,.5)">Incidenza mensile</div></div><div style="text-align:right"><div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:#ff9b9b">${fE(cfM)}/mese</div><div style="font-size:11px;color:rgba(255,255,255,.5)">${fE(cfM*12)}/anno</div></div></div><div style="padding:0 10px 8px;display:flex;align-items:center;justify-content:space-between"><div style="font-size:11px;font-weight:700;color:var(--soft);text-transform:uppercase">Voci</div><button onclick="openModal('mCostoFisso')" style="background:var(--g1);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">+ Aggiungi</button></div>${rows}</div>`;
 }
 
-let _scadTipo = 'entrata';
-function setScadTipo(tipo) {
-  _scadTipo = tipo;
-  const eBtn=$('scad-tipo-entrata'), uBtn=$('scad-tipo-uscita');
-  if(tipo==='entrata'){
-    if(eBtn){eBtn.style.background='var(--g1)';eBtn.style.borderColor='var(--g1)';eBtn.style.color='#fff';}
-    if(uBtn){uBtn.style.background='#fff';uBtn.style.borderColor='var(--s3)';uBtn.style.color='var(--soft)';}
-  } else {
-    if(uBtn){uBtn.style.background='var(--red)';uBtn.style.borderColor='var(--red)';uBtn.style.color='#fff';}
-    if(eBtn){eBtn.style.background='#fff';eBtn.style.borderColor='var(--s3)';eBtn.style.color='var(--soft)';}
-  }
+let _scadTipo='entrata';
+function setScadTipo(tipo){
+  _scadTipo=tipo;
+  const eB=$('scad-tipo-entrata'),uB=$('scad-tipo-uscita');
+  if(tipo==='entrata'){if(eB){eB.style.background='var(--g1)';eB.style.borderColor='var(--g1)';eB.style.color='#fff';}if(uB){uB.style.background='#fff';uB.style.borderColor='var(--s3)';uB.style.color='var(--soft)';}}
+  else{if(uB){uB.style.background='var(--red)';uB.style.borderColor='var(--red)';uB.style.color='#fff';}if(eB){eB.style.background='#fff';eB.style.borderColor='var(--s3)';eB.style.color='var(--soft)';}}
 }
-
-function renderScadenziario(az) {
-  const fE = n=>'€ '+Math.round(n).toLocaleString('it-IT');
-  const oggi = new Date(); oggi.setHours(0,0,0,0);
-  const voci = (az.scadenzario||[]).slice().sort((a,b)=>new Date(a.data)-new Date(b.data));
-  const mesi = {};
-  voci.forEach(v=>{ const d=new Date(v.data), mk=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; if(!mesi[mk]) mesi[mk]={entrate:0,uscite:0,voci:[]}; if(v.tipo==='entrata') mesi[mk].entrate+=(+v.importo||0); else mesi[mk].uscite+=(+v.importo||0); mesi[mk].voci.push(v); });
-  const statoColors={previsto:'var(--soft)',fatturato:'var(--blue)',incassato:'var(--g2)',anticipato:'var(--amber)'};
-  const statoLabels={previsto:'Previsto',fatturato:'Fatturato',incassato:'✓ Incassato',anticipato:'⚡ Anticipato'};
-  const mesiRows = Object.entries(mesi).sort().map(([mk,m])=>{
-    const [anno,mese]=mk.split('-'), meseNome=new Date(+anno,+mese-1,1).toLocaleString('it-IT',{month:'long',year:'numeric'}), netto=m.entrate-m.uscite;
-    const vociRows=m.voci.map(v=>{ const isE=v.tipo==='entrata', scad=new Date(v.data)<oggi&&v.stato==='previsto', cantNome=v.cantiereId?(S.cantieri.find(c=>c.id===v.cantiereId)?.nome||''):'';
-      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--s1);${scad?'background:var(--red-bg)':''}">
-        <div style="font-size:18px;flex-shrink:0">${isE?'📥':'📤'}</div>
-        <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text)">${esc(v.desc)}</div><div style="font-size:10px;color:var(--soft)">${v.data}${cantNome?' · '+esc(cantNome):''} · <span style="color:${statoColors[v.stato]||'var(--soft)'}">${statoLabels[v.stato]||v.stato}</span>${scad?' ⚠️':''}</div></div>
-        <div style="font-size:13px;font-weight:700;color:${isE?'var(--g2)':'var(--red)'};flex-shrink:0">${isE?'+':'−'}${fE(+v.importo||0)}</div>
-        <button onclick="eliminaScadenza('${v.id}')" style="background:none;border:none;color:var(--s4);cursor:pointer;font-size:14px;padding:2px;flex-shrink:0">✕</button>
-      </div>`;
+function renderScadenziario(az){
+  const fE=n=>'€ '+Math.round(n).toLocaleString('it-IT'),oggi=new Date();oggi.setHours(0,0,0,0);
+  const voci=(az.scadenzario||[]).slice().sort((a,b)=>new Date(a.data)-new Date(b.data)),mesi={};
+  voci.forEach(v=>{const d=new Date(v.data),mk=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;if(!mesi[mk])mesi[mk]={e:0,u:0,voci:[]};if(v.tipo==='entrata')mesi[mk].e+=(+v.importo||0);else mesi[mk].u+=(+v.importo||0);mesi[mk].voci.push(v);});
+  const sL={previsto:'var(--soft)',fatturato:'var(--blue)',incassato:'var(--g2)',anticipato:'var(--amber)'},sN={previsto:'Previsto',fatturato:'Fatturato',incassato:'✓ Incassato',anticipato:'⚡ Anticipato'};
+  const mesiRows=Object.entries(mesi).sort().map(([mk,m])=>{
+    const[anno,mese]=mk.split('-'),mn=new Date(+anno,+mese-1,1).toLocaleString('it-IT',{month:'long',year:'numeric'}),n=m.e-m.u;
+    const vR=m.voci.map(v=>{const iE=v.tipo==='entrata',sc=new Date(v.data)<oggi&&v.stato==='previsto',cn=v.cantiereId?(S.cantieri.find(c=>c.id===v.cantiereId)?.nome||''):'';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--s1);${sc?'background:var(--red-bg)':''}"><div style="font-size:18px;flex-shrink:0">${iE?'📥':'📤'}</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">${esc(v.desc)}</div><div style="font-size:10px;color:var(--soft)">${v.data}${cn?' · '+esc(cn):''} · <span style="color:${sL[v.stato]||'var(--soft)'}">${sN[v.stato]||v.stato}</span>${sc?' ⚠️':''}</div></div><div style="font-size:13px;font-weight:700;color:${iE?'var(--g2)':'var(--red)'};flex-shrink:0">${iE?'+':'−'}${fE(+v.importo||0)}</div><button onclick="eliminaScadenza('${v.id}')" style="background:none;border:none;color:var(--s4);cursor:pointer;font-size:14px;padding:2px">✕</button></div>`;
     }).join('');
-    return `<div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);overflow:hidden">
-      <div style="padding:10px 14px;background:${netto>=0?'var(--g6)':'var(--red-bg)'};display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--s2)">
-        <div style="font-size:13px;font-weight:600;color:var(--text);text-transform:capitalize">${meseNome}</div>
-        <div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;color:var(--g2)">+${fE(m.entrate)}</span><span style="font-size:11px;color:var(--red)">−${fE(m.uscite)}</span><span style="font-size:13px;font-weight:700;color:${netto>=0?'var(--g1)':'var(--red)'}">${netto>=0?'+':''}${fE(netto)}</span></div>
-      </div>
-      ${vociRows}
-    </div>`;
-  }).join('')||'<div style="text-align:center;padding:24px;color:var(--soft);font-size:13px">Nessuna voce. Aggiungi entrate e uscite.</div>';
-  const totE=voci.filter(v=>v.tipo==='entrata'&&v.stato!=='incassato').reduce((s,v)=>s+(+v.importo||0),0);
-  const totU=voci.filter(v=>v.tipo==='uscita'&&v.stato!=='incassato').reduce((s,v)=>s+(+v.importo||0),0);
-  return `<div>
-    <div style="margin:12px 10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-      <div style="background:var(--g6);border-radius:var(--r-sm);padding:10px;text-align:center"><div style="font-size:9px;color:var(--g2);font-weight:600;text-transform:uppercase">Entrate</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--g2)">${fE(totE)}</div></div>
-      <div style="background:var(--red-bg);border-radius:var(--r-sm);padding:10px;text-align:center"><div style="font-size:9px;color:var(--red);font-weight:600;text-transform:uppercase">Uscite</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--red)">${fE(totU)}</div></div>
-      <div style="background:var(--s1);border-radius:var(--r-sm);padding:10px;text-align:center"><div style="font-size:9px;color:var(--soft);font-weight:600;text-transform:uppercase">Saldo</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:${totE-totU>=0?'var(--g1)':'var(--red)'}">${totE-totU>=0?'+':''}${fE(totE-totU)}</div></div>
-    </div>
-    <div style="padding:0 10px 8px;display:flex;gap:8px">
-      <button onclick="setScadTipo('entrata');openModal('mScadenza')" style="flex:1;background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">📥 + Entrata</button>
-      <button onclick="setScadTipo('uscita');openModal('mScadenza')" style="flex:1;background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:var(--r-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">📤 + Uscita</button>
-    </div>
-    ${mesiRows}
-  </div>`;
+    return `<div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);overflow:hidden"><div style="padding:10px 14px;background:${n>=0?'var(--g6)':'var(--red-bg)'};display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--s2)"><div style="font-size:13px;font-weight:600;text-transform:capitalize">${mn}</div><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;color:var(--g2)">+${fE(m.e)}</span><span style="font-size:11px;color:var(--red)">−${fE(m.u)}</span><span style="font-size:13px;font-weight:700;color:${n>=0?'var(--g1)':'var(--red)'}">${n>=0?'+':''}${fE(n)}</span></div></div>${vR}</div>`;
+  }).join('')||'<div style="text-align:center;padding:24px;color:var(--soft);font-size:13px">Nessuna voce.</div>';
+  const tE=voci.filter(v=>v.tipo==='entrata'&&v.stato!=='incassato').reduce((s,v)=>s+(+v.importo||0),0);
+  const tU=voci.filter(v=>v.tipo==='uscita'&&v.stato!=='incassato').reduce((s,v)=>s+(+v.importo||0),0);
+  return `<div><div style="margin:12px 10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px"><div style="background:var(--g6);border-radius:var(--r-sm);padding:10px;text-align:center"><div style="font-size:9px;color:var(--g2);font-weight:600;text-transform:uppercase">Entrate</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--g2)">${fE(tE)}</div></div><div style="background:var(--red-bg);border-radius:var(--r-sm);padding:10px;text-align:center"><div style="font-size:9px;color:var(--red);font-weight:600;text-transform:uppercase">Uscite</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--red)">${fE(tU)}</div></div><div style="background:var(--s1);border-radius:var(--r-sm);padding:10px;text-align:center"><div style="font-size:9px;color:var(--soft);font-weight:600;text-transform:uppercase">Saldo</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:${tE-tU>=0?'var(--g1)':'var(--red)'}">${tE-tU>=0?'+':''}${fE(tE-tU)}</div></div></div><div style="padding:0 10px 8px;display:flex;gap:8px"><button onclick="setScadTipo('entrata');openModal('mScadenza')" style="flex:1;background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">📥 + Entrata</button><button onclick="setScadTipo('uscita');openModal('mScadenza')" style="flex:1;background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:var(--r-sm);padding:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">📤 + Uscita</button></div>${mesiRows}</div>`;
 }
 
-function renderPrevisionale(az) {
-  const fE = n=>'€ '+Math.round(n).toLocaleString('it-IT');
-  const anno = +az.anno||new Date().getFullYear(), cfMensili = getCostiFissiMensili(az);
-  const meseNomi=['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-  const entratePerMese=Array(12).fill(0), uscitePerMese=Array(12).fill(cfMensili);
-  (az.scadenzario||[]).forEach(v=>{ const d=new Date(v.data); if(d.getFullYear()!==anno) return; const m=d.getMonth(); if(v.tipo==='entrata') entratePerMese[m]+=(+v.importo||0); else uscitePerMese[m]+=(+v.importo||0); });
-  const totR=entratePerMese.reduce((s,x)=>s+x,0), totC=uscitePerMese.reduce((s,x)=>s+x,0), totM=totR-totC;
-  const margPct=totR>0?Math.round(totM/totR*100):0, semaforo=margPct>=20?'#22c55e':margPct>=10?'#f59e0b':'#dc2626';
-  const oggi=new Date();
-  const meseRows=meseNomi.map((nome,i)=>{ const ric=entratePerMese[i],cos=uscitePerMese[i],mar=ric-cos,col=mar>=0?'var(--g2)':'var(--red)',isPast=anno<oggi.getFullYear()||(anno===oggi.getFullYear()&&i<oggi.getMonth()),isCur=anno===oggi.getFullYear()&&i===oggi.getMonth();
-    return `<div style="display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--s1);background:${isCur?'var(--g6)':isPast?'var(--s1)':'#fff'}">
-      <div style="font-size:12px;font-weight:600;color:var(--text);width:28px;flex-shrink:0">${nome}</div>
-      <div style="flex:1"><div style="height:6px;background:var(--s2);border-radius:3px;overflow:hidden">${ric>0?`<div style="height:100%;width:${Math.min(100,ric/(Math.max(...entratePerMese)||1)*100)}%;background:var(--g3);border-radius:3px"></div>`:''}</div></div>
-      <div style="text-align:right;min-width:75px;flex-shrink:0"><div style="font-size:11px;color:var(--g2)">${fE(ric)}</div><div style="font-size:10px;color:var(--red)">−${fE(cos)}</div></div>
-      <div style="font-size:12px;font-weight:700;color:${col};min-width:65px;text-align:right;flex-shrink:0">${mar>=0?'+':''}${fE(mar)}</div>
-    </div>`;
+function renderPrevisionale(az){
+  const fE=n=>'€ '+Math.round(n).toLocaleString('it-IT'),anno=+az.anno||new Date().getFullYear(),cfM=getCostiFissiMensili(az);
+  const mn=['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+  const eM=Array(12).fill(0),uM=Array(12).fill(cfM);
+  (az.scadenzario||[]).forEach(v=>{const d=new Date(v.data);if(d.getFullYear()!==anno)return;const m=d.getMonth();if(v.tipo==='entrata')eM[m]+=(+v.importo||0);else uM[m]+=(+v.importo||0);});
+  const tR=eM.reduce((s,x)=>s+x,0),tC=uM.reduce((s,x)=>s+x,0),tM=tR-tC,mp=tR>0?Math.round(tM/tR*100):0,sem=mp>=20?'#22c55e':mp>=10?'#f59e0b':'#dc2626',oggi=new Date();
+  const rows=mn.map((n,i)=>{const r=eM[i],c=uM[i],m=r-c,col=m>=0?'var(--g2)':'var(--red)',iP=anno<oggi.getFullYear()||(anno===oggi.getFullYear()&&i<oggi.getMonth()),iC=anno===oggi.getFullYear()&&i===oggi.getMonth();
+    return `<div style="display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--s1);background:${iC?'var(--g6)':iP?'var(--s1)':'#fff'}"><div style="font-size:12px;font-weight:600;color:var(--text);width:28px">${n}</div><div style="flex:1"><div style="height:6px;background:var(--s2);border-radius:3px">${r>0?`<div style="height:100%;width:${Math.min(100,r/(Math.max(...eM)||1)*100)}%;background:var(--g3);border-radius:3px"></div>`:''}</div></div><div style="text-align:right;min-width:75px"><div style="font-size:11px;color:var(--g2)">${fE(r)}</div><div style="font-size:10px;color:var(--red)">−${fE(c)}</div></div><div style="font-size:12px;font-weight:700;color:${col};min-width:65px;text-align:right">${m>=0?'+':''}${fE(m)}</div></div>`;
   }).join('');
-  return `<div>
-    <div style="margin:12px 10px;background:var(--g1);border-radius:var(--r);padding:16px;color:#fff">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;letter-spacing:.5px">PREVISIONALE ${anno}</div>
-        <div style="display:flex;align-items:center;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:${semaforo}"></div><div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:${semaforo}">${margPct>0?'+':''}${margPct}%</div></div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-        <div style="background:rgba(255,255,255,.1);border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase">Ricavi</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--g5)">${fE(totR)}</div></div>
-        <div style="background:rgba(255,255,255,.1);border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase">Costi</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:#ff9b9b">${fE(totC)}</div></div>
-        <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase">Margine</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:${semaforo}">${totM>=0?'+':''}${fE(totM)}</div></div>
-      </div>
-      <div style="margin-top:8px;font-size:10px;color:rgba(255,255,255,.5)">CG fissi: ${fE(cfMensili)}/mese inclusi</div>
-    </div>
-    <div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 10px;border:1px solid var(--s2);overflow:hidden">
-      <div style="padding:10px 14px;background:var(--s1);display:grid;grid-template-columns:28px 1fr 75px 65px;gap:8px;font-size:10px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.4px">
-        <div>Mese</div><div>Trend</div><div style="text-align:right">Ric/Costi</div><div style="text-align:right">Margine</div>
-      </div>
-      ${meseRows}
-    </div>
-    <div style="margin:0 10px 12px;background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--r-sm);padding:12px 14px;font-size:12px;color:var(--blue)">
-      💡 Aggiungi entrate nello Scadenziario con data ${anno} per popolare il previsionale.
-    </div>
-  </div>`;
+  return `<div><div style="margin:12px 10px;background:var(--g1);border-radius:var(--r);padding:16px;color:#fff"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700">PREVISIONALE ${anno}</div><div style="display:flex;align-items:center;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:${sem}"></div><div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:${sem}">${mp>0?'+':''}${mp}%</div></div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"><div style="background:rgba(255,255,255,.1);border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:rgba(255,255,255,.6)">Ricavi</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--g5)">${fE(tR)}</div></div><div style="background:rgba(255,255,255,.1);border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:rgba(255,255,255,.6)">Costi</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:#ff9b9b">${fE(tC)}</div></div><div style="background:rgba(255,255,255,.15);border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:rgba(255,255,255,.6)">Margine</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:${sem}">${tM>=0?'+':''}${fE(tM)}</div></div></div><div style="margin-top:8px;font-size:10px;color:rgba(255,255,255,.5)">CG fissi: ${fE(cfM)}/mese inclusi</div></div><div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 10px;border:1px solid var(--s2);overflow:hidden">${rows}</div></div>`;
 }
 
-function salvaCostoFisso() {
-  const desc=v('cf-desc').trim(), importo=parseFloat(v('cf-importo'))||0;
-  if(!desc){alert('Inserisci la descrizione');return;} if(!importo){alert('Inserisci l\'importo');return;}
-  const az=getAzienda(); az.costiFissi=az.costiFissi||[];
-  az.costiFissi.push({id:uid(),desc,cat:v('cf-cat'),freq:v('cf-freq'),importo,scadenza:v('cf-scadenza'),note:v('cf-note'),created:Date.now()});
-  save(); closeModal('mCostoFisso');
-  ['cf-desc','cf-importo','cf-scadenza','cf-note'].forEach(id=>{const el=$(id);if(el)el.value='';});
-  switchAzTab('costi'); toast('✅ Costo fisso salvato!');
+function salvaCostoFisso(){const desc=v('cf-desc').trim(),importo=parseFloat(v('cf-importo'))||0;if(!desc){alert('Inserisci la descrizione');return;}if(!importo){alert('Inserisci l\'importo');return;}const az=getAzienda();az.costiFissi=az.costiFissi||[];az.costiFissi.push({id:uid(),desc,cat:v('cf-cat'),freq:v('cf-freq'),importo,scadenza:v('cf-scadenza'),note:v('cf-note'),created:Date.now()});save();closeModal('mCostoFisso');['cf-desc','cf-importo','cf-scadenza','cf-note'].forEach(id=>{const el=$(id);if(el)el.value='';});switchAzTab('costi');toast('✅ Costo fisso salvato!');}
+function eliminaCostoFisso(id){if(!confirm('Eliminare?'))return;const az=getAzienda();az.costiFissi=(az.costiFissi||[]).filter(x=>x.id!==id);save();switchAzTab('costi');}
+function salvaScadenza(){const desc=v('scad-desc').trim(),importo=parseFloat(v('scad-importo'))||0;if(!desc){alert('Inserisci la descrizione');return;}if(!importo){alert('Inserisci l\'importo');return;}const az=getAzienda();az.scadenzario=az.scadenzario||[];az.scadenzario.push({id:uid(),tipo:_scadTipo,desc,importo,data:v('scad-data')||today(),cantiereId:v('scad-cantiere'),stato:v('scad-stato'),note:v('scad-note'),created:Date.now()});save();closeModal('mScadenza');['scad-desc','scad-importo','scad-data','scad-note'].forEach(id=>{const el=$(id);if(el)el.value='';});switchAzTab('scadenziario');toast('✅ Voce salvata!');}
+function eliminaScadenza(id){const az=getAzienda();az.scadenzario=(az.scadenzario||[]).filter(x=>x.id!==id);save();switchAzTab('scadenziario');}
+function salvaImpostazioniAz(){const az=getAzienda();az.nome=v('az-nome')||az.nome;az.fido=parseFloat(v('az-fido'))||az.fido||200000;az.fidoUsato=parseFloat(v('az-fidoUsato'))||0;az.cassa=parseFloat(v('az-cassa'))||0;az.soglia=parseFloat(v('az-soglia'))||20000;az.tasso=parseFloat(v('az-tasso'))||5;az.anno=parseInt(v('az-anno'))||new Date().getFullYear();save();closeModal('mImpostazioniAz');switchAzTab('cruscotto');toast('✅ Impostazioni salvate!');}
+function apriImpostazioniAz(){const az=getAzienda();$('az-nome').value=az.nome||'';$('az-fido').value=az.fido||200000;$('az-fidoUsato').value=az.fidoUsato||0;$('az-cassa').value=az.cassa||0;$('az-soglia').value=az.soglia||20000;$('az-tasso').value=az.tasso||5;$('az-anno').value=az.anno||new Date().getFullYear();openModal('mImpostazioniAz');}
+function _popolaScadCantiere(){const sel=$('scad-cantiere');if(!sel)return;sel.innerHTML='<option value="">-- Nessuno --</option>';S.cantieri.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nome.slice(0,30);sel.appendChild(o);});}
+
+// ════════════════════════════════════════════
+// MODULO ORDINI
+// ════════════════════════════════════════════
+let _ordineId=null;
+function getFornitori(){const t=S.cantieri.flatMap(c=>(c.ordini||[]).map(o=>o.fornitore)).filter(Boolean);return[...new Set(t)].sort();}
+const STATI_ORDINE={in_attesa:{label:'In attesa DDT',ic:'⏳',color:'var(--amber)',bg:'var(--amber-bg)',border:'var(--amber-border)'},consegnato:{label:'DDT ricevuto',ic:'📦',color:'var(--blue)',bg:'var(--blue-bg)',border:'var(--blue-border)'},fatturato:{label:'Fatturato',ic:'🧾',color:'var(--soft)',bg:'var(--s1)',border:'var(--s2)'},chiuso:{label:'Chiuso',ic:'✅',color:'var(--g2)',bg:'var(--g6)',border:'var(--s3)'},annullato:{label:'Annullato',ic:'❌',color:'var(--red)',bg:'var(--red-bg)',border:'var(--red-border)'}};
+
+function salvaOrdine(){
+  const fornitore=v('ord-fornitore').trim(),desc=v('ord-desc').trim();
+  if(!fornitore){alert('Inserisci il fornitore');return;}if(!desc){alert('Inserisci la descrizione');return;}
+  const c=getCantiere();if(!c)return;c.ordini=c.ordini||[];
+  const ordine={id:uid(),fornitore,desc,importoStimato:parseFloat(v('ord-importo'))||0,importoReale:0,data:v('ord-data')||today(),consegnaPrevista:v('ord-consegna')||'',capId:v('ord-cap')||'',note:v('ord-note')||'',stato:'in_attesa',rifDoc:'',storico:[{data:today(),evento:'Ordine creato',utente:S.uid||'Utente'}],utente:S.uid||'Utente',created:Date.now()};
+  c.ordini.push(ordine);save();closeModal('mNuovoOrdine');
+  ['ord-fornitore','ord-desc','ord-importo','ord-data','ord-consegna','ord-note'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  renderTab('ordini');updateCounts();toast('✅ Ordine salvato!');
+  setTimeout(()=>{if(confirm('Vuoi inviare subito una copia al fornitore?')){_ordineId=ordine.id;inviaOrdineFornitore();}},400);
 }
-function eliminaCostoFisso(id) {
-  if(!confirm('Eliminare questo costo fisso?')) return;
-  const az=getAzienda(); az.costiFissi=(az.costiFissi||[]).filter(x=>x.id!==id);
-  save(); switchAzTab('costi'); toast('Costo eliminato');
+
+function apriDettaglioOrdine(ordId){
+  const c=getCantiere();if(!c)return;const ord=(c.ordini||[]).find(o=>o.id===ordId);if(!ord)return;
+  _ordineId=ordId;
+  const cap=(c.capitoli||[]).find(cap=>cap.id===ord.capId),info=$('ord-detail-info');
+  if(info)info.innerHTML=`<div style="font-weight:700;font-size:13px;margin-bottom:6px">📦 ${esc(ord.fornitore)}</div><div style="color:var(--soft);margin-bottom:4px">${esc(ord.desc)}</div><div style="display:flex;gap:12px;font-size:11px;flex-wrap:wrap"><span>📅 ${ord.data}</span>${ord.importoStimato?`<span>💰 ${fmtEur(ord.importoStimato)}</span>`:''} ${cap?`<span>🏗️ ${esc(cap.nome)}</span>`:''}</div>`;
+  const sel=$('ord-stato-edit');if(sel)sel.value=ord.stato||'in_attesa';
+  const ir=$('ord-importo-reale');if(ir)ir.value=ord.importoReale||'';
+  const rd=$('ord-rif-doc');if(rd)rd.value=ord.rifDoc||'';
+  const ne=$('ord-note-edit');if(ne)ne.value=ord.note||'';
+  openModal('mDettaglioOrdine');
 }
-function salvaScadenza() {
-  const desc=v('scad-desc').trim(), importo=parseFloat(v('scad-importo'))||0;
-  if(!desc){alert('Inserisci la descrizione');return;} if(!importo){alert('Inserisci l\'importo');return;}
-  const az=getAzienda(); az.scadenzario=az.scadenzario||[];
-  az.scadenzario.push({id:uid(),tipo:_scadTipo,desc,importo,data:v('scad-data')||today(),cantiereId:v('scad-cantiere'),stato:v('scad-stato'),note:v('scad-note'),created:Date.now()});
-  save(); closeModal('mScadenza');
-  ['scad-desc','scad-importo','scad-data','scad-note'].forEach(id=>{const el=$(id);if(el)el.value='';});
-  switchAzTab('scadenziario'); toast('✅ Voce salvata!');
+
+function aggiornaOrdine(){
+  const c=getCantiere();if(!c||!_ordineId)return;const ord=(c.ordini||[]).find(o=>o.id===_ordineId);if(!ord)return;
+  const ns=v('ord-stato-edit'),ir=parseFloat(v('ord-importo-reale'))||0;
+  if(ns!==ord.stato){ord.storico=ord.storico||[];ord.storico.push({data:today(),evento:`Stato → ${STATI_ORDINE[ns]?.label||ns}`,utente:S.uid||'Utente'});}
+  ord.stato=ns;ord.importoReale=ir;ord.rifDoc=v('ord-rif-doc')||'';ord.note=v('ord-note-edit')||'';
+  if((ns==='consegnato'||ns==='fatturato')&&ir>0){
+    c.speseMateriali=c.speseMateriali||[];const gP=c.speseMateriali.find(s=>s.ordineId===_ordineId);
+    if(!gP){c.speseMateriali.push({id:uid(),ordineId:_ordineId,desc:`${ord.fornitore} — ${ord.desc.slice(0,40)}`,capId:ord.capId||'',cat:'Materiali',importo:ir,data:today(),note:ord.rifDoc||'',utente:S.uid||'Utente',created:Date.now()});toast('✅ Aggiunto ai costi materiali del cantiere!');}
+    else{gP.importo=ir;toast('✅ Costi materiali aggiornati!');}
+  } else toast('✅ Ordine aggiornato!');
+  save();closeModal('mDettaglioOrdine');renderTab('ordini');
 }
-function eliminaScadenza(id) {
-  const az=getAzienda(); az.scadenzario=(az.scadenzario||[]).filter(x=>x.id!==id);
-  save(); switchAzTab('scadenziario'); toast('Voce eliminata');
+
+function eliminaOrdine(ordId){if(!confirm('Eliminare questo ordine?'))return;const c=getCantiere();if(!c)return;c.ordini=(c.ordini||[]).filter(o=>o.id!==ordId);save();renderTab('ordini');updateCounts();}
+
+function inviaOrdineFornitore(){
+  const c=getCantiere();if(!c||!_ordineId)return;const ord=(c.ordini||[]).find(o=>o.id===_ordineId);if(!ord)return;
+  const cap=(c.capitoli||[]).find(cap=>cap.id===ord.capId);
+  const wText=encodeURIComponent(`Ordine materiali per cantiere ${c.nome}:\n${ord.desc}\n${ord.importoStimato>0?`Importo stimato: ${fmtEur(ord.importoStimato)}`:''}${ord.consegnaPrevista?'\nConsegna prevista: '+ord.consegnaPrevista:''}\nGrazie, ${S.uid||'TB Restauri'}`);
+  const body=encodeURIComponent(`Gentile ${ord.fornitore},\n\nconferiamo ordine per i seguenti materiali:\n\n${ord.desc}\n${ord.importoStimato>0?`Importo stimato: ${fmtEur(ord.importoStimato)}`:''}${ord.consegnaPrevista?'\nConsegna prevista: '+ord.consegnaPrevista:''}\nCantiere: ${c.nome}${ord.note?'\nNote: '+ord.note:''}\n\nSi prega di allegare DDT intestato a Tecnobase Restauri Srl.\n\nCordiali saluti,\n${S.uid||'TB Restauri'}`);
+  const subj=encodeURIComponent(`Ordine materiali — ${c.nome} — ${ord.data}`);
+  if(confirm('Come vuoi inviare?\n\nOK = Email\nAnnulla = WhatsApp'))window.location.href=`mailto:?subject=${subj}&body=${body}`;
+  else window.open(`https://wa.me/?text=${wText}`,'_blank');
 }
-function salvaImpostazioniAz() {
-  const az=getAzienda();
-  az.nome=v('az-nome')||az.nome; az.fido=parseFloat(v('az-fido'))||az.fido||200000;
-  az.fidoUsato=parseFloat(v('az-fidoUsato'))||0; az.cassa=parseFloat(v('az-cassa'))||0;
-  az.soglia=parseFloat(v('az-soglia'))||20000; az.tasso=parseFloat(v('az-tasso'))||5;
-  az.anno=parseInt(v('az-anno'))||new Date().getFullYear();
-  save(); closeModal('mImpostazioniAz'); switchAzTab('cruscotto'); toast('✅ Impostazioni salvate!');
+
+function renderOrdini(c){
+  const ordini=(c.ordini||[]).slice().sort((a,b)=>new Date(b.data)-new Date(a.data));
+  const fE=n=>n>0?fmtEur(n):'—';
+  const tStim=ordini.filter(o=>o.stato!=='annullato').reduce((s,o)=>s+(+o.importoStimato||0),0);
+  const tReale=ordini.filter(o=>o.stato!=='annullato'&&o.importoReale>0).reduce((s,o)=>s+(+o.importoReale||0),0);
+  if(!ordini.length)return`<div style="padding:20px"><div class="empty"><div class="empty-ic">📦</div><div class="empty-txt">Nessun ordine.<br>Registra il primo ordine fornitore!</div></div><button onclick="openModal('mNuovoOrdine')" class="btn-prim" style="margin-top:12px">+ Nuovo ordine</button></div>`;
+  const sBar=Object.entries(STATI_ORDINE).map(([k,s])=>{const n=(ordini.filter(o=>o.stato===k)).length;if(!n)return'';return`<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:${s.bg};border-radius:6px;border:1px solid ${s.border}"><span>${s.ic}</span><span style="font-size:10px;font-weight:600;color:${s.color}">${n} ${s.label}</span></div>`;}).join('');
+  const rows=ordini.map(ord=>{const s=STATI_ORDINE[ord.stato]||STATI_ORDINE.in_attesa,cap=(c.capitoli||[]).find(cap=>cap.id===ord.capId),delta=ord.importoReale>0&&ord.importoStimato>0?ord.importoReale-ord.importoStimato:0;
+    return`<div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);overflow:hidden"><div style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer" onclick="apriDettaglioOrdine('${ord.id}')"><div style="width:36px;height:36px;border-radius:8px;background:${s.bg};border:1px solid ${s.border};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${s.ic}</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">${esc(ord.fornitore)}</div><div style="font-size:11px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(ord.desc)}</div><div style="display:flex;gap:8px;margin-top:2px;flex-wrap:wrap"><span style="font-size:10px;color:${s.color};font-weight:600">${s.label}</span>${cap?`<span style="font-size:10px;color:var(--soft)">· ${esc(cap.nome)}</span>`:''}<span style="font-size:10px;color:var(--soft)">· ${ord.data}</span></div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:700;color:var(--g1)">${fE(+ord.importoReale||+ord.importoStimato||0)}</div>${delta!==0?`<div style="font-size:10px;color:${delta>0?'var(--red)':'var(--g2)'}">${delta>0?'+':''}${fmtEur(delta)}</div>`:''}</div></div><div style="display:flex;gap:6px;padding:6px 14px 10px"><button onclick="_ordineId='${ord.id}';inviaOrdineFornitore()" style="flex:1;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:6px;padding:6px;font-size:10px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">📧 Invia</button><button onclick="apriDettaglioOrdine('${ord.id}')" style="flex:1;background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:6px;padding:6px;font-size:10px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">✏️ Aggiorna</button><button onclick="eliminaOrdine('${ord.id}')" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:6px;padding:6px 10px;font-size:10px;cursor:pointer;font-family:'Nunito',sans-serif">🗑</button></div></div>`;
+  }).join('');
+  return`<div><div style="margin:12px 10px;display:grid;grid-template-columns:1fr 1fr;gap:8px"><div style="background:var(--g6);border-radius:var(--r-sm);padding:10px;text-align:center"><div style="font-size:9px;color:var(--g2);font-weight:700;text-transform:uppercase;margin-bottom:3px">Stimato</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--g1)">${fmtEur(tStim)}</div></div><div style="background:var(--s1);border-radius:var(--r-sm);padding:10px;text-align:center"><div style="font-size:9px;color:var(--soft);font-weight:700;text-transform:uppercase;margin-bottom:3px">Reale</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700">${tReale?fmtEur(tReale):'—'}</div></div></div><div style="padding:0 10px 8px;display:flex;flex-wrap:wrap;gap:6px">${sBar}</div><div style="padding:4px 10px 6px;display:flex;align-items:center;justify-content:space-between"><div style="font-size:11px;font-weight:700;color:var(--soft);text-transform:uppercase">Ordini (${ordini.length})</div><button onclick="openModal('mNuovoOrdine')" style="background:var(--g1);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">+ Nuovo</button></div>${rows}</div>`;
 }
-function apriImpostazioniAz() {
-  const az=getAzienda();
-  $('az-nome').value=az.nome||''; $('az-fido').value=az.fido||200000; $('az-fidoUsato').value=az.fidoUsato||0;
-  $('az-cassa').value=az.cassa||0; $('az-soglia').value=az.soglia||20000;
-  $('az-tasso').value=az.tasso||5; $('az-anno').value=az.anno||new Date().getFullYear();
-  openModal('mImpostazioniAz');
-}
-function _popolaScadCantiere() {
-  const sel=$('scad-cantiere'); if(!sel) return;
-  sel.innerHTML='<option value="">-- Nessuno --</option>';
-  S.cantieri.forEach(c=>{ const o=document.createElement('option');o.value=c.id;o.textContent=c.nome.slice(0,30);sel.appendChild(o); });
-}
+
 </script>
 </body>
 </html>
