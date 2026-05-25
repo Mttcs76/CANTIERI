@@ -481,7 +481,6 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
       <button class="tab" id="t-operai" onclick="switchTab('operai')">👷 Operai <span class="tab-cnt" id="cnt-operai">0</span></button>
       <button class="tab" id="t-foto" onclick="switchTab('foto')">📷 Foto <span class="tab-cnt" id="cnt-foto">0</span></button>
       <button class="tab" id="t-margini" onclick="switchTab('margini')">📊 Margini</button>
-      <button class="tab" id="t-ordini" onclick="switchTab('ordini')">📦 Ordini <span class="tab-cnt" id="cnt-ordini">0</span></button>
       <button class="tab" id="t-documenti" onclick="switchTab('documenti')">🗂️ Docs <span class="tab-cnt" id="cnt-documenti">0</span></button>
     </div>
     <div id="detContent"></div>
@@ -499,7 +498,6 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
   <button class="nav-btn" id="n-operai" onclick="switchTab('operai')"><span class="nav-ic">👷</span><span class="nav-lb">Operai</span></button>
   <button class="nav-btn" id="n-foto" onclick="switchTab('foto')"><span class="nav-ic">📷</span><span class="nav-lb">Foto</span></button>
   <button class="nav-btn" id="n-margini" onclick="switchTab('margini')"><span class="nav-ic">📊</span><span class="nav-lb">Margini</span></button>
-  <button class="nav-btn" id="n-ordini" onclick="switchTab('ordini')"><span class="nav-ic">📦</span><span class="nav-lb">Ordini</span></button>
   <button class="nav-btn" id="n-documenti" onclick="switchTab('documenti')"><span class="nav-ic">🗂️</span><span class="nav-lb">Docs</span></button>
 </nav>
 
@@ -1022,64 +1020,6 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
   </div>
 </div>
 
-<!-- Nuovo Ordine -->
-<div class="overlay" id="mNuovoOrdine" onclick="closeOv(event,'mNuovoOrdine')">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">NUOVO ORDINE</div>
-    <div class="modal-body">
-      <div><label class="f-label">Fornitore *</label>
-        <input class="f-in" id="ord-fornitore" list="ord-fornitori-list" placeholder="es. Edilizia Rossi, Ferramenta Bianchi...">
-        <datalist id="ord-fornitori-list"></datalist>
-      </div>
-      <div><label class="f-label">Descrizione materiali *</label>
-        <textarea class="f-ta" id="ord-desc" rows="2" placeholder="es. 50 sacchi cemento Portland 325, guaina 4mm..."></textarea>
-      </div>
-      <div class="f-grid">
-        <div><label class="f-label">Importo stimato (€)</label><input class="f-in" type="number" id="ord-importo" step="0.01" placeholder="0"></div>
-        <div><label class="f-label">Data ordine</label><input class="f-in" type="date" id="ord-data"></div>
-        <div><label class="f-label">Consegna prevista</label><input class="f-in" type="date" id="ord-consegna"></div>
-        <div><label class="f-label">Capitolo</label>
-          <select class="f-sel" id="ord-cap">
-            <option value="">-- Nessun capitolo --</option>
-          </select>
-        </div>
-      </div>
-      <div><label class="f-label">Note / riferimento</label><input class="f-in" id="ord-note" placeholder="Riferimento preventivo, colori, misure speciali..."></div>
-      <!-- Invio -->
-      <div style="background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--r-sm);padding:10px 13px;font-size:12px;color:var(--blue);margin-top:4px">
-        📧 Dopo il salvataggio puoi inviare una copia al fornitore via email o WhatsApp
-      </div>
-      <button class="btn-prim" onclick="salvaOrdine()">SALVA ORDINE</button>
-    </div>
-  </div>
-</div>
-
-<!-- Dettaglio Ordine (aggiornamento stato / abbina DDT) -->
-<div class="overlay" id="mDettaglioOrdine" onclick="closeOv(event,'mDettaglioOrdine')">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">AGGIORNA ORDINE</div>
-    <div class="modal-body">
-      <div id="ord-detail-info" style="background:var(--s1);border-radius:var(--r-sm);padding:12px;font-size:12px;color:var(--text);margin-bottom:8px"></div>
-      <div><label class="f-label">Stato ordine</label>
-        <select class="f-sel" id="ord-stato-edit">
-          <option value="in_attesa">⏳ In attesa DDT</option>
-          <option value="consegnato">📦 Consegnato (DDT ricevuto)</option>
-          <option value="fatturato">🧾 Fatturato</option>
-          <option value="chiuso">✅ Chiuso</option>
-          <option value="annullato">❌ Annullato</option>
-        </select>
-      </div>
-      <div><label class="f-label">Importo reale (€) — da DDT o fattura</label><input class="f-in" type="number" id="ord-importo-reale" step="0.01" placeholder="0"></div>
-      <div><label class="f-label">Numero DDT / Fattura</label><input class="f-in" id="ord-rif-doc" placeholder="es. DDT 1234 / Fattura 567/2026"></div>
-      <div><label class="f-label">Note</label><input class="f-in" id="ord-note-edit" placeholder="Aggiornamento..."></div>
-      <button class="btn-prim" onclick="aggiornaOrdine()">SALVA AGGIORNAMENTO</button>
-      <button id="ord-invia-btn" style="width:100%;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:8px" onclick="inviaOrdineFornitore()">📧 Invia al fornitore</button>
-    </div>
-  </div>
-</div>
-
 <!-- LIGHTBOX -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <button class="lb-close" onclick="closeLightbox()">✕</button>
@@ -1375,7 +1315,7 @@ function switchTab(tab) {
 }
 
 function fabAction() {
-  const map = {computo:'mImportComputo',consuntivo:null,rapportini:'mRapportino',operai:'mOperaio',foto:'mFoto',ordini:'mNuovoOrdine',documenti:'mDocumento',margini:'mSpesaGenerale'};
+  const map = {computo:'mImportComputo',consuntivo:null,rapportini:'mRapportino',operai:'mOperaio',foto:'mFoto',documenti:'mDocumento',margini:'mSpesaGenerale'};
   if(map[S.tab]) openModal(map[S.tab]);
 }
 
@@ -1387,7 +1327,6 @@ function updateCounts() {
   $('cnt-operai').textContent = (c.operai||[]).length;
   $('cnt-foto').textContent = (c.foto||[]).length;
   $('cnt-documenti').textContent = (c.documenti||[]).length;
-  const cntOrd = $('cnt-ordini'); if(cntOrd) cntOrd.textContent = (c.ordini||[]).length;
 }
 
 // ════════════ MODALS ════════════
@@ -1441,23 +1380,6 @@ function openModal(id) {
         }).join('');
       }
     }
-  }
-  if(id==='mNuovoOrdine') {
-    const c = getCantiere();
-    // Popola capitoli
-    const sel = $('ord-cap');
-    if(sel && c) {
-      sel.innerHTML = '<option value="">-- Nessun capitolo --</option>';
-      (c.capitoli||[]).forEach(cap => { const o=document.createElement('option');o.value=cap.id;o.textContent=cap.nome;sel.appendChild(o); });
-    }
-    // Popola fornitori noti (datalist)
-    const dl = $('ord-fornitori-list');
-    if(dl) {
-      const fornitori = getFornitori();
-      dl.innerHTML = fornitori.map(f=>`<option value="${esc(f)}">`).join('');
-    }
-    const od=$('ord-data'); if(od&&!od.value) od.value=today();
-    _ordineId = null;
   }
   if(id==='mScadenza') { _popolaScadCantiere(); const sd=$('scad-data');if(sd&&!sd.value)sd.value=today(); setScadTipo(_scadTipo||'entrata'); }
   if(id==='mCostoFisso') { const sd=$('cf-scadenza');if(sd&&!sd.value)sd.value=today(); }
@@ -1627,7 +1549,6 @@ function renderTab(tab) {
     case 'operai':     el.innerHTML = renderOperai(c); break;
     case 'foto':       el.innerHTML = renderFoto(c); break;
     case 'margini':    el.innerHTML = renderMargini(c); break;
-    case 'ordini':     el.innerHTML = renderOrdini(c); break;
     case 'documenti':  el.innerHTML = renderDocumenti(c); break;
   }
 }
@@ -2024,7 +1945,7 @@ function saveCantiere() {
     pctCostiGenerali: parseFloat(v('nc-pctcg'))||18,
     targetMargine: parseFloat(v('nc-target'))||20,
     capitoli: [], rapportini: [], operai: [], foto: [], documenti: [],
-    speseGenerali: [], speseMateriali: [], ordini: [],
+    speseGenerali: [], speseMateriali: [],
     created: Date.now()
   });
   save(); closeModal('mNuovoCantiere');
@@ -3047,254 +2968,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initFirebase();
   setTimeout(checkWeeklyBackup, 4000);
 });
-
-  renderCantieri();
-  initFirebase();
-  setTimeout(checkWeeklyBackup, 4000);
-});
-
-// ════════════════════════════════════════════
-// MODULO ORDINI
-// ════════════════════════════════════════════
-let _ordineId = null; // ordine in editing
-
-// Fornitori noti — estratti dagli ordini esistenti
-function getFornitori() {
-  const tutti = S.cantieri.flatMap(c => (c.ordini||[]).map(o => o.fornitore)).filter(Boolean);
-  return [...new Set(tutti)].sort();
-}
-
-const STATI_ORDINE = {
-  in_attesa:  { label:'In attesa DDT',  ic:'⏳', color:'var(--amber)',    bg:'var(--amber-bg)',  border:'var(--amber-border)' },
-  consegnato: { label:'DDT ricevuto',   ic:'📦', color:'var(--blue)',     bg:'var(--blue-bg)',   border:'var(--blue-border)'  },
-  fatturato:  { label:'Fatturato',      ic:'🧾', color:'var(--soft)',     bg:'var(--s1)',        border:'var(--s2)'           },
-  chiuso:     { label:'Chiuso',         ic:'✅', color:'var(--g2)',       bg:'var(--g6)',        border:'var(--s3)'           },
-  annullato:  { label:'Annullato',      ic:'❌', color:'var(--red)',      bg:'var(--red-bg)',    border:'var(--red-border)'   },
-};
-
-function salvaOrdine() {
-  const fornitore = v('ord-fornitore').trim();
-  const desc = v('ord-desc').trim();
-  if(!fornitore){alert('Inserisci il fornitore');return;}
-  if(!desc){alert('Inserisci la descrizione materiali');return;}
-  const c = getCantiere(); if(!c) return;
-  c.ordini = c.ordini||[];
-  const ordine = {
-    id: uid(),
-    fornitore,
-    desc,
-    importoStimato: parseFloat(v('ord-importo'))||0,
-    importoReale: 0,
-    data: v('ord-data')||today(),
-    consegnaPrevista: v('ord-consegna')||'',
-    capId: v('ord-cap')||'',
-    note: v('ord-note')||'',
-    stato: 'in_attesa',
-    rifDoc: '',
-    storico: [{data: today(), evento:'Ordine creato', utente: S.uid||'Utente'}],
-    utente: S.uid||'Utente',
-    created: Date.now()
-  };
-  c.ordini.push(ordine);
-  save();
-  closeModal('mNuovoOrdine');
-  ['ord-fornitore','ord-desc','ord-importo','ord-data','ord-consegna','ord-note'].forEach(id=>{const el=$(id);if(el)el.value='';});
-  renderTab('ordini');
-  updateCounts();
-  toast('✅ Ordine salvato!');
-  // Propone subito di inviare al fornitore
-  setTimeout(()=>{
-    if(confirm('Vuoi inviare subito una copia dell\'ordine al fornitore?')) {
-      _ordineId = ordine.id;
-      inviaOrdineFornitore();
-    }
-  }, 400);
-}
-
-function apriDettaglioOrdine(ordId) {
-  const c = getCantiere(); if(!c) return;
-  const ord = (c.ordini||[]).find(o=>o.id===ordId);
-  if(!ord) return;
-  _ordineId = ordId;
-  // Popola info
-  const cap = (c.capitoli||[]).find(cap=>cap.id===ord.capId);
-  const info = $('ord-detail-info');
-  if(info) info.innerHTML = `
-    <div style="font-weight:700;font-size:13px;margin-bottom:6px">📦 ${esc(ord.fornitore)}</div>
-    <div style="color:var(--soft);margin-bottom:4px">${esc(ord.desc)}</div>
-    <div style="display:flex;gap:12px;font-size:11px;flex-wrap:wrap">
-      <span>📅 ${ord.data}</span>
-      ${ord.importoStimato?`<span>💰 Stimato: ${fmtEur(ord.importoStimato)}</span>`:''}
-      ${cap?`<span>🏗️ ${esc(cap.nome)}</span>`:''}
-    </div>`;
-  const sel = $('ord-stato-edit'); if(sel) sel.value = ord.stato||'in_attesa';
-  const ir = $('ord-importo-reale'); if(ir) ir.value = ord.importoReale||'';
-  const rd = $('ord-rif-doc'); if(rd) rd.value = ord.rifDoc||'';
-  const ne = $('ord-note-edit'); if(ne) ne.value = ord.note||'';
-  openModal('mDettaglioOrdine');
-}
-
-function aggiornaOrdine() {
-  const c = getCantiere(); if(!c||!_ordineId) return;
-  const ord = (c.ordini||[]).find(o=>o.id===_ordineId);
-  if(!ord) return;
-  const nuovoStato = v('ord-stato-edit');
-  const importoReale = parseFloat(v('ord-importo-reale'))||0;
-  // Aggiunge al log storico se cambia stato
-  if(nuovoStato !== ord.stato) {
-    ord.storico = ord.storico||[];
-    ord.storico.push({data:today(), evento:`Stato → ${STATI_ORDINE[nuovoStato]?.label||nuovoStato}`, utente:S.uid||'Utente'});
-  }
-  ord.stato = nuovoStato;
-  ord.importoReale = importoReale;
-  ord.rifDoc = v('ord-rif-doc')||'';
-  ord.note = v('ord-note-edit')||'';
-  // Se consegnato o fatturato, aggiunge automaticamente come spesa materiali
-  if((nuovoStato==='consegnato'||nuovoStato==='fatturato') && importoReale>0) {
-    c.speseMateriali = c.speseMateriali||[];
-    const giàPresente = c.speseMateriali.find(s=>s.ordineId===_ordineId);
-    if(!giàPresente) {
-      c.speseMateriali.push({
-        id:uid(), ordineId:_ordineId,
-        desc:`${ord.fornitore} — ${ord.desc.slice(0,40)}`,
-        capId: ord.capId||'', cat:'Materiali',
-        importo: importoReale, data: today(),
-        note: ord.rifDoc||'', utente:S.uid||'Utente', created:Date.now()
-      });
-      toast('✅ Aggiornato e aggiunto ai costi materiali del cantiere!');
-    } else {
-      giàPresente.importo = importoReale;
-      toast('✅ Ordine e costi materiali aggiornati!');
-    }
-  } else {
-    toast('✅ Ordine aggiornato!');
-  }
-  save();
-  closeModal('mDettaglioOrdine');
-  renderTab('ordini');
-}
-
-function eliminaOrdine(ordId) {
-  if(!confirm('Eliminare questo ordine?')) return;
-  const c = getCantiere(); if(!c) return;
-  c.ordini = (c.ordini||[]).filter(o=>o.id!==ordId);
-  save(); renderTab('ordini'); updateCounts(); toast('Ordine eliminato');
-}
-
-function inviaOrdineFornitore() {
-  const c = getCantiere(); if(!c||!_ordineId) return;
-  const ord = (c.ordini||[]).find(o=>o.id===_ordineId); if(!ord) return;
-  const cap = (c.capitoli||[]).find(cap=>cap.id===ord.capId);
-  const dataConsegna = ord.consegnaPrevista ? `\nConsegna prevista: ${ord.consegnaPrevista}` : '';
-  const capitolo = cap ? `\nCapitolo: ${cap.nome}` : '';
-  const body = encodeURIComponent(
-`Gentile ${ord.fornitore},
-
-con la presente confermiamo l'ordine per i seguenti materiali/servizi:
-
-${ord.desc}
-${ord.importoStimato>0?`Importo stimato: ${fmtEur(ord.importoStimato)}`:''}
-Data ordine: ${ord.data}${dataConsegna}${capitolo}
-Cantiere: ${c.nome}
-${ord.note?`Note: ${ord.note}`:''}
-
-Si prega di allegare DDT alla consegna intestato a:
-Tecnobase Restauri Srl
-
-Cordiali saluti,
-${S.uid||'Tecnobase Restauri'}
-`);
-  const subject = encodeURIComponent(`Ordine materiali — ${c.nome} — ${ord.data}`);
-  // Apre scelta: email o WhatsApp
-  const whatsappText = encodeURIComponent(`Ordine materiali per ${c.nome}:\n${ord.desc}\n${ord.importoStimato>0?`Importo stimato: ${fmtEur(ord.importoStimato)}`:''}${dataConsegna}\nGrazie, ${S.uid||'TB Restauri'}`);
-  // Mostra opzioni
-  const scelta = confirm('Come vuoi inviare l\'ordine?\n\nOK = Email\nAnnulla = WhatsApp');
-  if(scelta) {
-    window.location.href = `mailto:?subject=${subject}&body=${body}`;
-  } else {
-    window.open(`https://wa.me/?text=${whatsappText}`, '_blank');
-  }
-}
-
-function renderOrdini(c) {
-  const ordini = (c.ordini||[]).slice().sort((a,b)=>new Date(b.data)-new Date(a.data));
-  const fmtE = n => n>0 ? fmtEur(n) : '—';
-
-  // Riepilogo stati
-  const conteggioStati = {};
-  ordini.forEach(o=>{ conteggioStati[o.stato]=(conteggioStati[o.stato]||0)+1; });
-  const totStimato = ordini.filter(o=>o.stato!=='annullato').reduce((s,o)=>s+(+o.importoStimato||0),0);
-  const totReale = ordini.filter(o=>o.stato!=='annullato'&&o.importoReale>0).reduce((s,o)=>s+(+o.importoReale||0),0);
-
-  if(!ordini.length) {
-    return `<div style="padding:20px">
-      <div class="empty"><div class="empty-ic">📦</div>
-        <div class="empty-txt">Nessun ordine ancora.<br>Registra il primo ordine fornitore!</div>
-      </div>
-      <button onclick="openModal('mNuovoOrdine')" class="btn-prim" style="margin-top:12px">+ Nuovo ordine</button>
-    </div>`;
-  }
-
-  const statoBar = Object.entries(STATI_ORDINE).map(([k,s])=>{
-    const n = conteggioStati[k]||0; if(!n) return '';
-    return `<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:${s.bg};border-radius:6px;border:1px solid ${s.border}">
-      <span style="font-size:14px">${s.ic}</span>
-      <span style="font-size:11px;font-weight:600;color:${s.color}">${n} ${s.label}</span>
-    </div>`;
-  }).join('');
-
-  const rows = ordini.map(ord=>{
-    const s = STATI_ORDINE[ord.stato]||STATI_ORDINE.in_attesa;
-    const cap = (c.capitoli||[]).find(cap=>cap.id===ord.capId);
-    const delta = ord.importoReale>0&&ord.importoStimato>0 ? ord.importoReale-ord.importoStimato : 0;
-    return `<div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);overflow:hidden">
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer" onclick="apriDettaglioOrdine('${ord.id}')">
-        <div style="width:36px;height:36px;border-radius:8px;background:${s.bg};border:1px solid ${s.border};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${s.ic}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(ord.fornitore)}</div>
-          <div style="font-size:11px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(ord.desc)}</div>
-          <div style="display:flex;gap:8px;margin-top:2px;flex-wrap:wrap">
-            <span style="font-size:10px;color:${s.color};font-weight:600">${s.label}</span>
-            ${cap?`<span style="font-size:10px;color:var(--soft)">· ${esc(cap.nome)}</span>`:''}
-            <span style="font-size:10px;color:var(--soft)">· ${ord.data}</span>
-          </div>
-        </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:13px;font-weight:700;color:var(--g1)">${fmtE(+ord.importoReale||+ord.importoStimato||0)}</div>
-          ${delta!==0?`<div style="font-size:10px;color:${delta>0?'var(--red)':'var(--g2)'}">${delta>0?'+':''}${fmtEur(delta)}</div>`:''}
-        </div>
-      </div>
-      ${ord.rifDoc?`<div style="padding:4px 14px 8px;font-size:10px;color:var(--soft)">📄 ${esc(ord.rifDoc)}</div>`:''}
-      <div style="display:flex;gap:6px;padding:6px 14px 10px">
-        <button onclick="_ordineId='${ord.id}';inviaOrdineFornitore()" style="flex:1;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:6px;padding:6px;font-size:10px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">📧 Invia</button>
-        <button onclick="apriDettaglioOrdine('${ord.id}')" style="flex:1;background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:6px;padding:6px;font-size:10px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">✏️ Aggiorna</button>
-        <button onclick="eliminaOrdine('${ord.id}')" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:6px;padding:6px 10px;font-size:10px;cursor:pointer;font-family:'Nunito',sans-serif">🗑</button>
-      </div>
-    </div>`;
-  }).join('');
-
-  return `<div>
-    <!-- KPI riepilogo -->
-    <div style="margin:12px 10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div style="background:var(--g6);border-radius:var(--r-sm);padding:10px;text-align:center">
-        <div style="font-size:9px;color:var(--g2);font-weight:700;text-transform:uppercase;margin-bottom:3px">Importo stimato</div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--g1)">${fmtEur(totStimato)}</div>
-      </div>
-      <div style="background:${totReale>totStimato&&totStimato>0?'var(--red-bg)':'var(--s1)'};border-radius:var(--r-sm);padding:10px;text-align:center">
-        <div style="font-size:9px;color:var(--soft);font-weight:700;text-transform:uppercase;margin-bottom:3px">Importo reale</div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--text)">${fmtEur(totReale)||'—'}</div>
-      </div>
-    </div>
-    <!-- Stato bar -->
-    <div style="padding:0 10px 8px;display:flex;gap:6px;flex-wrap:wrap">${statoBar}</div>
-    <!-- Lista ordini -->
-    <div style="padding:0 0 4px;display:flex;align-items:center;justify-content:space-between;padding:4px 10px 6px">
-      <div style="font-size:11px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.5px">Ordini (${ordini.length})</div>
-      <button onclick="openModal('mNuovoOrdine')" style="background:var(--g1);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">+ Nuovo</button>
-    </div>
-    ${rows}
-  </div>`;
-}
 
 // ════════════════════════════════════════════
 // MODULO AZIENDA
