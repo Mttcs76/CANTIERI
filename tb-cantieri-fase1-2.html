@@ -142,7 +142,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
 .tb-user{margin-left:auto;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:50%;width:34px;height:34px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 
 /* ── LAYOUT ── */
-.app-body{flex:1;overflow:hidden;display:flex;flex-direction:column;max-width:800px;margin:0 auto;width:100%}
+.app-body{flex:1;overflow:hidden;display:flex;flex-direction:column;max-width:800px;margin:0 auto;width:100%;position:relative}
 .screen{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:72px}
 .screen::-webkit-scrollbar{width:4px}
 .screen::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px}
@@ -365,18 +365,17 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
     <div id="fbDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.3)"></div>
     <span id="fbLabel">locale</span>
   </div>
-  <button onclick="openAzienda()" title="Gestione Aziendale" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer;margin-right:4px">💼</button>
   <button class="tb-user" id="userBtn" onclick="openUserMenu()" title="Menu utente">?</button>
 </div>
 
 <!-- User menu dropdown -->
 <div id="userMenu" style="display:none;position:fixed;top:66px;right:10px;background:#fff;border-radius:var(--r);box-shadow:var(--shadow-md);border:1px solid var(--s2);z-index:100;min-width:210px;overflow:hidden">
   <div id="userMenuName" style="padding:12px 16px;font-size:13px;color:var(--soft);border-bottom:1px solid var(--s2)">Utente</div>
-  <button onclick="closeUserMenu();openModal('mOperaioGlobale')" style="width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-size:13px;color:var(--text);cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--s1)">👷 Anagrafica operai</button>
-  <button onclick="closeUserMenu();openModal('mBackup')" style="width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-size:13px;color:var(--text);cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--s1)">💾 Backup e ripristino</button>
-  <button onclick="closeUserMenu();openModal('mPassword')" style="width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-size:13px;color:var(--text);cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--s1)">🔑 Cambia password</button>
-  <button onclick="closeUserMenu();changeUser()" style="width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-size:13px;color:var(--text);cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--s1)">✏️ Cambia nome utente</button>
-  <button onclick="closeUserMenu();doLogout()" style="width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-size:13px;color:var(--red);cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:10px">🚪 Esci</button>
+  <button onclick="closeUserMenu();openModal('mOperaioGlobale')" style="width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-size:13px;color:var(--text);cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--s1)"><svg width="16" height="16" viewBox="0 0 48 48" fill="none" style="flex-shrink:0"><path d="M12 22 Q12 8 24 8 Q36 8 36 22 Z" fill="#1a4a2e"/><rect x="10" y="21" width="28" height="4" rx="2" fill="#1a4a2e"/><path d="M13 25 Q13 32 24 32 Q35 32 35 25" fill="#1a4a2e"/><path d="M8 48 L8 38 Q8 34 14 33 L18 32 Q20 36 24 36 Q28 36 30 32 L34 33 Q40 34 40 38 L40 48 Z" fill="#1a4a2e"/><path d="M18 34 L20 42 L28 42 L30 34 Q27 36 24 36 Q21 36 18 34 Z" fill="#52b788"/></svg> Anagrafica operai</button>
+  <button onclick="closeUserMenu();openModal('mBackup')" style="width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-size:13px;color:var(--text);cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--s1)"><svg width="16" height="16" viewBox="0 0 48 48" fill="none" style="flex-shrink:0"><rect x="6" y="6" width="36" height="36" rx="3" fill="#1a4a2e"/><rect x="12" y="6" width="20" height="16" rx="2" fill="#2d6a4f"/><rect x="18" y="8" width="8" height="12" rx="1" fill="#52b788"/><rect x="10" y="28" width="28" height="12" rx="2" fill="#2d6a4f"/><rect x="16" y="31" width="16" height="6" rx="1" fill="#52b788"/></svg> Backup e ripristino</button>
+  <button onclick="closeUserMenu();openModal('mPassword')" style="width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-size:13px;color:var(--text);cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--s1)"><svg width="16" height="16" viewBox="0 0 48 48" fill="none" style="flex-shrink:0"><circle cx="18" cy="20" r="10" stroke="#1a4a2e" stroke-width="4" fill="none"/><circle cx="18" cy="20" r="4" fill="#1a4a2e"/><rect x="26" y="18" width="18" height="5" rx="2" fill="#1a4a2e"/><rect x="38" y="23" width="5" height="7" rx="2" fill="#1a4a2e"/><rect x="31" y="23" width="5" height="5" rx="2" fill="#1a4a2e"/></svg> Cambia password</button>
+  <button onclick="closeUserMenu();changeUser()" style="width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-size:13px;color:var(--text);cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--s1)"><svg width="16" height="16" viewBox="0 0 48 48" fill="none" style="flex-shrink:0"><path d="M34 8 L40 14 L16 38 L8 40 L10 32 Z" fill="#1a4a2e"/><line x1="28" y1="14" x2="34" y2="20" stroke="#52b788" stroke-width="2"/></svg> Cambia nome utente</button>
+  <button onclick="closeUserMenu();doLogout()" style="width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-size:13px;color:var(--red);cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:10px"><svg width="16" height="16" viewBox="0 0 48 48" fill="none" style="flex-shrink:0"><rect x="10" y="6" width="22" height="36" rx="2" fill="#1a4a2e"/><rect x="14" y="10" width="14" height="28" rx="1" fill="#2d6a4f"/><circle cx="22" cy="24" r="2" fill="#52b788"/><line x1="30" y1="18" x2="42" y2="24" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/><line x1="42" y1="24" x2="30" y2="30" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/><line x1="26" y1="24" x2="42" y2="24" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/></svg> Esci</button>
 </div>
 
 <!-- APP BODY -->
@@ -389,7 +388,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
       <!-- IMPRESA -->
       <div style="background:#fff;border-radius:14px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden">
         <div onclick="toggleHomeSection('impresa')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none">
-          <div style="width:36px;height:36px;border-radius:10px;background:#e8f0ff;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">💼</div>
+          <div style="width:36px;height:36px;border-radius:10px;background:#e8f5ed;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="24" height="24" viewBox="0 0 48 48" fill="none"><polygon points="24,4 44,22 4,22" fill="#1a4a2e"/><rect x="7" y="22" width="34" height="22" fill="#1a4a2e"/><rect x="18" y="30" width="12" height="14" rx="1" fill="#d8f3dc"/></svg></div>
           <span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:.4px;flex:1">IMPRESA</span>
           <span id="arr-impresa" style="color:var(--s4);font-size:12px;transition:transform .25s">▼</span>
         </div>
@@ -399,10 +398,10 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
             <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--s1);border-radius:10px"><span style="font-size:11px;color:var(--soft);font-weight:600">CG fissi / mese</span><span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--s3);background:var(--s3);border-radius:5px">€ ••••</span></div>
             <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--s1);border-radius:10px"><span style="font-size:11px;color:var(--soft);font-weight:600">Scadenze 30gg</span><span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--s3);background:var(--s3);border-radius:5px">€ ••••</span></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px">
-              <button onclick="openAzienda();switchAzTab('cruscotto')" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">📊 Cruscotto</button>
-              <button onclick="openAzienda();switchAzTab('scadenziario')" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">📅 Scadenze</button>
-              <button onclick="openAzienda();switchAzTab('costi')" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">💼 Costi fissi</button>
-              <button onclick="openAzienda();switchAzTab('previsionale')" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">📈 Previsionale</button>
+              <button onclick="openAziendaTab('cruscotto')" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">Cruscotto</button>
+              <button onclick="openAziendaTab('scadenziario')" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">Scadenze</button>
+              <button onclick="openAziendaTab('costi')" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">Costi fissi</button>
+              <button onclick="openAziendaTab('previsionale')" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">Previsionale</button>
             </div>
           </div>
         </div>
@@ -411,7 +410,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
       <!-- CANTIERI -->
       <div style="background:#fff;border-radius:14px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden">
         <div onclick="toggleHomeSection('cantieri')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none">
-          <div style="width:36px;height:36px;border-radius:10px;background:#fff3e0;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🏗️</div>
+          <div style="width:36px;height:36px;border-radius:10px;background:#e8f5ed;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="24" height="24" viewBox="0 0 48 48" fill="none"><rect x="4" y="8" width="40" height="4" rx="1" fill="#1a4a2e"/><rect x="6" y="12" width="8" height="5" rx="1" fill="#1a4a2e"/><rect x="19" y="8" width="6" height="29" rx="1" fill="#1a4a2e"/><line x1="19" y1="14" x2="25" y2="20" stroke="#52b788" stroke-width="1.5"/><line x1="25" y1="14" x2="19" y2="20" stroke="#52b788" stroke-width="1.5"/><line x1="19" y1="22" x2="25" y2="28" stroke="#52b788" stroke-width="1.5"/><line x1="25" y1="22" x2="19" y2="28" stroke="#52b788" stroke-width="1.5"/><line x1="36" y1="12" x2="36" y2="22" stroke="#1a4a2e" stroke-width="2"/><rect x="32" y="22" width="8" height="3" rx="1.5" fill="#1a4a2e"/><path d="M36 25 Q40 28 39 32 Q38 36 35 36 Q32 35 32 32" stroke="#1a4a2e" stroke-width="2.5" fill="none" stroke-linecap="round"/><rect x="15" y="36" width="16" height="4" rx="1" fill="#1a4a2e"/><rect x="11" y="40" width="24" height="5" rx="1.5" fill="#1a4a2e"/></svg></div>
           <span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:.4px;flex:1">CANTIERI</span>
           <span id="home-cant-badge" style="background:var(--g6);color:var(--g1);font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;margin-right:4px">0</span>
           <button onclick="event.stopPropagation();openModal('mNuovoCantiere')" style="background:var(--g1);color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;flex-shrink:0">+ Nuovo</button>
@@ -425,7 +424,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
       <!-- OPERAI -->
       <div style="background:#fff;border-radius:14px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden">
         <div onclick="toggleHomeSection('operai')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none">
-          <div style="width:36px;height:36px;border-radius:10px;background:#e8f5ed;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">👷</div>
+          <div style="width:36px;height:36px;border-radius:10px;background:#e8f5ed;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="24" height="24" viewBox="0 0 48 48" fill="none"><path d="M8 26 Q8 8 24 8 Q40 8 40 26 Z" fill="#1a4a2e"/><path d="M24 8 Q26 16 26 26 L22 26 Q22 16 24 8 Z" fill="#2d6a4f"/><rect x="4" y="24" width="40" height="6" rx="3" fill="#1a4a2e"/><path d="M12 30 Q12 36 24 36 Q36 36 36 30" fill="#1a4a2e"/></svg></div>
           <span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:.4px;flex:1">OPERAI</span>
           <span id="homeOpCount" style="background:var(--g6);color:var(--g1);font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;margin-right:4px">0</span>
           <button onclick="event.stopPropagation();openModal('mOperaioGlobale')" style="background:var(--g1);color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;flex-shrink:0">+ Aggiungi</button>
@@ -444,23 +443,22 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
       <!-- IMPOSTAZIONI -->
       <div style="background:#fff;border-radius:14px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden">
         <div onclick="toggleHomeSection('impost')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none">
-          <div style="width:36px;height:36px;border-radius:10px;background:#f3f3f3;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">⚙️</div>
+          <div style="width:36px;height:36px;border-radius:10px;background:#e8f5ed;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="24" height="24" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="6" y1="14" x2="42" y2="14" stroke="#1a4a2e" stroke-width="3.5" stroke-linecap="round"/><circle cx="16" cy="14" r="7" fill="#1a4a2e"/><circle cx="16" cy="14" r="3.5" fill="#f0f5f2"/><line x1="6" y1="26" x2="42" y2="26" stroke="#1a4a2e" stroke-width="3.5" stroke-linecap="round"/><circle cx="32" cy="26" r="7" fill="#1a4a2e"/><circle cx="32" cy="26" r="3.5" fill="#f0f5f2"/><line x1="6" y1="38" x2="42" y2="38" stroke="#1a4a2e" stroke-width="3.5" stroke-linecap="round"/><circle cx="20" cy="38" r="7" fill="#1a4a2e"/><circle cx="20" cy="38" r="3.5" fill="#f0f5f2"/></svg></div>
           <span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:.4px;flex:1">IMPOSTAZIONI</span>
           <span id="arr-impost" style="color:var(--s4);font-size:12px;transition:transform .25s">▼</span>
         </div>
         <div id="body-impost" style="max-height:0;overflow:hidden;transition:max-height .35s ease">
           <div style="border-top:1px solid var(--s1);padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <button onclick="openModal('mPassword')" style="background:#f5f8f5;border:1px solid var(--s2);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="font-size:20px">🔑</span><span style="font-size:9px;font-weight:700;color:var(--text)">Password</span></button>
-            <button onclick="openModal('mBackup')" style="background:#f5f8f5;border:1px solid var(--s2);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="font-size:20px">💾</span><span style="font-size:9px;font-weight:700;color:var(--text)">Backup</span></button>
-            <button onclick="changeUser()" style="background:#f5f8f5;border:1px solid var(--s2);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="font-size:20px">👤</span><span style="font-size:9px;font-weight:700;color:var(--text)">Utente</span></button>
-            <button onclick="doLogout()" style="background:#fff0f0;border:1px solid var(--red-border);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="font-size:20px">🚪</span><span style="font-size:9px;font-weight:700;color:var(--red)">Esci</span></button>
+            <button onclick="openModal('mPassword')" style="background:#f5f8f5;border:1px solid var(--s2);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 48 48" fill="none"><circle cx="18" cy="20" r="10" stroke="#1a4a2e" stroke-width="4" fill="none"/><circle cx="18" cy="20" r="4" fill="#1a4a2e"/><rect x="26" y="18" width="18" height="5" rx="2" fill="#1a4a2e"/><rect x="38" y="23" width="5" height="7" rx="2" fill="#1a4a2e"/><rect x="31" y="23" width="5" height="5" rx="2" fill="#1a4a2e"/></svg></span><span style="font-size:9px;font-weight:700;color:var(--text)">Password</span></button>
+            <button onclick="openModal('mBackup')" style="background:#f5f8f5;border:1px solid var(--s2);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 48 48" fill="none"><rect x="6" y="6" width="36" height="36" rx="3" fill="#1a4a2e"/><rect x="12" y="6" width="20" height="16" rx="2" fill="#2d6a4f"/><rect x="18" y="8" width="8" height="12" rx="1" fill="#52b788"/><rect x="10" y="28" width="28" height="12" rx="2" fill="#2d6a4f"/><rect x="16" y="31" width="16" height="6" rx="1" fill="#52b788"/></svg></span><span style="font-size:9px;font-weight:700;color:var(--text)">Backup</span></button>
+            <button onclick="changeUser()" style="background:#f5f8f5;border:1px solid var(--s2);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="16" r="9" fill="#1a4a2e"/><path d="M8 42 C8 30 40 30 40 42" fill="#1a4a2e"/></svg></span><span style="font-size:9px;font-weight:700;color:var(--text)">Utente</span></button>
+            <button onclick="doLogout()" style="background:#fff0f0;border:1px solid var(--red-border);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 48 48" fill="none"><rect x="10" y="6" width="22" height="36" rx="2" fill="#1a4a2e"/><rect x="14" y="10" width="14" height="28" rx="1" fill="#2d6a4f"/><line x1="30" y1="18" x2="42" y2="24" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/><line x1="42" y1="24" x2="30" y2="30" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/><line x1="26" y1="24" x2="42" y2="24" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/></svg></span><span style="font-size:9px;font-weight:700;color:var(--red)">Esci</span></button>
           </div>
         </div>
       </div>
 
     </div>
   </div>
-
   <!-- SCREEN DETTAGLIO -->
   <div class="screen" id="scrDettaglio" style="display:none">
     <div class="tabs" id="detTabs">
@@ -945,14 +943,14 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
 </div>
 
 <!-- SCREEN AZIENDA -->
-<div class="screen" id="scrAzienda" style="display:none;flex-direction:column;width:100%;overflow-x:hidden">
-  <div style="display:flex;border-bottom:2px solid var(--s2);background:#fff;flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch">
-    <button id="azt-cruscotto" onclick="switchAzTab('cruscotto')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--g1);cursor:pointer;font-family:'Nunito',sans-serif;border-bottom:2px solid var(--g1);margin-bottom:-2px;white-space:nowrap;min-width:70px">📊 Cruscotto</button>
-    <button id="azt-costi" onclick="switchAzTab('costi')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:70px">💼 Costi</button>
-    <button id="azt-scadenziario" onclick="switchAzTab('scadenziario')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:80px">📅 Scadenze</button>
-    <button id="azt-previsionale" onclick="switchAzTab('previsionale')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:80px">📈 Previs.</button>
+<div id="scrAzienda" style="display:none;overflow-y:auto;overflow-x:hidden;position:absolute;left:0;right:0;bottom:0">
+  <div id="azContent" style="padding-bottom:60px"></div>
+  <div style="display:flex;border-top:2px solid var(--s2);background:#fff;position:fixed;bottom:0;left:0;right:0;z-index:50">
+    <button id="azt-cruscotto" onclick="switchAzTab('cruscotto')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--g1);cursor:pointer;font-family:'Nunito',sans-serif;border-top:2px solid var(--g1);margin-top:-2px;white-space:nowrap;min-width:70px"><svg width="14" height="14" viewBox="0 0 48 48" fill="none" style="flex-shrink:0"><rect x="6" y="26" width="10" height="16" rx="1" fill="currentColor"/><rect x="19" y="18" width="10" height="24" rx="1" fill="currentColor"/><rect x="32" y="10" width="10" height="32" rx="1" fill="currentColor"/></svg> Cruscotto</button>
+    <button id="azt-costi" onclick="switchAzTab('costi')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:70px">Costi</button>
+    <button id="azt-scadenziario" onclick="switchAzTab('scadenziario')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:80px"><svg width="14" height="14" viewBox="0 0 48 48" fill="none" style="flex-shrink:0"><rect x="6" y="8" width="36" height="34" rx="3" fill="currentColor"/><rect x="14" y="4" width="4" height="10" rx="2" fill="currentColor"/><rect x="30" y="4" width="4" height="10" rx="2" fill="currentColor"/><rect x="12" y="22" width="24" height="3" rx="1.5" fill="white" opacity=".5"/><rect x="12" y="30" width="16" height="3" rx="1.5" fill="white" opacity=".5"/></svg> Scadenze</button>
+    <button id="azt-previsionale" onclick="switchAzTab('previsionale')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:80px">Previs.</button>
   </div>
-  <div id="azContent" style="flex:1;overflow-y:auto;overflow-x:hidden;width:100%;max-width:100%;box-sizing:border-box"></div>
 </div>
 
 <!-- Nuovo Costo Fisso -->
@@ -1589,8 +1587,8 @@ function renderCantieri() {
         <div class="c-stat"><div class="c-stat-n">${(c.foto||[]).length}</div><div class="c-stat-l">Foto</div></div>
       </div>
       <div style="padding:8px 14px;display:flex;gap:8px;border-top:1px solid var(--s1)" onclick="event.stopPropagation()">
-        <button onclick="exportCantierePDF('${c.id}')" style="flex:1;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:6px;padding:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">📄 Esporta PDF</button>
-        <button onclick="eliminaCantiere('${c.id}')" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:6px;padding:7px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">🗑 Elimina</button>
+        <button onclick="exportCantierePDF('${c.id}')" style="flex:1;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:6px;padding:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif"><svg width="13" height="13" viewBox="0 0 48 48" fill="none" style="flex-shrink:0"><path d="M10 4 H32 L42 14 V44 H10 Z" fill="currentColor"/><path d="M32 4 V14 H42" fill="none" stroke="currentColor" stroke-width="2"/><rect x="16" y="22" width="16" height="2.5" rx="1.25" fill="white" opacity=".6"/><rect x="16" y="28" width="12" height="2.5" rx="1.25" fill="white" opacity=".6"/><rect x="16" y="34" width="8" height="2.5" rx="1.25" fill="white" opacity=".6"/></svg> Esporta PDF</button>
+        <button onclick="eliminaCantiere('${c.id}')" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:6px;padding:7px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif"><svg width="13" height="13" viewBox="0 0 48 48" fill="none" style="flex-shrink:0"><rect x="6" y="12" width="36" height="4" rx="2" fill="currentColor"/><path d="M10 16 L12 44 H36 L38 16" fill="currentColor"/><rect x="18" y="6" width="12" height="6" rx="2" fill="currentColor"/><line x1="20" y1="24" x2="20" y2="38" stroke="white" stroke-width="2" opacity=".5"/><line x1="28" y1="24" x2="28" y2="38" stroke="white" stroke-width="2" opacity=".5"/></svg> Elimina</button>
       </div>
     </div>`;
   }).join('');
@@ -1672,7 +1670,7 @@ function renderComputo(c) {
     <div style="padding:10px 10px 4px;display:flex;gap:8px">
       <button onclick="openModal('mImportComputo')" style="flex:1;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif">📊 Aggiorna da Excel</button>
       <button onclick="openModal('mNuovaVoce')" style="flex:1;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif">+ Voce manuale</button>
-      <button onclick="exportComputo()" style="flex:1;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif">📄 PDF</button>
+      <button onclick="exportComputo()" style="flex:1;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif"><svg width="13" height="13" viewBox="0 0 48 48" fill="none" style="flex-shrink:0"><path d="M10 4 H32 L42 14 V44 H10 Z" fill="currentColor"/><path d="M32 4 V14 H42" fill="none" stroke="currentColor" stroke-width="2"/><rect x="16" y="22" width="16" height="2.5" rx="1.25" fill="white" opacity=".6"/><rect x="16" y="28" width="12" height="2.5" rx="1.25" fill="white" opacity=".6"/><rect x="16" y="34" width="8" height="2.5" rx="1.25" fill="white" opacity=".6"/></svg> PDF</button>
     </div>
     <div style="padding:4px 0">${caps}</div>
   </div>`;
@@ -1832,7 +1830,7 @@ function renderRapportini(c) {
 
   return `<div style="padding:8px 0">
     <div style="padding:4px 10px 8px">
-      <button onclick="exportAllRapportini()" style="width:100%;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif">📄 Esporta tutti in PDF</button>
+      <button onclick="exportAllRapportini()" style="width:100%;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif"><svg width="13" height="13" viewBox="0 0 48 48" fill="none" style="flex-shrink:0"><path d="M10 4 H32 L42 14 V44 H10 Z" fill="currentColor"/><path d="M32 4 V14 H42" fill="none" stroke="currentColor" stroke-width="2"/><rect x="16" y="22" width="16" height="2.5" rx="1.25" fill="white" opacity=".6"/><rect x="16" y="28" width="12" height="2.5" rx="1.25" fill="white" opacity=".6"/><rect x="16" y="34" width="8" height="2.5" rx="1.25" fill="white" opacity=".6"/></svg> Esporta tutti in PDF</button>
     </div>
     ${items.map(r => {
       // Ore operai in questo rapportino
@@ -1912,7 +1910,7 @@ function renderOperai(c) {
       <div class="kpi-box"><div class="kpi-n">${fmtEur(totCosto)}</div><div class="kpi-l">Costo manod.</div></div>
     </div>
     <div style="padding:8px 10px 4px">
-      <button onclick="exportPresenze()" style="width:100%;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif">📄 Esporta registro presenze PDF</button>
+      <button onclick="exportPresenze()" style="width:100%;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif"><svg width="13" height="13" viewBox="0 0 48 48" fill="none" style="flex-shrink:0"><path d="M10 4 H32 L42 14 V44 H10 Z" fill="currentColor"/><path d="M32 4 V14 H42" fill="none" stroke="currentColor" stroke-width="2"/><rect x="16" y="22" width="16" height="2.5" rx="1.25" fill="white" opacity=".6"/><rect x="16" y="28" width="12" height="2.5" rx="1.25" fill="white" opacity=".6"/><rect x="16" y="34" width="8" height="2.5" rx="1.25" fill="white" opacity=".6"/></svg> Esporta registro presenze PDF</button>
     </div>
     ${operai.map(op => {
       const righeOre = getOreOperaio(c, op.id).sort((a,b) => b.data.localeCompare(a.data));
@@ -3038,16 +3036,20 @@ function getAzienda() {
 function openAzienda() {
   closeUserMenu&&closeUserMenu();
   $('scrCantieri').style.display='none';$('scrDettaglio').style.display='none';
-  const az=$('scrAzienda'); az.style.display='flex'; az.style.flexDirection='column';
+  const az=$('scrAzienda');
+  const tb=$('topbar');
+  az.style.top = (tb ? tb.getBoundingClientRect().bottom + 'px' : '66px');
+  az.style.display='block';
   $('backBtn').classList.add('show');$('fab').classList.remove('show');$('bottomNav').style.display='none';
   $('tbSub').textContent='Gestione Aziendale'; switchAzTab('cruscotto');
 }
 function switchAzTab(tab) {
   ['cruscotto','costi','scadenziario','previsionale'].forEach(t=>{
     const b=$('azt-'+t); if(!b) return;
-    b.style.color=t===tab?'var(--g1)':'var(--soft)';
-    b.style.borderBottom=t===tab?'2px solid var(--g1)':'none';
-    b.style.marginBottom=t===tab?'-2px':'0';
+    b.style.color = t===tab ? 'var(--g1)' : 'var(--soft)';
+    b.style.borderTop = t===tab ? '2px solid var(--g1)' : 'none';
+    b.style.marginTop = t===tab ? '-2px' : '0';
+    b.style.fontWeight = t===tab ? '700' : '600';
   });
   const az=getAzienda(), el=$('azContent'); if(!el) return;
   switch(tab){case 'cruscotto':el.innerHTML=renderCruscotto(az);break;case 'costi':el.innerHTML=renderCostiFissi(az);break;case 'scadenziario':el.innerHTML=renderScadenziario(az);break;case 'previsionale':el.innerHTML=renderPrevisionale(az);break;}
@@ -3100,7 +3102,7 @@ function renderCruscotto(az) {
       <button onclick="switchAzTab('scadenziario');setTimeout(()=>openModal('mScadenza'),100)" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:12px 8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">📥 + Entrata</button>
       <button onclick="switchAzTab('scadenziario');setTimeout(()=>{setScadTipo('uscita');openModal('mScadenza')},100)" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:var(--r-sm);padding:12px 8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">📤 + Uscita</button>
       <button onclick="switchAzTab('costi');setTimeout(()=>openModal('mCostoFisso'),100)" style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);border-radius:var(--r-sm);padding:12px 8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">💼 + Costo fisso</button>
-      <button onclick="switchAzTab('previsionale')" style="background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:var(--r-sm);padding:12px 8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">📈 Previsionale</button>
+      <button onclick="switchAzTab('previsionale')" style="background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:var(--r-sm);padding:12px 8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif"><svg width="14" height="14" viewBox="0 0 48 48" fill="none" style="flex-shrink:0"><polyline points="6,38 16,24 26,30 42,10" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><polyline points="34,10 42,10 42,18" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg> Previsionale</button>
     </div>
   </div>`;
 }
