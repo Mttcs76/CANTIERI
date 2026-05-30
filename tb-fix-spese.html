@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TB — Fix Spese</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:sans-serif;background:#f0f5f2;padding:20px;color:#1a2e22}
+.card{background:#fff;border-radius:14px;border:1px solid #e2ede6;padding:20px;max-width:600px;margin:0 auto 16px}
+.btn{width:100%;background:#1a4a2e;color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px}
+.status{padding:12px;border-radius:8px;margin-top:10px;font-size:13px;font-weight:600;line-height:1.6}
+.ok{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
+.err{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.info{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2 style="font-size:18px;margin-bottom:8px">TB CANTIERI — FIX SPESE MATERIALI</h2>
+  <p style="font-size:13px;color:#6a9478;margin-bottom:12px">Sposta le spese da speseMateriali a speseGenerali in entrambi i cantieri, così appaiono subito nel tab Margini.</p>
+  <button class="btn" id="btn">Esegui fix su Firebase</button>
+  <div id="status" class="status info">Premi il pulsante per procedere.</div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+const fb = initializeApp({apiKey:"AIzaSyDvXu1k4kPWBDnmBZxDs6McM9fqntMMphw",authDomain:"tb-cantieri.firebaseapp.com",projectId:"tb-cantieri",storageBucket:"tb-cantieri.firebasestorage.app",messagingSenderId:"91212110377",appId:"1:91212110377:web:cbb842678fb0d311a79a38"});
+const db = getFirestore(fb);
+
+document.getElementById('btn').onclick = async function() {
+  const st = document.getElementById('status');
+  this.disabled = true;
+  st.className = 'status info';
+  st.textContent = 'Connessione a Firebase...';
+  try {
+    const snap = await getDoc(doc(db,'tbcantieri','shared'));
+    if (!snap.exists()) { st.className='status err'; st.textContent='Nessun dato trovato.'; return; }
+    const S = snap.data();
+    let movedF=0, movedB=0;
+
+    S.cantieri.forEach(c => {
+      const n = (c.nome||'').toLowerCase();
+      const isFont = n.includes('fontanasanta');
+      const isBorg = n.includes('borghetto');
+      if (!isFont && !isBorg) return;
+
+      c.speseGenerali = c.speseGenerali || [];
+      const mat = c.speseMateriali || [];
+      // Sposta solo quelle con utente Import TdC (quelle appena caricate)
+      const daRimuovere = [];
+      mat.forEach(s => {
+        if (s.utente === 'Import TdC') {
+          // Controlla duplicati in speseGenerali
+          const dup = c.speseGenerali.some(g => g.desc === s.desc && g.data === s.data);
+          if (!dup) {
+            c.speseGenerali.push({
+              id: s.id, desc: s.desc, cat: s.cat,
+              tipo: 'fixed', importo: s.importo,
+              data: s.data, note: s.note||'',
+              utente: s.utente, created: s.created
+            });
+            if (isFont) movedF++;
+            if (isBorg) movedB++;
+          }
+          daRimuovere.push(s.id);
+        }
+      });
+      c.speseMateriali = mat.filter(s => !daRimuovere.includes(s.id));
+    });
+
+    await setDoc(doc(db,'tbcantieri','shared'), S);
+    st.className = 'status ok';
+    st.innerHTML = 'FIX COMPLETATO!<br>' +
+      'Fontanasanta: ' + movedF + ' spese spostate<br>' +
+      'Borghetto: ' + movedB + ' spese spostate<br><br>' +
+      'Apri l\'app TB Cantieri, vai nel cantiere e ricarica la pagina. Le spese appariranno nella sezione Spese generali reali.';
+  } catch(e) {
+    st.className = 'status err';
+    st.textContent = 'Errore: ' + e.message;
+    document.getElementById('btn').disabled = false;
+  }
+};
+</script>
+</body>
+</html>
