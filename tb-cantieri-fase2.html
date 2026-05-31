@@ -409,9 +409,9 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
         </div>
         <div id="body-impresa" style="max-height:0;overflow:hidden;transition:max-height .3s ease">
           <div style="border-top:1px solid var(--s1);padding:12px 14px;display:flex;flex-direction:column;gap:8px">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--s1);border-radius:10px"><span style="font-size:11px;color:var(--soft);font-weight:600">Liquidità totale</span><span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--s3);background:var(--s3);border-radius:5px">€ ••••••</span></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--s1);border-radius:10px"><span style="font-size:11px;color:var(--soft);font-weight:600">CG fissi / mese</span><span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--s3);background:var(--s3);border-radius:5px">€ ••••</span></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--s1);border-radius:10px"><span style="font-size:11px;color:var(--soft);font-weight:600">Scadenze 30gg</span><span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--s3);background:var(--s3);border-radius:5px">€ ••••</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--s1);border-radius:10px"><span style="font-size:11px;color:var(--soft);font-weight:600">Saldo BTS</span><span id="kpi-saldo" style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--g1)">—</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--s1);border-radius:10px"><span style="font-size:11px;color:var(--soft);font-weight:600">CG totali</span><span id="kpi-cg" style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--red)">—</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--s1);border-radius:10px"><span style="font-size:11px;color:var(--soft);font-weight:600">Ricavi cantieri</span><span id="kpi-ricavi" style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--g2)">—</span></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px">
               <button onclick="openAzienda();switchAzTab('cruscotto')" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">📊 Cruscotto</button>
               <button onclick="openAzienda();switchAzTab('banca')" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">🏦 Banca</button>
@@ -1195,6 +1195,7 @@ async function initFirebase() {
         azienda: S.azienda, uid: S.uid, updated: Date.now()
       }));
       renderCantieri();
+      aggiornaKPIImpresa();
       toast('☁️ Dati sincronizzati da Firebase');
     } else if (S.cantieri.length > 0) {
       // Firebase vuoto — carica da locale e salva su Firebase
@@ -1227,7 +1228,7 @@ async function initFirebase() {
 
 function renderCurrentScreen() {
   if (S.cantiereId) { updateCounts(); renderTab(S.tab); }
-  else renderCantieri();
+  else { renderCantieri(); aggiornaKPIImpresa(); }
 }
 
 // ════════════ UTILS ════════════
@@ -3133,6 +3134,16 @@ function getCostiFissiMensili(az){
 function getRicaviCantieri(){
   return S.cantieri.reduce((s,c)=>s+(c.capitoli||[]).reduce((a,cap)=>a+(cap.voci||[]).reduce((b,v)=>{const q=v.qtyEff!==undefined&&v.qtyEff!==null?+v.qtyEff:+v.qty;return b+(q||0)*(+v.pu||0);},0),0),0);
 }
+function aggiornaKPIImpresa() {
+  const fE = n => '€ ' + Math.round(Math.abs(n||0)).toLocaleString('it-IT');
+  const az = S.azienda || {};
+  const saldo = (az.movimentiBanca||[]).reduce((s,m)=>s+(+m.importo||0),0);
+  const cg = (az.fatture||[]).filter(f=>f.centro==='generale').reduce((s,f)=>s+(+f.importo||0),0);
+  const ricavi = getRicaviCantieri();
+  const kpiS = $('kpi-saldo'); if(kpiS) kpiS.textContent = saldo ? fE(saldo) : '—';
+  const kpiC = $('kpi-cg'); if(kpiC) kpiC.textContent = cg ? fE(cg) : '—';
+  const kpiR = $('kpi-ricavi'); if(kpiR) kpiR.textContent = ricavi ? fE(ricavi) : '—';
+}
 
 // ── CRUSCOTTO ──
 function renderCruscotto(az) {
@@ -3140,7 +3151,8 @@ function renderCruscotto(az) {
   const movBanca = az.movimentiBanca||[];
   const saldoBanca = movBanca.reduce((s,m)=>s+m.importo,0);
   const oggi = new Date(); const meseCorrente = oggi.getMonth(); const annoCorrente = oggi.getFullYear();
-  const movMese = movBanca.filter(m=>{ const d=new Date(m.data.split('/').reverse().join('-')||m.data); return d.getMonth()===meseCorrente&&d.getFullYear()===annoCorrente; });
+  const parseData = s => { try { if(!s) return new Date(0); const p=s.trim().split('/'); if(p.length===3&&p[0].length===2) return new Date(+p[2],+p[1]-1,+p[0]); return new Date(s); } catch(e){return new Date(0);} };
+  const movMese = movBanca.filter(m=>{ const d=parseData(m.data); return d.getMonth()===meseCorrente&&d.getFullYear()===annoCorrente; });
   const entrateMese = movMese.filter(m=>m.importo>0).reduce((s,m)=>s+m.importo,0);
   const usciteMese = Math.abs(movMese.filter(m=>m.importo<0).reduce((s,m)=>s+m.importo,0));
   const ricaviCantieri = getRicaviCantieri();
@@ -3284,11 +3296,9 @@ function renderFlusso(az) {
   if(!movs.length) return `<div class="empty" style="padding:24px"><div class="empty-ic">💰</div><div class="empty-txt">Importa l'estratto conto per vedere il flusso di cassa.</div></div>`;
   // Raggruppa per mese
   const perMese={};
+  const parseDataF = s => { try { if(!s) return null; const p=s.trim().split('/'); if(p.length===3&&p[0].length===2) return {y:p[2],m:p[1]}; const pp=s.split('-'); if(pp.length>=2) return {y:pp[0],m:pp[1]}; return null; } catch(e){return null;} };
   movs.forEach(m=>{
-    const d=m.data||''; const parts=d.includes('/')? d.split('/') : d.split('-');
-    let key;
-    if(d.includes('/') && parts[0].length===2) key=`${parts[2]}-${parts[1]}`; // dd/mm/yyyy
-    else key=`${parts[0]}-${parts[1]}`; // yyyy-mm
+    const key = (() => { const r=parseDataF(m.data); return r?`${r.y}-${r.m}`:'0000-00'; })();
     if(!perMese[key]) perMese[key]={entrate:0,uscite:0};
     if(m.importo>0) perMese[key].entrate+=m.importo;
     else perMese[key].uscite+=Math.abs(m.importo);
