@@ -132,7 +132,7 @@ html,body{height:100%;overflow:hidden}
 body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);display:flex;flex-direction:column}
 
 /* ── TOPBAR ── */
-.topbar{background:var(--g1);color:#fff;height:calc(66px + env(safe-area-inset-top,0px));display:flex;align-items:center;gap:11px;padding:env(safe-area-inset-top,0px) 14px 0;flex-shrink:0;position:relative;z-index:60;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+.topbar{background:var(--g1);color:#fff;height:66px;display:flex;align-items:center;gap:11px;padding:0 14px;flex-shrink:0;position:relative;z-index:60;box-shadow:0 2px 10px rgba(0,0,0,.2)}
 .tb-logo{width:54px;height:54px;background:transparent;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:0}
 .tb-logo img{width:54px;height:54px;object-fit:cover;border-radius:50%;display:block}
 .tb-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;letter-spacing:2px;color:#fff}
@@ -944,7 +944,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
 </div>
 
 <!-- SCREEN AZIENDA -->
-<div class="screen" id="scrAzienda" style="display:none;flex-direction:column;width:100%;overflow-x:hidden">
+<div id="scrAzienda" style="display:none;overflow-y:auto;overflow-x:hidden;flex:1">
   <div style="display:flex;border-top:2px solid var(--s2);background:#fff;position:fixed;bottom:0;left:0;right:0;z-index:50">
     <button id="azt-cruscotto" onclick="switchAzTab('cruscotto')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--g1);cursor:pointer;font-family:'Nunito',sans-serif;border-bottom:2px solid var(--g1);margin-bottom:-2px;white-space:nowrap;min-width:70px">📊 Cruscotto</button>
     <button id="azt-costi" onclick="switchAzTab('costi')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:70px">💼 Costi</button>
@@ -3044,9 +3044,7 @@ function openAzienda() {
   closeUserMenu&&closeUserMenu();
   $('scrCantieri').style.display='none';$('scrDettaglio').style.display='none';
   const az=$('scrAzienda');
-  const tb=$('topbar');
-  az.style.top=(tb?tb.getBoundingClientRect().bottom+'px':'66px');
-  az.style.display='block';
+  az.style.display='flex'; az.style.flexDirection='column';
   $('backBtn').classList.add('show');$('fab').classList.remove('show');$('bottomNav').style.display='none';
   $('tbSub').textContent='Gestione Aziendale'; switchAzTab('cruscotto');
 }
@@ -3054,8 +3052,9 @@ function switchAzTab(tab) {
   ['cruscotto','costi','scadenziario','previsionale'].forEach(t=>{
     const b=$('azt-'+t); if(!b) return;
     b.style.color=t===tab?'var(--g1)':'var(--soft)';
-    b.style.borderTop=t===tab?'2px solid var(--g1)':'none';
-    b.style.marginTop=t===tab?'-2px':'0';
+    b.style.borderBottom=t===tab?'2px solid var(--g1)':'2px solid transparent';
+    b.style.borderTop='none';
+    b.style.marginTop='0';
   });
   const az=getAzienda(), el=$('azContent'); if(!el) return;
   switch(tab){case 'cruscotto':el.innerHTML=renderCruscotto(az);break;case 'costi':el.innerHTML=renderCostiFissi(az);break;case 'scadenziario':el.innerHTML=renderScadenziario(az);break;case 'previsionale':el.innerHTML=renderPrevisionale(az);break;}
