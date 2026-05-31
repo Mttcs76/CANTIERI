@@ -142,7 +142,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
 .tb-user{margin-left:auto;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:50%;width:34px;height:34px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 
 /* ── LAYOUT ── */
-.app-body{flex:1;overflow:hidden;display:flex;flex-direction:column;max-width:800px;margin:0 auto;width:100%;position:relative}
+.app-body{flex:1;overflow:hidden;display:flex;flex-direction:column;max-width:800px;margin:0 auto;width:100%}
 .screen{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:72px}
 .screen::-webkit-scrollbar{width:4px}
 .screen::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px}
@@ -365,6 +365,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
     <div id="fbDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.3)"></div>
     <span id="fbLabel">locale</span>
   </div>
+  <button onclick="openAzienda()" title="Gestione Aziendale" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer;margin-right:4px">💼</button>
   <button class="tb-user" id="userBtn" onclick="openUserMenu()" title="Menu utente">?</button>
 </div>
 
@@ -944,14 +945,14 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
 </div>
 
 <!-- SCREEN AZIENDA -->
-<div id="scrAzienda" style="display:none;overflow-y:auto;overflow-x:hidden;position:absolute;left:0;right:0;bottom:0">
-  <div style="display:flex;border-top:2px solid var(--s2);background:#fff;position:fixed;bottom:0;left:0;right:0;z-index:50">
+<div class="screen" id="scrAzienda" style="display:none;flex-direction:column;width:100%;overflow-x:hidden">
+  <div style="display:flex;border-bottom:2px solid var(--s2);background:#fff;flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch">
     <button id="azt-cruscotto" onclick="switchAzTab('cruscotto')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--g1);cursor:pointer;font-family:'Nunito',sans-serif;border-bottom:2px solid var(--g1);margin-bottom:-2px;white-space:nowrap;min-width:70px">📊 Cruscotto</button>
     <button id="azt-costi" onclick="switchAzTab('costi')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:70px">💼 Costi</button>
     <button id="azt-scadenziario" onclick="switchAzTab('scadenziario')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:80px">📅 Scadenze</button>
     <button id="azt-previsionale" onclick="switchAzTab('previsionale')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:80px">📈 Previs.</button>
   </div>
-  <div id="azContent" style="padding-bottom:60px"></div>
+  <div id="azContent" style="flex:1;overflow-y:auto;overflow-x:hidden;width:100%;max-width:100%;box-sizing:border-box"></div>
 </div>
 
 <!-- Nuovo Costo Fisso -->
@@ -1114,41 +1115,58 @@ function setFbStatus(online) {
 }
 
 async function initFirebase() {
-  // Wait for Firebase module to load
+  // Pulizia backup vecchi (tieni solo tbc_last_weekly)
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('tbc_backup_')) localStorage.removeItem(k);
+    }
+  } catch(e) {}
+
   await new Promise(r => setTimeout(r, 800));
   if (!window._fbEnabled) { setFbStatus(false); return; }
   setFbStatus(true);
 
-  // Try to load data from Firebase first
+  // Firebase è la fonte principale — sovrascrive sempre il localStorage
   try {
     const remoteData = await window._fbLoad();
     if (remoteData && remoteData.cantieri && remoteData.cantieri.length > 0) {
-      // Merge: remote has more data → use remote, preserve local uid
+      // Firebase ha dati — usa sempre quelli (sono la fonte di verità)
       S.cantieri = remoteData.cantieri;
-      localStorage.setItem(SK, JSON.stringify({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, uid: S.uid, updated: Date.now() }));
+      if (remoteData.operaiGlobali && remoteData.operaiGlobali.length > 0)
+        S.operaiGlobali = remoteData.operaiGlobali;
+      if (remoteData.azienda) S.azienda = remoteData.azienda;
+      if (remoteData.uid) S.uid = remoteData.uid;
+      localStorage.setItem(SK, JSON.stringify({
+        cantieri: S.cantieri, operaiGlobali: S.operaiGlobali,
+        azienda: S.azienda, uid: S.uid, updated: Date.now()
+      }));
       renderCantieri();
       toast('☁️ Dati sincronizzati da Firebase');
     } else if (S.cantieri.length > 0) {
-      // Local has data, push to Firebase
-      await window._fbSave({ cantieri: S.cantieri });
+      // Firebase vuoto — carica da locale e salva su Firebase
+      await window._fbSave({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda });
+      toast('☁️ Dati locali salvati su Firebase');
     }
   } catch(e) { console.warn('Firebase init error:', e); setFbStatus(false); }
 
-  // Real-time listener — updates all connected devices
+  // Real-time listener
   if (window._fbListen) {
     window._fbListen((remoteData) => {
       if (_fbSyncing) return;
       if (!remoteData || !remoteData.cantieri) return;
-      // Only update if remote is newer than local
       const remoteUpdated = remoteData.updated || 0;
       const localUpdated = (() => { try { return JSON.parse(localStorage.getItem(SK)||'{}').updated||0; } catch(e){return 0;} })();
       if (remoteUpdated > localUpdated + 500) {
         S.cantieri = remoteData.cantieri;
-        if(remoteData.operaiGlobali) S.operaiGlobali = remoteData.operaiGlobali;
-        localStorage.setItem(SK, JSON.stringify({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, uid: S.uid, updated: remoteUpdated }));
+        if (remoteData.operaiGlobali) S.operaiGlobali = remoteData.operaiGlobali;
+        if (remoteData.azienda) S.azienda = remoteData.azienda;
+        localStorage.setItem(SK, JSON.stringify({
+          cantieri: S.cantieri, operaiGlobali: S.operaiGlobali,
+          azienda: S.azienda, uid: S.uid, updated: remoteUpdated
+        }));
         renderCurrentScreen();
         setFbStatus(true);
-        toast('🔄 Aggiornamento da un altro utente');
       }
     });
   }
@@ -2709,21 +2727,10 @@ function getBackupData() {
   };
 }
 
-// Snapshot automatico — chiamato ad ogni save()
+// Snapshot automatico — disabilitato, i backup si fanno solo su Firebase
 function autoSnapshot() {
-  try {
-    const now = Date.now();
-    const data = getBackupData();
-    const key = BK_PREFIX + now;
-    localStorage.setItem(key, JSON.stringify(data));
-    // Pulisce vecchi snapshot oltre BK_MAX
-    const keys = Object.keys(localStorage)
-      .filter(k => k.startsWith(BK_PREFIX))
-      .sort(); // ordine cronologico
-    if (keys.length > BK_MAX) {
-      keys.slice(0, keys.length - BK_MAX).forEach(k => localStorage.removeItem(k));
-    }
-  } catch(e) { console.warn('Snapshot fallito:', e); }
+  // Non salva più backup nel localStorage — evita QuotaExceededError
+  // I dati sono al sicuro su Firebase
 }
 
 // Snapshot settimanale — salva su Firebase e chiede download locale
@@ -3037,10 +3044,7 @@ function getAzienda() {
 function openAzienda() {
   closeUserMenu&&closeUserMenu();
   $('scrCantieri').style.display='none';$('scrDettaglio').style.display='none';
-  const az=$('scrAzienda');
-  const tb=$('topbar');
-  az.style.top=(tb?tb.getBoundingClientRect().bottom+'px':'66px');
-  az.style.display='block';
+  const az=$('scrAzienda'); az.style.display='flex'; az.style.flexDirection='column';
   $('backBtn').classList.add('show');$('fab').classList.remove('show');$('bottomNav').style.display='none';
   $('tbSub').textContent='Gestione Aziendale'; switchAzTab('cruscotto');
 }
@@ -3048,8 +3052,8 @@ function switchAzTab(tab) {
   ['cruscotto','costi','scadenziario','previsionale'].forEach(t=>{
     const b=$('azt-'+t); if(!b) return;
     b.style.color=t===tab?'var(--g1)':'var(--soft)';
-    b.style.borderTop=t===tab?'2px solid var(--g1)':'none';
-    b.style.marginTop=t===tab?'-2px':'0';
+    b.style.borderBottom=t===tab?'2px solid var(--g1)':'none';
+    b.style.marginBottom=t===tab?'-2px':'0';
   });
   const az=getAzienda(), el=$('azContent'); if(!el) return;
   switch(tab){case 'cruscotto':el.innerHTML=renderCruscotto(az);break;case 'costi':el.innerHTML=renderCostiFissi(az);break;case 'scadenziario':el.innerHTML=renderScadenziario(az);break;case 'previsionale':el.innerHTML=renderPrevisionale(az);break;}
