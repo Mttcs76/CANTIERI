@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TB Works — Import Fatture</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700&family=Nunito:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',sans-serif;background:#f0f5f2;color:#1a2e22;padding:16px}
+.card{background:#fff;border-radius:14px;border:1px solid #e2ede6;padding:16px;margin-bottom:14px;max-width:780px;margin-left:auto;margin-right:auto}
+h1{font-family:'Barlow Condensed',sans-serif;font-size:22px;color:#1a4a2e;margin-bottom:2px}
+h2{font-family:'Barlow Condensed',sans-serif;font-size:15px;color:#1a4a2e;margin-bottom:10px;letter-spacing:.5px}
+.btn{width:100%;background:#1a4a2e;color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:6px}
+.btn:hover{background:#2d6a4f}.btn:disabled{background:#b8d4c0;cursor:not-allowed}
+.btn-danger{background:#dc2626}.btn-danger:hover{background:#b91c1c}
+.status{padding:10px 12px;border-radius:10px;font-size:12px;font-weight:600;margin-top:10px;line-height:1.6}
+.ok{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
+.err{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.info{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+.warn{background:#fffbeb;color:#d97706;border:1px solid #fde68a}
+
+/* Tabella fatture */
+.fatture-table{width:100%;border-collapse:collapse;font-size:12px}
+.fatture-table th{background:#1a4a2e;color:#fff;padding:8px 6px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.3px;position:sticky;top:0}
+.fatture-table td{padding:6px;border-bottom:1px solid #f0f5f2;vertical-align:middle}
+.fatture-table tr:hover td{background:#f8faf8}
+.fatture-table tr.da-classificare td{background:#fffbeb}
+select.mini{font-size:11px;padding:3px 5px;border-radius:6px;border:1px solid #b8d4c0;background:#f0f5f2;font-family:'Nunito',sans-serif;width:100%;min-width:110px}
+select.mini-cat{font-size:11px;padding:3px 5px;border-radius:6px;border:1px solid #b8d4c0;background:#f0f5f2;font-family:'Nunito',sans-serif;width:100%;min-width:130px}
+.badge{display:inline-block;border-radius:99px;padding:2px 7px;font-size:10px;font-weight:700}
+.badge-f{background:#d1fae5;color:#065f46}
+.badge-b{background:#dbeafe;color:#1e3a8a}
+.badge-g{background:#fef3c7;color:#92400e}
+.badge-dc{background:#fee2e2;color:#991b1b}
+.importo{text-align:right;font-weight:700;color:#dc2626;white-space:nowrap}
+.table-wrap{overflow-x:auto;max-height:480px;overflow-y:auto;border-radius:8px;border:1px solid #e2ede6}
+
+/* Filtri */
+.filtri{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.filtri button{border:1px solid #b8d4c0;background:#f0f5f2;border-radius:99px;padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;color:#4d6b58}
+.filtri button.active{background:#1a4a2e;color:#fff;border-color:#1a4a2e}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.kpi{background:#f0f5f2;border-radius:10px;padding:10px;text-align:center}
+.kpi-n{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:#1a4a2e}
+.kpi-l{font-size:9px;color:#6a9478;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+.kpi.warn-kpi .kpi-n{color:#d97706}
+#log{font-size:11px;line-height:1.8;max-height:160px;overflow-y:auto;background:#1a2e22;color:#d8f3dc;border-radius:8px;padding:10px;margin-top:8px;font-family:monospace;display:none}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>TB WORKS — IMPORT FATTURE</h1>
+  <p style="font-size:12px;color:#6a9478;margin-bottom:12px">Registro centralizzato fatture · Assegna ai centri di costo prima di importare</p>
+
+  <div id="step1">
+    <h2>CONNETTI FIREBASE</h2>
+    <button class="btn" id="loadBtn">Connetti e carica dati</button>
+    <div id="s1status" class="status info">Premi per connetterti al database.</div>
+  </div>
+</div>
+
+<!-- Step 2: KPI + tabella -->
+<div class="card" id="step2card" style="display:none">
+  <h2>REGISTRO FATTURE — <span id="totFatture">0</span> voci · <span id="totImporto">€ 0</span></h2>
+
+  <!-- KPI -->
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <!-- Filtri -->
+  <div class="filtri" id="filtriBar">
+    <button class="active" data-f="tutti" onclick="filtra(this,'tutti')">Tutte</button>
+    <button data-f="fontanasanta" onclick="filtra(this,'fontanasanta')">🏗 Fontanasanta</button>
+    <button data-f="borghetto" onclick="filtra(this,'borghetto')">🏗 Borghetto</button>
+    <button data-f="generale" onclick="filtra(this,'generale')">🏢 Costi generali</button>
+    <button data-f="da_classificare" onclick="filtra(this,'da_classificare')">⚠️ Da classificare</button>
+  </div>
+
+  <!-- Tabella -->
+  <div class="table-wrap">
+    <table class="fatture-table">
+      <thead><tr>
+        <th>Data</th>
+        <th>Fornitore</th>
+        <th>Fatt.</th>
+        <th style="text-align:right">Importo</th>
+        <th>Centro di costo</th>
+        <th>Categoria</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Azioni -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+    <button class="btn" id="importBtn" onclick="importaFatture()">☁️ Importa su Firebase</button>
+    <button class="btn btn-danger" id="resetBtn" onclick="resetFirebase()">🗑 Azzera e reimporta</button>
+  </div>
+  <div id="importStatus" class="status info" style="display:none"></div>
+  <div id="log"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const fb = initializeApp({
+  apiKey:"AIzaSyDvXu1k4kPWBDnmBZxDs6McM9fqntMMphw",
+  authDomain:"tb-cantieri.firebaseapp.com",
+  projectId:"tb-cantieri",
+  storageBucket:"tb-cantieri.firebasestorage.app",
+  messagingSenderId:"91212110377",
+  appId:"1:91212110377:web:cbb842678fb0d311a79a38"
+});
+const db = getFirestore(fb);
+let S = null;
+let _filtroAttivo = 'tutti';
+
+// ── FATTURE ORIGINALI con assegnazioni corrette ──
+// [data, numero, fornitore, importo, centro, categoria]
+// CORREZIONI APPLICATE:
+//   - DALFOVO MAURO → generale / Carburante (era fontanasanta/Materiali)
+//   - SAPI S.R.L. 3843/26 → generale / Formazione/Sicurezza (era fontanasanta/Materiali)
+//   - Piffer Paolo 892 → generale / Vitto/Trasferte (era fontanasanta/Vitto cantiere — cantiere Sarnonico non ancora creato)
+const F = [
+  ["2026-02-19","1000263001776172","ARUBA SPA",6.10,"generale","Software/Licenze"],
+  ["2026-02-27","9","CALLIARI FRANCO",622.20,"fontanasanta","Subappalto"],
+  ["2026-02-28","FM20","NEW DELHI SNC",127.50,"fontanasanta","Vitto cantiere"],
+  ["2026-03-04","XFT00004525","ORO S.R.L.",72.00,"fontanasanta","Vitto cantiere"],
+  ["2026-03-09","1112","i Notai Romano e Associati",2395.39,"generale","Legale/Notaio"],
+  ["2026-03-10","2026/FE03468/414","DALFOVO MAURO E C SNC",205.80,"generale","Carburante"],       // ← corretto
+  ["2026-03-31","2057","EDILRAVANELLI S.R.L.",82.67,"fontanasanta","Materiali"],
+  ["2026-03-31","2058","EDILRAVANELLI S.R.L.",1847.12,"fontanasanta","Materiali"],
+  ["2026-03-31","FM32","NEW DELHI SNC",566.00,"fontanasanta","Vitto cantiere"],
+  ["2026-04-07","1035","ESNA SOA SPA",2366.80,"generale","Certificazioni/SOA"],
+  ["2026-04-13","FT2203202600151","Servizi e Gestioni Italia srl",100.04,"generale","Servizi"],
+  ["2026-04-15","01F0010000000001","AUTODESK IRELAND OPERATIONS UC",585.60,"generale","Software/Licenze"],
+  ["2026-04-20","153/1-23453","SECCHI FRANCESCA",30.00,"generale","Consulenza"],
+  ["2026-04-21","158/1-23453","SECCHI FRANCESCA",30.00,"generale","Consulenza"],
+  ["2026-04-22","JA6WJK2M-0001","ANTHROPIC PBC",21.96,"generale","Software/Licenze"],
+  ["2026-04-23","FPR 6/26","PEDROTTI BEATRICE - RSPP",2049.60,"generale","INAIL/Sicurezza"],
+  ["2026-04-29","36","CARPENTERIA ROSSI s.a.s.",1396.90,"fontanasanta","Subappalto"],
+  ["2026-04-30","1091","SATIVA SRL",193.00,"fontanasanta","Materiali"],
+  ["2026-04-30","1/1175","TECNOEDIL NOLEGGI SRL",560.19,"fontanasanta","Noleggi"],
+  ["2026-04-30","1/200","MGTEC SRL",300.22,"fontanasanta","Materiali"],
+  ["2026-04-30","1/31","BRENNERPONT S.R.L.",3690.00,"fontanasanta","Subappalto"],
+  ["2026-04-30","3015","EDILRAVANELLI S.R.L.",203.98,"fontanasanta","Materiali"],
+  ["2026-04-30","472","COLORIFICIO FAILONI SRL",739.62,"fontanasanta","Materiali"],
+  ["2026-04-30","FE26-02454","BOSSONG SPA",2569.32,"borghetto","Materiali"],
+  ["2026-04-30","FM45","NEW DELHI SNC",268.50,"fontanasanta","Vitto cantiere"],
+  ["2026-05-07","6/FE","DECARLI MATTHIEU",3520.00,"fontanasanta","Subappalto"],
+  ["2026-05-15","1259","SATIVA SRL",152.01,"fontanasanta","Materiali"],
+  ["2026-05-15","13","CALLIARI FRANCO",658.80,"fontanasanta","Subappalto"],
+  ["2026-05-15","3843/26","SAPI S.R.L.",561.20,"generale","Formazione/Sicurezza"],               // ← corretto
+  ["2026-05-22","B019-1-2026-824","LONGO EVENTS SRL",63.10,"generale","Servizi"],
+  ["2026-05-25","1577","ESNA SOA SPA",2391.20,"generale","Certificazioni/SOA"],
+  ["2026-05-27","892","Piffer Paolo",15.00,"generale","Vitto/Trasferte"],                         // ← corretto (Sarnonico non ancora creato)
+  ["2026-05-29","FE26-03350","BOSSONG SPA",2569.32,"borghetto","Materiali"]
+];
+
+const CENTRI = {
+  fontanasanta: "🏗 Villa Fontanasanta",
+  borghetto:    "🏗 Borghetto",
+  generale:     "🏢 Costi generali",
+  skip:         "⛔ Non importare"
+};
+
+const CATS = [
+  "Materiali","Subappalto","Noleggi","Vitto cantiere",
+  "Software/Licenze","Certificazioni/SOA","Legale/Notaio",
+  "INAIL/Sicurezza","Consulenza","Servizi","Carburante",
+  "Formazione/Sicurezza","Vitto/Trasferte","Altro"
+];
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function fmtEur(n) { return '€ ' + (+(n||0)).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function log(m) { const l=document.getElementById('log'); l.style.display='block'; l.innerHTML+=m+'\n'; l.scrollTop=l.scrollHeight; }
+
+// Stato locale modificabile
+let righe = F.map((f,i) => ({ idx:i, data:f[0], numero:f[1], fornitore:f[2], importo:f[3], centro:f[4], cat:f[5] }));
+
+document.getElementById('loadBtn').onclick = async function() {
+  const s = document.getElementById('s1status');
+  s.className='status info'; s.textContent='Connessione...';
+  try {
+    const snap = await getDoc(doc(db,'tbcantieri','shared'));
+    if(!snap.exists()) { s.className='status err'; s.textContent='Nessun dato. Sincronizza prima dall\'app.'; return; }
+    S = snap.data();
+    s.className='status ok'; s.textContent='Connesso. Controlla le assegnazioni e premi Importa.';
+    document.getElementById('step2card').style.display='block';
+    renderTabella();
+    aggiornaKPI();
+  } catch(e) { s.className='status err'; s.textContent='Errore: '+e.message; }
+};
+
+function renderTabella() {
+  const tbody = document.getElementById('tbody');
+  const filtered = _filtroAttivo === 'tutti' ? righe :
+    _filtroAttivo === 'da_classificare' ? righe.filter(r => r.centro === 'da_classificare') :
+    righe.filter(r => r.centro === _filtroAttivo);
+
+  document.getElementById('totFatture').textContent = righe.length;
+  document.getElementById('totImporto').textContent = fmtEur(righe.reduce((s,r)=>s+r.importo,0));
+
+  tbody.innerHTML = filtered.map(r => {
+    const badgeCls = r.centro==='fontanasanta'?'badge-f':r.centro==='borghetto'?'badge-b':r.centro==='generale'?'badge-g':'badge-dc';
+    const centroOpts = Object.entries(CENTRI).map(([v,l]) =>
+      `<option value="${v}" ${v===r.centro?'selected':''}>${l}</option>`
+    ).join('');
+    const catOpts = CATS.map(c => `<option ${c===r.cat?'selected':''}>${c}</option>`).join('');
+    return `<tr class="${r.centro==='da_classificare'?'da-classificare':''}">
+      <td style="white-space:nowrap;color:#6a9478;font-size:11px">${r.data}</td>
+      <td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.fornitore}">${r.fornitore}</td>
+      <td style="font-size:10px;color:#6a9478;white-space:nowrap">${r.numero}</td>
+      <td class="importo">${fmtEur(r.importo)}</td>
+      <td><select class="mini" onchange="setCentro(${r.idx},this.value)">${centroOpts}</select></td>
+      <td><select class="mini-cat" onchange="setCat(${r.idx},this.value)">${catOpts}</select></td>
+    </tr>`;
+  }).join('');
+}
+
+function setCentro(idx, val) {
+  righe[idx].centro = val;
+  aggiornaKPI();
+  // Aggiorna classe riga
+  renderTabella();
+}
+function setCat(idx, val) { righe[idx].cat = val; }
+
+window.filtra = function(btn, filtro) {
+  _filtroAttivo = filtro;
+  document.querySelectorAll('.filtri button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTabella();
+};
+
+function aggiornaKPI() {
+  const totF = righe.filter(r=>r.centro==='fontanasanta').reduce((s,r)=>s+r.importo,0);
+  const totB = righe.filter(r=>r.centro==='borghetto').reduce((s,r)=>s+r.importo,0);
+  const totG = righe.filter(r=>r.centro==='generale').reduce((s,r)=>s+r.importo,0);
+  const totDC = righe.filter(r=>r.centro==='da_classificare').length;
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi"><div class="kpi-n">${fmtEur(totF)}</div><div class="kpi-l">🏗 Fontanasanta</div></div>
+    <div class="kpi"><div class="kpi-n">${fmtEur(totB)}</div><div class="kpi-l">🏗 Borghetto</div></div>
+    <div class="kpi"><div class="kpi-n">${fmtEur(totG)}</div><div class="kpi-l">🏢 Costi generali</div></div>
+    <div class="kpi ${totDC>0?'warn-kpi':''}"><div class="kpi-n">${totDC}</div><div class="kpi-l">⚠️ Da classificare</div></div>
+  `;
+}
+
+window.importaFatture = async function() {
+  const btn = document.getElementById('importBtn');
+  const st = document.getElementById('importStatus');
+  const dc = righe.filter(r=>r.centro==='da_classificare').length;
+  if(dc > 0 && !confirm(`Ci sono ${dc} fatture "Da classificare". Continuare comunque?`)) return;
+
+  btn.disabled=true; btn.textContent='Importazione...';
+  st.style.display='block'; st.className='status info'; st.textContent='Elaborazione in corso...';
+
+  // Trova cantieri
+  S.cantieri = S.cantieri||[];
+  const cF = S.cantieri.find(c=>(c.nome||'').toLowerCase().includes('fontanasanta'));
+  const cB = S.cantieri.find(c=>(c.nome||'').toLowerCase().includes('borghetto'));
+  S.azienda = S.azienda||{};
+  S.azienda.fatture = S.azienda.fatture||[];
+
+  let nF=0,nB=0,nG=0,nSkip=0,nDup=0;
+
+  for(const r of righe) {
+    if(r.centro==='skip') { nSkip++; continue; }
+    const fatturaId = r.numero + '|' + r.fornitore + '|' + r.data;
+
+    // Controlla duplicati nel registro fatture
+    if(S.azienda.fatture.some(f=>f.fatturaId===fatturaId)) { nDup++; log('dup: '+r.fornitore+' '+r.numero); continue; }
+
+    const fattura = {
+      id: uid(),
+      fatturaId,
+      data: r.data,
+      numero: r.numero,
+      fornitore: r.fornitore,
+      importo: r.importo,
+      cat: r.cat,
+      centro: r.centro,
+      stato: 'assegnata',
+      note: '',
+      created: Date.now()
+    };
+
+    S.azienda.fatture.push(fattura);
+
+    // Collega anche alle speseMateriali del cantiere per compatibilità
+    if(r.centro==='fontanasanta' && cF) {
+      cF.speseMateriali = cF.speseMateriali||[];
+      if(!cF.speseMateriali.some(s=>s.desc===r.fornitore+' - Fatt. '+r.numero)) {
+        cF.speseMateriali.push({ id:fattura.id, desc:r.fornitore+' - Fatt. '+r.numero, capId:'', cat:r.cat, importo:r.importo, data:r.data, note:'', utente:'Import', created:Date.now() });
+      }
+      nF++; log('F: '+r.fornitore);
+    } else if(r.centro==='borghetto' && cB) {
+      cB.speseMateriali = cB.speseMateriali||[];
+      if(!cB.speseMateriali.some(s=>s.desc===r.fornitore+' - Fatt. '+r.numero)) {
+        cB.speseMateriali.push({ id:fattura.id, desc:r.fornitore+' - Fatt. '+r.numero, capId:'', cat:r.cat, importo:r.importo, data:r.data, note:'', utente:'Import', created:Date.now() });
+      }
+      nB++; log('B: '+r.fornitore);
+    } else if(r.centro==='generale') {
+      S.azienda.costiFissi = S.azienda.costiFissi||[];
+      if(!S.azienda.costiFissi.some(s=>s.desc===r.fornitore+' - Fatt. '+r.numero)) {
+        S.azienda.costiFissi.push({ id:fattura.id, desc:r.fornitore+' - Fatt. '+r.numero, cat:r.cat, freq:'una-tantum', importo:r.importo, scadenza:r.data, note:'', created:Date.now() });
+      }
+      nG++; log('G: '+r.fornitore);
+    }
+  }
+
+  try {
+    await setDoc(doc(db,'tbcantieri','shared'), S);
+    st.className='status ok';
+    st.innerHTML=`<strong>IMPORT COMPLETATO!</strong><br>
+      🏗 Fontanasanta: +${nF} fatture<br>
+      🏗 Borghetto: +${nB} fatture<br>
+      🏢 Costi generali: +${nG} fatture<br>
+      ⛔ Saltate: ${nSkip} · 🔄 Duplicati: ${nDup}<br><br>
+      <em>Apri TB Works e ricarica la pagina.</em>`;
+    btn.textContent='✅ Importato!'; btn.style.background='#22c55e';
+  } catch(e) {
+    st.className='status err'; st.textContent='Errore Firebase: '+e.message;
+    btn.disabled=false; btn.textContent='☁️ Importa su Firebase';
+  }
+};
+
+window.resetFirebase = async function() {
+  if(!confirm('⚠️ ATTENZIONE\n\nQuesto azzera:\n- Tutte le spese dei cantieri\n- Tutti i costi generali\n- Il registro fatture\n\nI cantieri, rapportini e operai vengono conservati.\n\nContinuare?')) return;
+  const btn = document.getElementById('resetBtn');
+  btn.disabled=true; btn.textContent='Azzeramento...';
+  try {
+    S.cantieri.forEach(c => { c.speseMateriali=[]; c.speseGenerali=[]; });
+    S.azienda.fatture=[];
+    S.azienda.costiFissi=[];
+    await setDoc(doc(db,'tbcantieri','shared'), S);
+    document.getElementById('importStatus').style.display='block';
+    document.getElementById('importStatus').className='status ok';
+    document.getElementById('importStatus').textContent='✅ Dati azzerati. Ora premi Importa per reimportare.';
+    btn.disabled=false; btn.textContent='🗑 Azzera e reimporta';
+  } catch(e) {
+    document.getElementById('importStatus').style.display='block';
+    document.getElementById('importStatus').className='status err';
+    document.getElementById('importStatus').textContent='Errore: '+e.message;
+    btn.disabled=false; btn.textContent='🗑 Azzera e reimporta';
+  }
+};
+
+</script>
+</body>
+</html>
