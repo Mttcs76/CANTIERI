@@ -3098,11 +3098,11 @@ function openAzienda() {
   const az=$('scrAzienda');
   const tb=$('topbar');
   const bn=$('bottomNav');
-  bn.style.display='flex';
+  bn.style.display='flex'; // temporaneo per misurare
   const topH=tb?tb.getBoundingClientRect().bottom:66;
-  const botH=bn?bn.offsetHeight:72;
+  bn.style.display='none'; // nasconde la bottom nav in Impresa
   az.style.top=topH+'px';
-  az.style.bottom=botH+'px';
+  az.style.bottom='0px';
   az.style.display='flex';
   $('backBtn').classList.add('show');$('fab').classList.remove('show');
   $('tbSub').textContent='Gestione Aziendale'; switchAzTab('cruscotto');
@@ -3138,7 +3138,10 @@ function aggiornaKPIImpresa() {
   const fE = n => '€ ' + Math.round(Math.abs(n||0)).toLocaleString('it-IT');
   const az = S.azienda || {};
   const saldo = (az.movimentiBanca||[]).reduce((s,m)=>s+(+m.importo||0),0);
-  const cg = (az.fatture||[]).filter(f=>f.centro==='generale').reduce((s,f)=>s+(+f.importo||0),0);
+  const cg = [
+    ...(az.fatture||[]).filter(f=>f.centro==='generale'),
+    ...(az.costiFissi||[]).filter(c=>!c.freq||c.freq==='una-tantum')
+  ].reduce((s,f)=>s+(+f.importo||0),0);
   const ricavi = getRicaviCantieri();
   const kpiS = $('kpi-saldo'); if(kpiS) kpiS.textContent = saldo ? fE(saldo) : '—';
   const kpiC = $('kpi-cg'); if(kpiC) kpiC.textContent = cg ? fE(cg) : '—';
@@ -3254,8 +3257,14 @@ function renderBanca(az) {
 // ── COSTI GENERALI ──
 function renderCostiGenerali(az) {
   const fE=n=>'€ '+Math.round(n||0).toLocaleString('it-IT');
-  // Fatture assegnate a "generale"
-  const fatGen = (az.fatture||[]).filter(f=>f.centro==='generale');
+  // Fatture assegnate a "generale" — supporta sia az.fatture che az.costiFissi (legacy)
+  const fatGen = [
+    ...(az.fatture||[]).filter(f=>f.centro==='generale'),
+    ...(az.costiFissi||[]).filter(c=>!c.freq||c.freq==='una-tantum').map(c=>({
+      fornitore: c.desc, desc: c.desc, cat: c.cat||'Altro',
+      importo: c.importo, data: c.scadenza||c.data||'', centro:'generale'
+    }))
+  ];
   // Movimenti banca assegnati a "generale"
   const movGen = (az.movimentiBanca||[]).filter(m=>m.centro==='generale'&&m.importo<0);
   const totFatGen = fatGen.reduce((s,f)=>s+(+f.importo||0),0);
