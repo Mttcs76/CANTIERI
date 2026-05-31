@@ -132,7 +132,7 @@ html,body{height:100%;overflow:hidden}
 body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);display:flex;flex-direction:column}
 
 /* ── TOPBAR ── */
-.topbar{background:var(--g1);color:#fff;height:66px;display:flex;align-items:center;gap:11px;padding:0 14px;flex-shrink:0;position:relative;z-index:60;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+.topbar{background:var(--g1);color:#fff;height:calc(66px + env(safe-area-inset-top,0px));display:flex;align-items:center;gap:11px;padding:env(safe-area-inset-top,0px) 14px 0;flex-shrink:0;position:relative;z-index:60;box-shadow:0 2px 10px rgba(0,0,0,.2)}
 .tb-logo{width:54px;height:54px;background:transparent;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:0}
 .tb-logo img{width:54px;height:54px;object-fit:cover;border-radius:50%;display:block}
 .tb-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;letter-spacing:2px;color:#fff}
