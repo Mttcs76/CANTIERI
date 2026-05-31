@@ -944,14 +944,14 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
 </div>
 
 <!-- SCREEN AZIENDA -->
-<div id="scrAzienda" style="display:none;overflow-y:auto;overflow-x:hidden;flex:1">
-  <div style="display:flex;border-top:2px solid var(--s2);background:#fff;position:fixed;bottom:0;left:0;right:0;z-index:50">
-    <button id="azt-cruscotto" onclick="switchAzTab('cruscotto')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--g1);cursor:pointer;font-family:'Nunito',sans-serif;border-bottom:2px solid var(--g1);margin-bottom:-2px;white-space:nowrap;min-width:70px">📊 Cruscotto</button>
-    <button id="azt-costi" onclick="switchAzTab('costi')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:70px">💼 Costi</button>
-    <button id="azt-scadenziario" onclick="switchAzTab('scadenziario')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:80px">📅 Scadenze</button>
-    <button id="azt-previsionale" onclick="switchAzTab('previsionale')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:80px">📈 Previs.</button>
+<div id="scrAzienda" style="display:none;position:fixed;left:0;right:0;bottom:72px;overflow-y:auto;overflow-x:hidden;background:var(--off);z-index:55">
+  <div id="azTabBar" style="display:flex;border-bottom:1px solid var(--s2);background:#fff;position:sticky;top:0;z-index:10">
+    <button id="azt-cruscotto" onclick="switchAzTab('cruscotto')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--g1);cursor:pointer;font-family:'Nunito',sans-serif;border-bottom:2px solid var(--g1);margin-bottom:-1px;white-space:nowrap;min-width:70px">📊 Cruscotto</button>
+    <button id="azt-costi" onclick="switchAzTab('costi')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;min-width:70px">💼 Costi</button>
+    <button id="azt-scadenziario" onclick="switchAzTab('scadenziario')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;min-width:80px">📅 Scadenze</button>
+    <button id="azt-previsionale" onclick="switchAzTab('previsionale')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;min-width:80px">📈 Previs.</button>
   </div>
-  <div id="azContent" style="flex:1;overflow-y:auto;overflow-x:hidden;width:100%;max-width:100%;box-sizing:border-box"></div>
+  <div id="azContent" style="width:100%;max-width:100%;box-sizing:border-box"></div>
 </div>
 
 <!-- Nuovo Costo Fisso -->
@@ -3044,8 +3044,10 @@ function openAzienda() {
   closeUserMenu&&closeUserMenu();
   $('scrCantieri').style.display='none';$('scrDettaglio').style.display='none';
   const az=$('scrAzienda');
-  az.style.display='flex'; az.style.flexDirection='column';
-  $('backBtn').classList.add('show');$('fab').classList.remove('show');$('bottomNav').style.display='none';
+  const tb=$('topbar');
+  az.style.top=(tb?tb.getBoundingClientRect().bottom+'px':'66px');
+  az.style.display='block';
+  $('backBtn').classList.add('show');$('fab').classList.remove('show');$('bottomNav').style.display='flex';
   $('tbSub').textContent='Gestione Aziendale'; switchAzTab('cruscotto');
 }
 function switchAzTab(tab) {
