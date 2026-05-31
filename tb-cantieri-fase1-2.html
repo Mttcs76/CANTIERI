@@ -3047,7 +3047,7 @@ function openAzienda() {
   const tb=$('topbar');
   const bn=$('bottomNav');
   const topH=tb?tb.getBoundingClientRect().bottom:66;
-  const botH=bn?(window.innerHeight-bn.getBoundingClientRect().top):72;
+  const botH=bn?bn.offsetHeight:72;
   az.style.top=topH+'px';
   az.style.bottom=botH+'px';
   az.style.display='flex';
