@@ -3097,12 +3097,13 @@ function openAzienda() {
   const az=$('scrAzienda');
   const tb=$('topbar');
   const bn=$('bottomNav');
+  bn.style.display='flex';
   const topH=tb?tb.getBoundingClientRect().bottom:66;
-  const botH=bn?(window.innerHeight-bn.getBoundingClientRect().top):72;
+  const botH=bn?bn.offsetHeight:72;
   az.style.top=topH+'px';
   az.style.bottom=botH+'px';
   az.style.display='flex';
-  $('backBtn').classList.add('show');$('fab').classList.remove('show');$('bottomNav').style.display='flex';
+  $('backBtn').classList.add('show');$('fab').classList.remove('show');
   $('tbSub').textContent='Gestione Aziendale'; switchAzTab('cruscotto');
 }
 function switchAzTab(tab) {
@@ -3112,11 +3113,16 @@ function switchAzTab(tab) {
     b.style.borderBottom=t===tab?'2px solid var(--g1)':'2px solid transparent';
   });
   const az=getAzienda(), el=$('azContent'); if(!el) return;
-  switch(tab){
-    case 'cruscotto':   el.innerHTML=renderCruscotto(az); break;
-    case 'banca':       el.innerHTML=renderBanca(az); break;
-    case 'costi':       el.innerHTML=renderCostiGenerali(az); break;
-    case 'flusso':      el.innerHTML=renderFlusso(az); break;
+  try {
+    switch(tab){
+      case 'cruscotto':   el.innerHTML=renderCruscotto(az); break;
+      case 'banca':       el.innerHTML=renderBanca(az); break;
+      case 'costi':       el.innerHTML=renderCostiGenerali(az); break;
+      case 'flusso':      el.innerHTML=renderFlusso(az); break;
+    }
+  } catch(e) {
+    el.innerHTML=`<div style="padding:20px;color:var(--red);font-size:12px;font-family:monospace">Errore: ${e.message}</div>`;
+    console.error('switchAzTab error:', e);
   }
 }
 
