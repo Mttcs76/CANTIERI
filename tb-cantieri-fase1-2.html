@@ -53,6 +53,7 @@ window._fbSave = async (data) => {
     await setDoc(doc(fbDb, 'tbcantieri', 'shared'), {
       cantieri: data.cantieri,
       operaiGlobali: data.operaiGlobali || [],
+      azienda: data.azienda || {},
       updated: Date.now()
     });
   } catch(e) { console.warn('Firebase save error:', e); }
@@ -944,14 +945,14 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
 </div>
 
 <!-- SCREEN AZIENDA -->
-<div id="scrAzienda" style="display:none;position:fixed;left:0;right:0;bottom:72px;overflow-y:auto;overflow-x:hidden;background:var(--off);z-index:55">
-  <div id="azTabBar" style="display:flex;border-bottom:1px solid var(--s2);background:#fff;position:sticky;top:0;z-index:10">
-    <button id="azt-cruscotto" onclick="switchAzTab('cruscotto')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--g1);cursor:pointer;font-family:'Nunito',sans-serif;border-bottom:2px solid var(--g1);margin-bottom:-1px;white-space:nowrap;min-width:70px">📊 Cruscotto</button>
-    <button id="azt-costi" onclick="switchAzTab('costi')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;min-width:70px">💼 Costi</button>
-    <button id="azt-scadenziario" onclick="switchAzTab('scadenziario')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;min-width:80px">📅 Scadenze</button>
-    <button id="azt-previsionale" onclick="switchAzTab('previsionale')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;min-width:80px">📈 Previs.</button>
+<div class="screen" id="scrAzienda" style="display:none;flex-direction:column;width:100%;overflow-x:hidden">
+  <div style="display:flex;border-top:2px solid var(--s2);background:#fff;position:fixed;bottom:0;left:0;right:0;z-index:50">
+    <button id="azt-cruscotto" onclick="switchAzTab('cruscotto')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--g1);cursor:pointer;font-family:'Nunito',sans-serif;border-bottom:2px solid var(--g1);margin-bottom:-2px;white-space:nowrap;min-width:70px">📊 Cruscotto</button>
+    <button id="azt-costi" onclick="switchAzTab('costi')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:70px">💼 Costi</button>
+    <button id="azt-scadenziario" onclick="switchAzTab('scadenziario')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:80px">📅 Scadenze</button>
+    <button id="azt-previsionale" onclick="switchAzTab('previsionale')" style="flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;min-width:80px">📈 Previs.</button>
   </div>
-  <div id="azContent" style="width:100%;max-width:100%;box-sizing:border-box"></div>
+  <div id="azContent" style="flex:1;overflow-y:auto;overflow-x:hidden;width:100%;max-width:100%;box-sizing:border-box"></div>
 </div>
 
 <!-- Nuovo Costo Fisso -->
@@ -3047,16 +3048,15 @@ function openAzienda() {
   const tb=$('topbar');
   az.style.top=(tb?tb.getBoundingClientRect().bottom+'px':'66px');
   az.style.display='block';
-  $('backBtn').classList.add('show');$('fab').classList.remove('show');$('bottomNav').style.display='flex';
+  $('backBtn').classList.add('show');$('fab').classList.remove('show');$('bottomNav').style.display='none';
   $('tbSub').textContent='Gestione Aziendale'; switchAzTab('cruscotto');
 }
 function switchAzTab(tab) {
   ['cruscotto','costi','scadenziario','previsionale'].forEach(t=>{
     const b=$('azt-'+t); if(!b) return;
     b.style.color=t===tab?'var(--g1)':'var(--soft)';
-    b.style.borderBottom=t===tab?'2px solid var(--g1)':'2px solid transparent';
-    b.style.borderTop='none';
-    b.style.marginTop='0';
+    b.style.borderTop=t===tab?'2px solid var(--g1)':'none';
+    b.style.marginTop=t===tab?'-2px':'0';
   });
   const az=getAzienda(), el=$('azContent'); if(!el) return;
   switch(tab){case 'cruscotto':el.innerHTML=renderCruscotto(az);break;case 'costi':el.innerHTML=renderCostiFissi(az);break;case 'scadenziario':el.innerHTML=renderScadenziario(az);break;case 'previsionale':el.innerHTML=renderPrevisionale(az);break;}
