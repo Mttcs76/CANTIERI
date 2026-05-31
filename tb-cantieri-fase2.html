@@ -482,7 +482,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
       <button class="tab" id="t-sal" onclick="switchTab('sal')">📋 SAL</button>
       <button class="tab" id="t-rapportini" onclick="switchTab('rapportini')">📓 Rapportini <span class="tab-cnt" id="cnt-rapportini">0</span></button>
       <button class="tab" id="t-operai" onclick="switchTab('operai')">👷 Operai <span class="tab-cnt" id="cnt-operai">0</span></button>
-      <button class="tab" id="t-margini" onclick="switchTab('margini')">📊 Margini</button>
+      <button class="tab" id="t-costi" onclick="switchTab('costi')">💰 Costi</button>
       <button class="tab" id="t-ordini" onclick="switchTab('ordini')">📦 Ordini <span class="tab-cnt" id="cnt-ordini">0</span></button>
       <button class="tab" id="t-giornale" onclick="switchTab('giornale')">📔 Giornale <span class="tab-cnt" id="cnt-giornale">0</span></button>
     </div>
@@ -499,7 +499,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
   <button class="nav-btn active" id="n-computo" onclick="switchTab('computo')"><span class="nav-ic">📐</span><span class="nav-lb">Computo</span></button>
   <button class="nav-btn" id="n-rapportini" onclick="switchTab('rapportini')"><span class="nav-ic">📓</span><span class="nav-lb">Rapportini</span></button>
   <button class="nav-btn" id="n-operai" onclick="switchTab('operai')"><span class="nav-ic">👷</span><span class="nav-lb">Operai</span></button>
-  <button class="nav-btn" id="n-margini" onclick="switchTab('margini')"><span class="nav-ic">📊</span><span class="nav-lb">Margini</span></button>
+  <button class="nav-btn" id="n-costi" onclick="switchTab('costi')"><span class="nav-ic">💰</span><span class="nav-lb">Costi</span></button>
   <button class="nav-btn" id="n-ordini" onclick="switchTab('ordini')"><span class="nav-ic">📦</span><span class="nav-lb">Ordini</span></button>
   <button class="nav-btn" id="n-giornale" onclick="switchTab('giornale')"><span class="nav-ic">📔</span><span class="nav-lb">Giornale</span></button>
 </nav>
@@ -1465,7 +1465,7 @@ function switchTab(tab) {
 }
 
 function fabAction() {
-  const map = {computo:'mImportComputo',sal:null,rapportini:'mRapportino',operai:'mOperaio',margini:'mSpesaGenerale',ordini:'mNuovoOrdine',giornale:'mNuovaVoceGiornale'};
+  const map = {computo:'mImportComputo',sal:null,rapportini:'mRapportino',operai:'mOperaio',costi:'mSpesaGenerale',ordini:'mNuovoOrdine',giornale:'mNuovaVoceGiornale'};
   if(map[S.tab]) openModal(map[S.tab]);
 }
 
@@ -1714,7 +1714,7 @@ function renderTab(tab) {
     case 'sal':        el.innerHTML = renderSAL(c); break;
     case 'rapportini': el.innerHTML = renderRapportini(c); break;
     case 'operai':     el.innerHTML = renderOperai(c); break;
-    case 'margini':    el.innerHTML = renderMargini(c); break;
+    case 'costi':    el.innerHTML = renderCosti(c); break;
     case 'ordini':     el.innerHTML = renderOrdini(c); break;
     case 'giornale':   el.innerHTML = renderGiornale(c); break;
   }
@@ -1800,41 +1800,14 @@ function calcolaManodopera(c) {
 }
 
 function renderSAL(c) {
-  if(!(c.capitoli||[]).length) return `<div class="empty"><div class="empty-ic">⚖️</div><div class="empty-txt">Importa prima il computo preventivo<br>per poter confrontare i costi reali.</div></div>`;
+  if(!(c.capitoli||[]).length) return `<div class="empty"><div class="empty-ic">📋</div><div class="empty-txt">Importa prima il computo per aggiornare<br>le quantità eseguite e generare il SAL.</div></div>`;
   const totPrev = calcolaPreventivo(c);
   const totEff = calcolaConsuntivo(c);
-  const totMdo = calcolaManodopera(c);
-  const delta = totEff - totPrev;
   const pct = totPrev>0 ? Math.round((totEff/totPrev)*100) : 0;
-
-  // Dettaglio manodopera per operaio
-  const operaiMap = {};
-  (c.operai||[]).forEach(op => { operaiMap[op.id] = op; });
-  const mdoPerOperaio = {};
-  (c.rapportini||[]).forEach(r => {
-    (r.oreOperai||[]).forEach(x => {
-      if(!mdoPerOperaio[x.opId]) mdoPerOperaio[x.opId] = 0;
-      mdoPerOperaio[x.opId] += (+x.ore||0);
-    });
-  });
-
-  const mdoRows = Object.entries(mdoPerOperaio).map(([opId, ore]) => {
-    const op = operaiMap[opId]; if(!op) return '';
-    const costo = ore * (+op.costo||0);
-    return `<div class="voce-row" style="grid-template-columns:1fr 44px 56px 72px;gap:4px">
-      <div>
-        <div class="voce-desc">${esc(op.nome)}</div>
-        <div style="font-size:10px;color:var(--soft)">${esc(op.qualifica||'')}</div>
-      </div>
-      <div class="voce-pu" style="text-align:right">€${op.costo}</div>
-      <div class="voce-qty">${fmtN(ore)}h</div>
-      <div class="voce-price">${fmtEur(costo)}</div>
-    </div>`;
-  }).join('');
 
   const caps = c.capitoli.map(cap=>{
     const capPrev = (cap.voci||[]).reduce((s,v)=>s+(+v.qty||0)*(+v.pu||0),0);
-    const capEff = (cap.voci||[]).reduce((s,v)=>s+(+v.qtyEff!==undefined&&v.qtyEff!==null?+v.qtyEff:+v.qty||0)*(+v.pu||0),0);
+    const capEff = (cap.voci||[]).reduce((s,v)=>s+(v.qtyEff!==undefined&&v.qtyEff!==null?+v.qtyEff:+v.qty||0)*(+v.pu||0),0);
     const rows = (cap.voci||[]).map(v=>{
       const prev = (+v.qty||0)*(+v.pu||0);
       const qEff = v.qtyEff!==undefined&&v.qtyEff!==null ? +v.qtyEff : +v.qty;
@@ -1858,7 +1831,7 @@ function renderSAL(c) {
       <div class="table-header" style="grid-template-columns:1fr 64px 72px 56px 60px;gap:4px">
         <span class="th-label">Descrizione</span>
         <span class="th-label" style="text-align:center">Qtà eseg.</span>
-        <span class="th-label" style="text-align:right">Effettivo</span>
+        <span class="th-label" style="text-align:right">Importo</span>
         <span class="th-label" style="text-align:right">Δ</span>
         <span class="th-label" style="text-align:right">%</span>
       </div>
@@ -1868,17 +1841,10 @@ function renderSAL(c) {
 
   return `<div>
     <div class="kpi-row">
-      <div class="kpi-box"><div class="kpi-n">${fmtEur(totPrev)}</div><div class="kpi-l">Prev. lavoraz.</div></div>
-      <div class="kpi-box ${totEff>totPrev?'danger':'success'}"><div class="kpi-n">${fmtEur(totEff)}</div><div class="kpi-l">Eff. lavoraz.</div></div>
-      <div class="kpi-box"><div class="kpi-n">${fmtEur(totMdo)}</div><div class="kpi-l">Manodopera</div></div>
+      <div class="kpi-box"><div class="kpi-n">${fmtEur(totPrev)}</div><div class="kpi-l">Prev. contratto</div></div>
+      <div class="kpi-box ${totEff>totPrev?'danger':'success'}"><div class="kpi-n">${fmtEur(totEff)}</div><div class="kpi-l">Eseguito</div></div>
+      <div class="kpi-box"><div class="kpi-n">${pct}%</div><div class="kpi-l">Avanzamento</div></div>
     </div>
-
-    <!-- Totale generale inclusa manodopera -->
-    <div style="margin:8px 10px 0;background:var(--g1);border-radius:var(--r-sm);padding:10px 16px;display:flex;justify-content:space-between;align-items:center">
-      <span style="font-size:12px;color:rgba(255,255,255,.7);font-weight:500">Costo totale (lavorazioni + manodopera)</span>
-      <span style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:#fff">${fmtEur(totEff + totMdo)}</span>
-    </div>
-
     <div style="padding:8px 10px 2px">
       <div style="background:var(--s1);border-radius:99px;height:8px;overflow:hidden;border:1px solid var(--s2)">
         <div style="width:${pct}%;height:100%;background:${pct>100?'var(--red)':'var(--g3)'};border-radius:99px;transition:width .5s"></div>
@@ -1887,38 +1853,10 @@ function renderSAL(c) {
         <span>Avanzamento economico lavorazioni</span><span>${pct}%</span>
       </div>
     </div>
-
-    <!-- SEZIONE MANODOPERA da rapportini -->
-    ${Object.keys(mdoPerOperaio).length > 0 ? `
-    <div class="computo-wrap" style="margin-top:8px">
-      <div class="cap-header" style="background:linear-gradient(90deg,#2d4a3e,#3d6b55)">
-        <span>👷 Manodopera — da rapportini</span>
-        <span class="cap-total">${fmtEur(totMdo)}</span>
-      </div>
-      <div class="table-header" style="grid-template-columns:1fr 44px 56px 72px">
-        <span class="th-label">Operaio</span>
-        <span class="th-label" style="text-align:right">€/h</span>
-        <span class="th-label" style="text-align:right">Ore tot.</span>
-        <span class="th-label" style="text-align:right">Costo</span>
-      </div>
-      ${mdoRows}
-      <div style="padding:8px 14px;background:var(--g6);display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--g1);border-top:1px solid var(--s2)">
-        <span>Totale manodopera</span>
-        <span>${fmtEur(totMdo)}</span>
-      </div>
-    </div>` : `
-    <div style="margin:8px 10px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--r-sm);padding:10px 14px;font-size:12px;color:var(--amber)">
-      💡 Le ore degli operai inserite nei rapportini appariranno automaticamente qui come costo manodopera.
-    </div>`}
-
-    <div style="padding:4px 10px 4px;margin-top:4px">
-      <button onclick="exportConsuntivo()" style="width:100%;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif">📊 Esporta Excel consuntivo</button>
+    <div style="padding:4px 10px 8px">
+      <button onclick="exportConsuntivo()" style="width:100%;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif">📊 Esporta Excel SAL</button>
     </div>
-
-    <!-- SEZIONE LAVORAZIONI voce per voce -->
-    <div style="padding:4px 10px 4px">
-      <div style="font-size:10px;font-weight:600;color:var(--soft);text-transform:uppercase;letter-spacing:.5px;padding:6px 4px 4px">Avanzamento lavorazioni — aggiorna le quantità eseguite</div>
-    </div>
+    <div style="padding:0 10px 4px;font-size:10px;font-weight:600;color:var(--soft);text-transform:uppercase;letter-spacing:.5px">Aggiorna quantità eseguite</div>
     <div style="padding:2px 0">${caps}</div>
   </div>`;
 }
@@ -2705,7 +2643,7 @@ function saveSpesaMateriali() {
 }
 
 // ════════════ RENDER MARGINI ════════════
-function renderMargini(c) {
+function renderCosti(c) {
   const pctCG = +(c.pctCostiGenerali||18);
   const targetM = +(c.targetMargine||20);
   const totVendita = calcolaConsuntivo(c);
@@ -2846,6 +2784,17 @@ function renderMargini(c) {
       <button onclick="openModal('mSpesaMateriali')" style="flex:1;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif">🧱 + Mat./Nolo</button>
       <button onclick="openModal('mSpesaGenerale')" style="flex:1;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);border-radius:var(--r-sm);padding:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif">📋 + Spesa reale</button>
     </div>
+
+    <!-- MANODOPERA DA RAPPORTINI -->
+    ${(() => {
+      const operaiMap = {};
+      (c.operai||[]).forEach(op => { operaiMap[op.id] = op; });
+      const mdoPerOperaio = {};
+      (c.rapportini||[]).forEach(r => { (r.oreOperai||[]).forEach(x => { if(!mdoPerOperaio[x.opId]) mdoPerOperaio[x.opId]=0; mdoPerOperaio[x.opId]+=(+x.ore||0); }); });
+      if(!Object.keys(mdoPerOperaio).length) return `<div style="margin:4px 10px 8px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--r-sm);padding:10px 14px;font-size:12px;color:var(--amber)">💡 Le ore degli operai inserite nei rapportini appariranno qui come costo manodopera.</div>`;
+      const mdoRows = Object.entries(mdoPerOperaio).map(([opId,ore]) => { const op=operaiMap[opId]; if(!op) return ''; const costo=ore*(+op.costo||0); return `<div class="voce-row" style="grid-template-columns:1fr 44px 56px 72px;gap:4px"><div><div class="voce-desc">${esc(op.nome)}</div><div style="font-size:10px;color:var(--soft)">${esc(op.qualifica||'')}</div></div><div class="voce-pu" style="text-align:right">€${op.costo}</div><div class="voce-qty">${fmtN(ore)}h</div><div class="voce-price">${fmtEur(costo)}</div></div>`; }).join('');
+      return `<div class="computo-wrap" style="margin:4px 10px 8px"><div class="cap-header" style="background:linear-gradient(90deg,#2d4a3e,#3d6b55)"><span>👷 Manodopera — da rapportini</span><span class="cap-total">${fmtE(totMdo)}</span></div><div class="table-header" style="grid-template-columns:1fr 44px 56px 72px"><span class="th-label">Operaio</span><span class="th-label" style="text-align:right">€/h</span><span class="th-label" style="text-align:right">Ore tot.</span><span class="th-label" style="text-align:right">Costo</span></div>${mdoRows}<div style="padding:8px 14px;background:var(--g6);display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--g1);border-top:1px solid var(--s2)"><span>Totale manodopera</span><span>${fmtEur(totMdo)}</span></div></div>`;
+    })()}
 
     <!-- CONFRONTO CG STIMATI vs REALI -->
     <div style="margin:4px 10px 8px;background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);padding:12px 14px">
