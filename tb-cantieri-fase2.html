@@ -479,13 +479,12 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
   <div class="screen" id="scrDettaglio" style="display:none">
     <div class="tabs" id="detTabs">
       <button class="tab active" id="t-computo" onclick="switchTab('computo')">📐 Computo <span class="tab-cnt" id="cnt-computo">0</span></button>
-      <button class="tab" id="t-consuntivo" onclick="switchTab('consuntivo')">⚖️ Consuntivo</button>
-      <button class="tab" id="t-rapportini" onclick="switchTab('rapportini')">📋 Rapportini <span class="tab-cnt" id="cnt-rapportini">0</span></button>
+      <button class="tab" id="t-sal" onclick="switchTab('sal')">📋 SAL</button>
+      <button class="tab" id="t-rapportini" onclick="switchTab('rapportini')">📓 Rapportini <span class="tab-cnt" id="cnt-rapportini">0</span></button>
       <button class="tab" id="t-operai" onclick="switchTab('operai')">👷 Operai <span class="tab-cnt" id="cnt-operai">0</span></button>
-      <button class="tab" id="t-foto" onclick="switchTab('foto')">📷 Foto <span class="tab-cnt" id="cnt-foto">0</span></button>
       <button class="tab" id="t-margini" onclick="switchTab('margini')">📊 Margini</button>
       <button class="tab" id="t-ordini" onclick="switchTab('ordini')">📦 Ordini <span class="tab-cnt" id="cnt-ordini">0</span></button>
-      <button class="tab" id="t-documenti" onclick="switchTab('documenti')">🗂️ Docs <span class="tab-cnt" id="cnt-documenti">0</span></button>
+      <button class="tab" id="t-giornale" onclick="switchTab('giornale')">📔 Giornale <span class="tab-cnt" id="cnt-giornale">0</span></button>
     </div>
     <div id="detContent"></div>
   </div>
@@ -498,12 +497,11 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
 <!-- BOTTOM NAV (only in dettaglio) -->
 <nav class="bottom-nav" id="bottomNav" style="display:none">
   <button class="nav-btn active" id="n-computo" onclick="switchTab('computo')"><span class="nav-ic">📐</span><span class="nav-lb">Computo</span></button>
-  <button class="nav-btn" id="n-rapportini" onclick="switchTab('rapportini')"><span class="nav-ic">📋</span><span class="nav-lb">Rapportini</span></button>
+  <button class="nav-btn" id="n-rapportini" onclick="switchTab('rapportini')"><span class="nav-ic">📓</span><span class="nav-lb">Rapportini</span></button>
   <button class="nav-btn" id="n-operai" onclick="switchTab('operai')"><span class="nav-ic">👷</span><span class="nav-lb">Operai</span></button>
-  <button class="nav-btn" id="n-foto" onclick="switchTab('foto')"><span class="nav-ic">📷</span><span class="nav-lb">Foto</span></button>
   <button class="nav-btn" id="n-margini" onclick="switchTab('margini')"><span class="nav-ic">📊</span><span class="nav-lb">Margini</span></button>
   <button class="nav-btn" id="n-ordini" onclick="switchTab('ordini')"><span class="nav-ic">📦</span><span class="nav-lb">Ordini</span></button>
-  <button class="nav-btn" id="n-documenti" onclick="switchTab('documenti')"><span class="nav-ic">🗂️</span><span class="nav-lb">Docs</span></button>
+  <button class="nav-btn" id="n-giornale" onclick="switchTab('giornale')"><span class="nav-ic">📔</span><span class="nav-lb">Giornale</span></button>
 </nav>
 
 <!-- ══════════ MODALS ══════════ -->
@@ -954,6 +952,47 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- Nuova Voce Giornale di Cantiere -->
+<div class="overlay" id="mNuovaVoceGiornale" onclick="closeOv(event,'mNuovaVoceGiornale')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📔 GIORNALE DI CANTIERE</div>
+    <div class="modal-body">
+      <div class="f-grid">
+        <div><label class="f-label">Data *</label><input class="f-in" type="date" id="gn-data"></div>
+        <div><label class="f-label">Categoria</label>
+          <select class="f-sel" id="gn-cat">
+            <option value="decisione">🔵 Decisione</option>
+            <option value="problema">🔴 Problema</option>
+            <option value="variante">🟠 Variante</option>
+            <option value="comunicazione">🟢 Comunicazione</option>
+            <option value="consegna">📦 Consegna materiali</option>
+            <option value="ispezione">🔍 Ispezione/Collaudo</option>
+            <option value="nota">📝 Nota generale</option>
+          </select>
+        </div>
+      </div>
+      <div><label class="f-label">Descrizione *</label>
+        <textarea class="f-ta" id="gn-testo" rows="4" placeholder="Descrivi la decisione, il problema o l'evento..."></textarea>
+      </div>
+      <div>
+        <label class="f-label">Foto (opzionale)</label>
+        <div id="gn-fotoPreview" style="display:none;margin-bottom:8px;text-align:center">
+          <img id="gn-fotoImg" style="max-height:180px;border-radius:10px;max-width:100%;object-fit:contain;border:1px solid var(--s2)">
+          <div style="font-size:11px;color:var(--soft);margin-top:4px" id="gn-fotoName"></div>
+          <button onclick="rimuoviFotoGiornale()" style="margin-top:4px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'Nunito',sans-serif">✕ Rimuovi</button>
+        </div>
+        <input type="file" id="gn-fotoInput" accept="image/*" style="display:none" onchange="previewFotoGiornale(event)">
+        <button onclick="document.getElementById('gn-fotoInput').click()"
+          style="width:100%;background:var(--s1);color:var(--soft);border:1.5px dashed var(--s3);border-radius:var(--r-sm);padding:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px">
+          📷 Scatta foto o scegli dalla libreria
+        </button>
+      </div>
+      <button class="btn-prim" onclick="salvaVoceGiornale()">SALVA NEL GIORNALE</button>
     </div>
   </div>
 </div>
@@ -1426,7 +1465,7 @@ function switchTab(tab) {
 }
 
 function fabAction() {
-  const map = {computo:'mImportComputo',consuntivo:null,rapportini:'mRapportino',operai:'mOperaio',foto:'mFoto',ordini:'mNuovoOrdine',documenti:'mDocumento',margini:'mSpesaGenerale'};
+  const map = {computo:'mImportComputo',sal:null,rapportini:'mRapportino',operai:'mOperaio',margini:'mSpesaGenerale',ordini:'mNuovoOrdine',giornale:'mNuovaVoceGiornale'};
   if(map[S.tab]) openModal(map[S.tab]);
 }
 
@@ -1436,14 +1475,13 @@ function updateCounts() {
   $('cnt-computo').textContent = voci;
   $('cnt-rapportini').textContent = (c.rapportini||[]).length;
   $('cnt-operai').textContent = (c.operai||[]).length;
-  $('cnt-foto').textContent = (c.foto||[]).length;
-  $('cnt-documenti').textContent = (c.documenti||[]).length;
+  $('cnt-giornale').textContent = (c.giornale||[]).length;
   const cntOrd = $('cnt-ordini'); if(cntOrd) cntOrd.textContent = (c.ordini||[]).length;
 }
 
 // ════════════ MODALS ════════════
 function openModal(id) {
-  ['rp-data','ft-data','dc-data','ore-data'].forEach(f=>{ const el=$(f); if(el&&!el.value) el.value=today(); });
+  ['rp-data','ft-data','dc-data','ore-data','gn-data'].forEach(f=>{ const el=$(f); if(el&&!el.value) el.value=today(); });
   // Populate capitoli datalist in voce modal
   if(id==='mNuovaVoce') {
     const c = getCantiere();
@@ -1673,13 +1711,12 @@ function renderTab(tab) {
   const el = $('detContent');
   switch(tab) {
     case 'computo':    el.innerHTML = renderComputo(c); break;
-    case 'consuntivo': el.innerHTML = renderConsuntivo(c); break;
+    case 'sal':        el.innerHTML = renderSAL(c); break;
     case 'rapportini': el.innerHTML = renderRapportini(c); break;
     case 'operai':     el.innerHTML = renderOperai(c); break;
-    case 'foto':       el.innerHTML = renderFoto(c); break;
     case 'margini':    el.innerHTML = renderMargini(c); break;
     case 'ordini':     el.innerHTML = renderOrdini(c); break;
-    case 'documenti':  el.innerHTML = renderDocumenti(c); break;
+    case 'giornale':   el.innerHTML = renderGiornale(c); break;
   }
 }
 
@@ -1762,7 +1799,7 @@ function calcolaManodopera(c) {
   }, 0);
 }
 
-function renderConsuntivo(c) {
+function renderSAL(c) {
   if(!(c.capitoli||[]).length) return `<div class="empty"><div class="empty-ic">⚖️</div><div class="empty-txt">Importa prima il computo preventivo<br>per poter confrontare i costi reali.</div></div>`;
   const totPrev = calcolaPreventivo(c);
   const totEff = calcolaConsuntivo(c);
@@ -2063,6 +2100,103 @@ function renderDocumenti(c) {
       </div>
       ${d.fileData?`<button class="doc-dl" onclick="downloadDoc('${d.id}')">⬇ Scarica</button>`:''}
     </div>`).join('')}</div>`;
+}
+
+// ── GIORNALE DI CANTIERE ──
+let _gnFotoDataUrl = null;
+
+function previewFotoGiornale(e) {
+  const file = e.target.files && e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const tmpImg = new Image();
+    tmpImg.onload = () => {
+      const MAX = 1200; let w = tmpImg.width, h = tmpImg.height;
+      if (w > MAX || h > MAX) { if (w > h) { h = Math.round(h*MAX/w); w = MAX; } else { w = Math.round(w*MAX/h); h = MAX; } }
+      const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(tmpImg, 0, 0, w, h);
+      _gnFotoDataUrl = canvas.toDataURL('image/jpeg', 0.80);
+      const wrap=$('gn-fotoPreview'), img=$('gn-fotoImg'), nm=$('gn-fotoName');
+      if(wrap) wrap.style.display='block'; if(img) img.src=_gnFotoDataUrl; if(nm) nm.textContent=file.name;
+    };
+    tmpImg.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function rimuoviFotoGiornale() {
+  _gnFotoDataUrl = null;
+  const wrap=$('gn-fotoPreview'); if(wrap) wrap.style.display='none';
+  const inp=$('gn-fotoInput'); if(inp) inp.value='';
+}
+
+function salvaVoceGiornale() {
+  const testo = v('gn-testo').trim();
+  if (!testo) { alert('Inserisci una descrizione'); return; }
+  const c = getCantiere(); if (!c) return;
+  c.giornale = c.giornale || [];
+  c.giornale.push({ id:uid(), data:v('gn-data')||today(), cat:v('gn-cat')||'nota', testo, foto:_gnFotoDataUrl||null, utente:S.uid||'Utente', created:Date.now() });
+  _gnFotoDataUrl = null;
+  save(); closeModal('mNuovaVoceGiornale');
+  const el=$('gn-testo'); if(el) el.value='';
+  const inp=$('gn-fotoInput'); if(inp) inp.value='';
+  const wrap=$('gn-fotoPreview'); if(wrap) wrap.style.display='none';
+  updateCounts(); renderTab('giornale'); toast('✅ Voce salvata nel giornale!');
+}
+
+function eliminaVoceGiornale(id) {
+  if (!confirm('Eliminare questa voce?')) return;
+  const c = getCantiere(); if (!c) return;
+  c.giornale = (c.giornale||[]).filter(x=>x.id!==id);
+  save(); updateCounts(); renderTab('giornale');
+}
+
+function renderGiornale(c) {
+  const voci = [...(c.giornale||[])].reverse();
+  const catConf = {
+    decisione:     { label:'Decisione',          color:'#1d4ed8', bg:'#eff6ff', border:'#bfdbfe', dot:'#3b82f6' },
+    problema:      { label:'Problema',            color:'#dc2626', bg:'#fef2f2', border:'#fecaca', dot:'#ef4444' },
+    variante:      { label:'Variante',            color:'#d97706', bg:'#fffbeb', border:'#fde68a', dot:'#f59e0b' },
+    comunicazione: { label:'Comunicazione',       color:'#15803d', bg:'#f0fdf4', border:'#bbf7d0', dot:'#22c55e' },
+    consegna:      { label:'Consegna materiali',  color:'#6d28d9', bg:'#f5f3ff', border:'#ddd6fe', dot:'#8b5cf6' },
+    ispezione:     { label:'Ispezione/Collaudo',  color:'#0e7490', bg:'#ecfeff', border:'#a5f3fc', dot:'#06b6d4' },
+    nota:          { label:'Nota',                color:'#4d6b58', bg:'#f7faf8', border:'#e2ede6', dot:'#6a9478' },
+  };
+  if (!voci.length) return `<div class="empty"><div class="empty-ic">📔</div><div class="empty-txt">Nessuna voce nel giornale.<br>Registra decisioni, problemi e varianti!</div></div>`;
+  const counters = Object.entries(catConf).map(([k,conf]) => {
+    const n = voci.filter(v=>v.cat===k).length; if(!n) return '';
+    return `<div style="display:flex;align-items:center;gap:5px;padding:5px 10px;background:${conf.bg};border-radius:6px;border:1px solid ${conf.border}"><div style="width:7px;height:7px;border-radius:50%;background:${conf.dot}"></div><span style="font-size:10px;font-weight:600;color:${conf.color}">${n} ${conf.label}</span></div>`;
+  }).join('');
+  const rows = voci.map(v => {
+    const conf = catConf[v.cat]||catConf.nota;
+    return `<div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid ${conf.border};overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:${conf.bg};border-bottom:1px solid ${conf.border}">
+        <div style="width:10px;height:10px;border-radius:50%;background:${conf.dot};flex-shrink:0"></div>
+        <div style="flex:1"><span style="font-size:11px;font-weight:700;color:${conf.color};text-transform:uppercase;letter-spacing:.4px">${conf.label}</span><span style="font-size:11px;color:var(--soft);margin-left:8px">${v.data}</span></div>
+        <span style="font-size:11px;font-weight:600;color:var(--soft);background:#fff;border-radius:99px;padding:2px 8px;border:1px solid ${conf.border}">${esc(v.utente||'—')}</span>
+        <button onclick="eliminaVoceGiornale('${v.id}')" style="background:none;border:none;color:var(--s4);cursor:pointer;font-size:16px;padding:2px 4px">✕</button>
+      </div>
+      <div style="padding:12px 14px">
+        <div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap">${esc(v.testo)}</div>
+        ${v.foto?`<div style="margin-top:10px"><img src="${v.foto}" style="max-width:100%;border-radius:8px;border:1px solid var(--s2);cursor:pointer" onclick="apriLightboxGiornale('${v.id}')"></div>`:''}
+        <div style="font-size:10px;color:var(--s4);margin-top:8px">${fmtTs(v.created)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div>
+    <div style="padding:10px 10px 6px;display:flex;flex-wrap:wrap;gap:6px">${counters}</div>
+    <div style="padding:0 10px 8px"><button onclick="openModal('mNuovaVoceGiornale')" style="width:100%;background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:11px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">+ Nuova voce giornale</button></div>
+    ${rows}
+  </div>`;
+}
+
+function apriLightboxGiornale(id) {
+  const c = getCantiere(); if (!c) return;
+  const v = (c.giornale||[]).find(x=>x.id===id); if (!v||!v.foto) return;
+  const lb=$('lightbox'), img=$('lbImg'), info=$('lbInfo');
+  img.src=v.foto; img.style.display='block';
+  info.textContent=`${v.data} · ${v.utente||''} · ${v.testo.slice(0,60)}`;
+  lb.classList.add('show');
 }
 
 // ════════════ SAVE ACTIONS ════════════
