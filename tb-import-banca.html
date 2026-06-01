@@ -140,35 +140,36 @@ const REGOLE = [
   // ENTRATE — incassi clienti
   { match: /FONTANASANTA/i,         centro:'fontanasanta', cat:'Incasso cliente',    tipo:'entrata' },
   { match: /BORGHETTO/i,            centro:'borghetto',    cat:'Incasso cliente',    tipo:'entrata' },
-  // Ritenute fiscali su bonifici in entrata
-  { match: /RITENUTA FISCALE.*BONIFICO RICEV/i, centro:'fisco', cat:'Ritenuta d\'acconto', tipo:'uscita' },
+  // Ritenute fiscali su bonifici in entrata Fontanasanta → rimangono su fontanasanta
+  { match: /RITENUTA FISCALE.*BONIFICO RICEV.*FONTANASANTA/i, centro:'fontanasanta', cat:'Incasso cliente', tipo:'entrata' },
+  { match: /RITENUTA FISCALE.*FONTANASANTA/i, centro:'fontanasanta', cat:'Incasso cliente', tipo:'entrata' },
   // Fornitori cantiere Fontanasanta
   { match: /CALLIARI FRANCO/i,      centro:'fontanasanta', cat:'Subappalto',         tipo:'uscita' },
   { match: /NEW DELHI/i,            centro:'fontanasanta', cat:'Vitto cantiere',     tipo:'uscita' },
   { match: /BRENNERPONT/i,          centro:'fontanasanta', cat:'Subappalto/Nolo',    tipo:'uscita' },
-  { match: /DECARLI MATTHIEU/i,     centro:'fontanasanta', cat:'Subappalto',         tipo:'uscita' },
+  { match: /DECARLI MATTHIEU|DE CARLI MATTHIEU/i, centro:'fontanasanta', cat:'Subappalto', tipo:'uscita' },
   { match: /CARPENTERIA ROSSI/i,    centro:'fontanasanta', cat:'Subappalto',         tipo:'uscita' },
   { match: /EDILRAVANELLI/i,        centro:'fontanasanta', cat:'Materiali',          tipo:'uscita' },
   { match: /COLORIFICIO FAILONI/i,  centro:'fontanasanta', cat:'Materiali',          tipo:'uscita' },
   { match: /SATIVA/i,               centro:'fontanasanta', cat:'Materiali',          tipo:'uscita' },
   { match: /MGTEC/i,                centro:'fontanasanta', cat:'Materiali',          tipo:'uscita' },
   { match: /TECNOEDIL NOLEGGI/i,    centro:'fontanasanta', cat:'Noleggi',            tipo:'uscita' },
-  { match: /ANTICA TRATTORIA/i,     centro:'borghetto',    cat:'Vitto cantiere',     tipo:'uscita' },
-  { match: /PIFFER PAOLO/i,         centro:'generale',     cat:'Vitto/Trasferte',    tipo:'uscita' },
   // Fornitori Borghetto
   { match: /BOSSONG/i,              centro:'borghetto',    cat:'Materiali',          tipo:'uscita' },
-  // Personale (stipendi soci)
+  // Vitto cantiere Borghetto (Antica Trattoria + Secchi Francesca)
+  { match: /ANTICA TRATTORIA/i,     centro:'borghetto',    cat:'Vitto cantiere',     tipo:'uscita' },
+  { match: /SECCHI FRANCESCA/i,     centro:'borghetto',    cat:'Vitto cantiere',     tipo:'uscita' },
+  // Personale (compensi soci)
   { match: /MIHALI ILIE/i,          centro:'personale',    cat:'Compenso socio',     tipo:'uscita' },
   { match: /BORGES SOUZA CASSIO/i,  centro:'personale',    cat:'Compenso socio',     tipo:'uscita' },
-  { match: /CASSIO.*COMPENSO|COMPENSO.*CASSIO/i, centro:'personale', cat:'Compenso socio', tipo:'uscita' },
   // Costi generali
   { match: /KUWAIT PETROLEUM|Q8/i,  centro:'generale',     cat:'Carburante',         tipo:'uscita' },
+  { match: /PV 2203/i,              centro:'generale',     cat:'Carburante',         tipo:'uscita' },  // POS carburante anonimo
   { match: /AUTODESK/i,             centro:'generale',     cat:'Software/Licenze',   tipo:'uscita' },
   { match: /ARUBA/i,                centro:'generale',     cat:'Software/Licenze',   tipo:'uscita' },
   { match: /ESNA SOA/i,             centro:'generale',     cat:'Certificazioni/SOA', tipo:'uscita' },
   { match: /PEDROTTI.*BEATRICE|BEATRICE.*PEDROTTI/i, centro:'generale', cat:'INAIL/Sicurezza', tipo:'uscita' },
   { match: /AUSUGUM ASSICURAZIONI/i, centro:'generale',    cat:'Assicurazioni',      tipo:'uscita' },
-  { match: /SECCHI FRANCESCA/i,     centro:'generale',     cat:'Consulenza',         tipo:'uscita' },
   { match: /STUDIO GBS|COMMERCIALISTI/i, centro:'generale', cat:'Commercialista',   tipo:'uscita' },
   { match: /iNotai|i Notai|NOTAI.*ROMANO/i, centro:'generale', cat:'Legale/Notaio', tipo:'uscita' },
   { match: /CONFARTIGIANATO/i,      centro:'generale',     cat:'Associazioni',       tipo:'uscita' },
@@ -178,17 +179,18 @@ const REGOLE = [
   { match: /Servizi e Gestioni Italia/i, centro:'generale', cat:'Servizi',           tipo:'uscita' },
   { match: /SAPI/i,                 centro:'generale',     cat:'Formazione/Sicurezza', tipo:'uscita' },
   { match: /DALFOVO MAURO/i,        centro:'generale',     cat:'Carburante',         tipo:'uscita' },
+  { match: /ORO STUBE/i,            centro:'generale',     cat:'Vitto/Trasferte',    tipo:'uscita' },
+  { match: /PIFFER PAOLO/i,         centro:'generale',     cat:'Vitto/Trasferte',    tipo:'uscita' },
+  { match: /CCIAA TRENTO/i,         centro:'generale',     cat:'Tassa CCIAA',        tipo:'uscita' },
+  { match: /NEXI/i,                 centro:'generale',     cat:'Servizi',            tipo:'uscita' },
+  { match: /Ricarica carta prepagate/i, centro:'generale', cat:'Ricarica carta',     tipo:'uscita' },
+  { match: /Ricarica carta RICCC/i,  centro:'generale',    cat:'Commissioni banca',  tipo:'uscita' },
   // Fisco
-  { match: /Imposte e tasse|RITENUTA FISCALE|delega fiscale|Scadenza delega/i, centro:'fisco', cat:'Imposte/Tasse', tipo:'uscita' },
+  { match: /Imposte e tasse|Scadenza delega/i, centro:'fisco', cat:'Imposte/Tasse', tipo:'uscita' },
   { match: /Interessi e competenze/i, centro:'fisco',      cat:'Interessi bancari',  tipo:'uscita' },
   { match: /CANONE.*VIRTUAL BANKING|COMMISSIONI.*VIRTUAL/i, centro:'fisco', cat:'Commissioni banca', tipo:'uscita' },
-  { match: /NEXI|spese carta/i,     centro:'fisco',        cat:'Commissioni banca',  tipo:'uscita' },
-  // Ricariche carta/trasferimenti interni
-  { match: /Ricarica carta prepagate/i, centro:'nc',       cat:'Ricarica carta',     tipo:'uscita' },
-  { match: /Ricarica carta RICCC/i,  centro:'nc',          cat:'Ricarica carta',     tipo:'uscita' },
-  { match: /Versamento assegni/i,    centro:'nc',          cat:'Versamento',         tipo:'entrata' },
-  { match: /pagamento tramite POS.*CCIAA/i, centro:'generale', cat:'Tassa CCIAA',   tipo:'uscita' },
-  { match: /ORO STUBE/i,            centro:'generale',     cat:'Vitto/Trasferte',    tipo:'uscita' },
+  // Versamenti interni
+  { match: /Versamento assegni/i,    centro:'generale',    cat:'Versamento',         tipo:'entrata' },
 ];
 
 const CENTRI_LABEL = {
