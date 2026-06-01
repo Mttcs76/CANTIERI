@@ -377,24 +377,64 @@ window.importaFirebase = async () => {
     const S = snap.data();
     S.azienda = S.azienda || {};
     S.azienda.movimentiBanca = S.azienda.movimentiBanca || [];
+    S.azienda.costiFissi = S.azienda.costiFissi || [];
+    S.cantieri = S.cantieri || [];
 
-    let nNuovi = 0, nDup = 0;
+    // Trova cantieri
+    const cF = S.cantieri.find(c=>(c.nome||'').toLowerCase().includes('fontanasanta'));
+    const cB = S.cantieri.find(c=>(c.nome||'').toLowerCase().includes('borghetto'));
+    if(cF) cF.speseMateriali = cF.speseMateriali || [];
+    if(cB) cB.speseMateriali = cB.speseMateriali || [];
+
+    let nNuovi=0, nDup=0, nF=0, nB=0, nG=0, nSkip=0;
+
     for (const m of movimenti) {
-      if (m.centro === 'skip') continue;
-      const key = m.data + '|' + m.importo + '|' + m.desc.slice(0,30);
-      if (S.azienda.movimentiBanca.some(x => x.key === key)) { nDup++; continue; }
-      S.azienda.movimentiBanca.push({ ...m, key, importedAt: Date.now() });
-      nNuovi++;
+      if (m.centro === 'skip') { nSkip++; continue; }
+      const key = m.data+'|'+m.importo+'|'+m.desc.slice(0,30);
+
+      // Registra in movimentiBanca (tutti, entrate e uscite)
+      if (!S.azienda.movimentiBanca.some(x=>x.key===key)) {
+        S.azienda.movimentiBanca.push({ ...m, key, importedAt: Date.now() });
+        nNuovi++;
+      } else {
+        nDup++; continue;
+      }
+
+      // Solo uscite → distribuisci ai centri di costo
+      if (m.importo >= 0) continue;
+      const importoAbs = Math.abs(m.importo);
+      const desc = m.desc.slice(0,80);
+
+      if (m.centro === 'fontanasanta' && cF) {
+        if (!cF.speseMateriali.some(s=>s.key===key)) {
+          cF.speseMateriali.push({ id:key, desc, cat:m.cat||'Altro', importo:importoAbs, data:m.data, capId:'', note:'', utente:'Import banca', key, created:Date.now() });
+          nF++;
+        }
+      } else if (m.centro === 'borghetto' && cB) {
+        if (!cB.speseMateriali.some(s=>s.key===key)) {
+          cB.speseMateriali.push({ id:key, desc, cat:m.cat||'Altro', importo:importoAbs, data:m.data, capId:'', note:'', utente:'Import banca', key, created:Date.now() });
+          nB++;
+        }
+      } else if (['generale','personale','fisco'].includes(m.centro)) {
+        if (!S.azienda.costiFissi.some(s=>s.key===key)) {
+          S.azienda.costiFissi.push({ id:key, desc, cat:m.cat||'Altro', freq:'una-tantum', importo:importoAbs, scadenza:m.data, centro:m.centro, note:'', key, created:Date.now() });
+          nG++;
+        }
+      }
+      // nc → solo movimentiBanca, nessun collegamento
     }
 
-    // Aggiorna saldo
-    S.azienda.saldoBanca = movimenti.reduce((s,m) => s + m.importo, null) !== null
-      ? parseFloat((S.azienda.movimentiBanca.reduce((s,m)=>s+m.importo,0)).toFixed(2))
-      : S.azienda.saldoBanca;
+    S.azienda.saldoBanca = parseFloat((S.azienda.movimentiBanca.reduce((s,m)=>s+m.importo,0)).toFixed(2));
 
     await setDoc(doc(db,'tbcantieri','shared'), S);
     st.className = 'status ok';
-    st.innerHTML = `<strong>✅ SALVATO SU FIREBASE</strong><br>Nuovi: ${nNuovi} · Duplicati saltati: ${nDup}<br><em>Apri TB Works → Impresa per vedere i movimenti.</em>`;
+    st.innerHTML = `<strong>✅ IMPORTATO SU FIREBASE</strong><br>
+      Movimenti registrati: ${nNuovi} · Duplicati saltati: ${nDup}<br>
+      🏗 Fontanasanta: +${nF} spese<br>
+      🏗 Borghetto: +${nB} spese<br>
+      🏢 Costi generali/personale/fisco: +${nG} voci<br>
+      ⛔ Saltati: ${nSkip}<br>
+      <em>Apri TB Works → ricarica la pagina.</em>`;
     btn.textContent = '✅ Salvato!'; btn.style.background = '#22c55e';
   } catch(e) {
     st.className = 'status err'; st.textContent = '❌ Errore: ' + e.message;
