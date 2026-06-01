@@ -330,7 +330,9 @@ window.importaFatture = async function() {
 };
 
 window.resetFirebase = async function() {
-  if(!confirm('⚠️ ATTENZIONE\n\nQuesto azzera:\n- Tutte le spese dei cantieri\n- Tutti i costi generali\n- Il registro fatture\n\nI cantieri, rapportini e operai vengono conservati.\n\nContinuare?')) return;
+  if(!S) { alert('Prima premi "Connetti e carica dati"'); return; }
+  const nMov = (S.azienda?.movimentiBanca||[]).length;
+  if(!confirm(`⚠️ ATTENZIONE\n\nQuesto azzera:\n- Tutte le spese dei cantieri\n- Tutti i costi generali\n- Il registro fatture\n\nVERRANNO CONSERVATI:\n- Cantieri, rapportini e operai\n- Movimenti bancari (${nMov} voci)\n\nContinuare?`)) return;
   const btn = document.getElementById('resetBtn');
   btn.disabled=true; btn.textContent='Azzeramento...';
   try {
