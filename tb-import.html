@@ -336,7 +336,9 @@ window.resetFirebase = async function() {
   const btn = document.getElementById('resetBtn');
   btn.disabled=true; btn.textContent='Azzeramento...';
   try {
+    S.cantieri = S.cantieri||[];
     S.cantieri.forEach(c => { c.speseMateriali=[]; c.speseGenerali=[]; });
+    S.azienda = S.azienda||{};
     S.azienda.fatture=[];
     S.azienda.costiFissi=[];
     await setDoc(doc(db,'tbcantieri','shared'), S);
