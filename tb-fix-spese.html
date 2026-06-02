@@ -2,84 +2,115 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TB — Fix Spese</title>
+<title>TB Works — Fix Spese Duplicate</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:sans-serif;background:#f0f5f2;padding:20px;color:#1a2e22}
-.card{background:#fff;border-radius:14px;border:1px solid #e2ede6;padding:20px;max-width:600px;margin:0 auto 16px}
-.btn{width:100%;background:#1a4a2e;color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px}
-.status{padding:12px;border-radius:8px;margin-top:10px;font-size:13px;font-weight:600;line-height:1.6}
-.ok{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
-.err{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
-.info{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+body{font-family:sans-serif;padding:20px;background:#f0f5f2;color:#1a2e22}
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;max-width:700px}
+h1{color:#1a4a2e;font-size:18px}
+button{background:#1a4a2e;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;margin:4px}
+button.red{background:#dc2626}
+pre{background:#1a2e22;color:#d8f3dc;padding:12px;border-radius:8px;font-size:11px;max-height:400px;overflow-y:auto;white-space:pre-wrap}
+.ok{color:#15803d;font-weight:bold}
+.err{color:#dc2626;font-weight:bold}
 </style>
 </head>
 <body>
 <div class="card">
-  <h2 style="font-size:18px;margin-bottom:8px">TB CANTIERI — FIX SPESE MATERIALI</h2>
-  <p style="font-size:13px;color:#6a9478;margin-bottom:12px">Sposta le spese da speseMateriali a speseGenerali in entrambi i cantieri, così appaiono subito nel tab Margini.</p>
-  <button class="btn" id="btn">Esegui fix su Firebase</button>
-  <div id="status" class="status info">Premi il pulsante per procedere.</div>
+  <h1>🔧 TB Works — Fix Spese Duplicate</h1>
+  <p style="font-size:13px;color:#6a9478">Rimuove le voci duplicate nei cantieri: elimina le spese il cui testo inizia con "Vostra disposizione", "Imposte e tasse RITENUTA FISCALE" o "PRE-ADDEBITO" che sono movimenti bancari erroneamente importati come spese.</p>
+  <button onclick="carica()">1. Connetti e analizza</button>
+  <button class="red" onclick="pulisci()">2. Pulisci duplicati</button>
+  <div id="status" style="margin-top:12px"></div>
+  <pre id="log"></pre>
 </div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-const fb = initializeApp({apiKey:"AIzaSyDvXu1k4kPWBDnmBZxDs6McM9fqntMMphw",authDomain:"tb-cantieri.firebaseapp.com",projectId:"tb-cantieri",storageBucket:"tb-cantieri.firebasestorage.app",messagingSenderId:"91212110377",appId:"1:91212110377:web:cbb842678fb0d311a79a38"});
-const db = getFirestore(fb);
 
-document.getElementById('btn').onclick = async function() {
-  const st = document.getElementById('status');
-  this.disabled = true;
-  st.className = 'status info';
-  st.textContent = 'Connessione a Firebase...';
+const fb = initializeApp({
+  apiKey:"AIzaSyDvXu1k4kPWBDnmBZxDs6McM9fqntMMphw",
+  authDomain:"tb-cantieri.firebaseapp.com",
+  projectId:"tb-cantieri",
+  storageBucket:"tb-cantieri.firebasestorage.app",
+  messagingSenderId:"91212110377",
+  appId:"1:91212110377:web:cbb842678fb0d311a79a38"
+});
+const db = getFirestore(fb);
+let S = null;
+
+function log(msg){ document.getElementById('log').textContent += msg + '\n'; }
+function status(msg, cls){ document.getElementById('status').innerHTML = `<span class="${cls||''}">${msg}</span>`; }
+
+// Pattern che identificano movimenti banca erroneamente in speseMateriali
+const PATTERN_BANCA = [
+  /^Vostra disposizione/i,
+  /^Imposte e tasse RITENUTA FISCALE/i,
+  /^PRE-ADDEBITO/i,
+  /^Pagamento tramite POS.*ANTICA TRATTORIA/i,
+  /^Pagamento tramite POS.*SECCHI FRANCESCA/i,
+  /^Pagamento tramite POS.*PIFFER PAOLO/i,
+  /^Pagamento tramite POS.*ORO STUBE/i,
+  /^Pagamento tramite POS.*CCIAA/i,
+  /^Pagamento tramite POS.*PV 2203/i,
+  /^Ordinante:.*FONTANASANTA/i,
+];
+
+function isBancaMovimento(desc) {
+  return PATTERN_BANCA.some(p => p.test(desc||''));
+}
+
+window.carica = async function() {
+  status('Connessione...', '');
+  document.getElementById('log').textContent = '';
   try {
     const snap = await getDoc(doc(db,'tbcantieri','shared'));
-    if (!snap.exists()) { st.className='status err'; st.textContent='Nessun dato trovato.'; return; }
-    const S = snap.data();
-    let movedF=0, movedB=0;
-
-    S.cantieri.forEach(c => {
-      const n = (c.nome||'').toLowerCase();
-      const isFont = n.includes('fontanasanta');
-      const isBorg = n.includes('borghetto');
-      if (!isFont && !isBorg) return;
-
-      c.speseGenerali = c.speseGenerali || [];
-      const mat = c.speseMateriali || [];
-      // Sposta solo quelle con utente Import TdC (quelle appena caricate)
-      const daRimuovere = [];
-      mat.forEach(s => {
-        if (s.utente === 'Import TdC') {
-          // Controlla duplicati in speseGenerali
-          const dup = c.speseGenerali.some(g => g.desc === s.desc && g.data === s.data);
-          if (!dup) {
-            c.speseGenerali.push({
-              id: s.id, desc: s.desc, cat: s.cat,
-              tipo: 'fixed', importo: s.importo,
-              data: s.data, note: s.note||'',
-              utente: s.utente, created: s.created
-            });
-            if (isFont) movedF++;
-            if (isBorg) movedB++;
-          }
-          daRimuovere.push(s.id);
-        }
-      });
-      c.speseMateriali = mat.filter(s => !daRimuovere.includes(s.id));
+    if (!snap.exists()) throw new Error('Database non trovato');
+    S = snap.data();
+    log(`✅ Connesso. Cantieri: ${S.cantieri?.length || 0}`);
+    
+    let totDup = 0;
+    (S.cantieri||[]).forEach(c => {
+      const spese = c.speseMateriali || [];
+      const dup = spese.filter(s => isBancaMovimento(s.desc));
+      const ok = spese.filter(s => !isBancaMovimento(s.desc));
+      log(`\n🏗 ${c.nome}: ${spese.length} spese totali`);
+      log(`   ✅ Da conservare: ${ok.length}`);
+      log(`   🗑 Da eliminare (movimenti banca): ${dup.length}`);
+      dup.forEach(d => log(`      - ${(d.desc||'').slice(0,70)}`));
+      totDup += dup.length;
     });
-
-    await setDoc(doc(db,'tbcantieri','shared'), S);
-    st.className = 'status ok';
-    st.innerHTML = 'FIX COMPLETATO!<br>' +
-      'Fontanasanta: ' + movedF + ' spese spostate<br>' +
-      'Borghetto: ' + movedB + ' spese spostate<br><br>' +
-      'Apri l\'app TB Cantieri, vai nel cantiere e ricarica la pagina. Le spese appariranno nella sezione Spese generali reali.';
+    
+    log(`\n📊 TOTALE DA ELIMINARE: ${totDup} voci`);
+    status(`Analisi completata. ${totDup} voci da eliminare. Premi "Pulisci duplicati" per procedere.`, totDup > 0 ? 'err' : 'ok');
   } catch(e) {
-    st.className = 'status err';
-    st.textContent = 'Errore: ' + e.message;
-    document.getElementById('btn').disabled = false;
+    status('❌ Errore: ' + e.message, 'err');
+  }
+};
+
+window.pulisci = async function() {
+  if (!S) { alert('Prima clicca "Connetti e analizza"'); return; }
+  if (!confirm('Eliminare tutte le voci duplicate (movimenti banca) dalle spese cantieri?')) return;
+  
+  status('Pulizia in corso...', '');
+  let totRimossi = 0;
+  
+  (S.cantieri||[]).forEach(c => {
+    const prima = (c.speseMateriali||[]).length;
+    c.speseMateriali = (c.speseMateriali||[]).filter(s => !isBancaMovimento(s.desc));
+    const rimossi = prima - c.speseMateriali.length;
+    if (rimossi > 0) {
+      log(`🗑 ${c.nome}: rimossi ${rimossi} movimenti banca`);
+      totRimossi += rimossi;
+    }
+  });
+  
+  try {
+    await setDoc(doc(db,'tbcantieri','shared'), S);
+    log(`\n✅ Salvato su Firebase. Rimossi ${totRimossi} voci duplicate.`);
+    status(`✅ Pulizia completata. Rimossi ${totRimossi} movimenti banca dalle spese cantieri. Ricarica TB Works.`, 'ok');
+  } catch(e) {
+    status('❌ Errore salvataggio: ' + e.message, 'err');
   }
 };
 </script>
