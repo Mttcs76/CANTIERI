@@ -2653,24 +2653,8 @@ function renderCosti(c) {
   // Fatture importate da tb-import.html
   const fatture = (c.speseMateriali||[]);
 
-  // Movimenti banca assegnati a questo cantiere (da tb-import-banca.html)
-  // Prende il nome del cantiere per identificare il centro di costo
-  const nomeLower = (c.nome||'').toLowerCase();
-  const centroId = nomeLower.includes('fontanasanta') ? 'fontanasanta' :
-                   nomeLower.includes('borghetto') ? 'borghetto' : null;
-  const movBanca = centroId ?
-    (S.azienda?.movimentiBanca||[]).filter(m => m.centro===centroId && m.importo<0) : [];
-
-  // Evita duplicati: escludi movimenti banca già presenti come fatture (stesso importo+data)
-  const fattureKeys = new Set(fatture.map(f=>`${f.data}|${Math.abs(+f.importo||0)}`));
-  const movBancaUnici = movBanca.filter(m => {
-    const k = `${m.data}|${Math.abs(m.importo)}`;
-    return !fattureKeys.has(k);
-  });
-
   const totFatture = fatture.reduce((s,x)=>s+(+x.importo||0),0);
-  const totMovBanca = movBancaUnici.reduce((s,m)=>s+Math.abs(m.importo),0);
-  const totCosti = totMdo + totFatture + totMovBanca;
+  const totCosti = totMdo + totFatture;
   const margine = totRicavo - totCosti;
   const margPct = totRicavo>0 ? Math.round(margine/totRicavo*100) : 0;
   const semaforo = margPct>=targetM?'#22c55e':margPct>=targetM/2?'#f59e0b':'#dc2626';
@@ -2688,10 +2672,9 @@ function renderCosti(c) {
     </div>`;
   }).join('');
 
-  // Tutte le voci di costo (fatture + movimenti banca unici)
+  // Tutte le voci di costo (solo fatture)
   const tutteVoci = [
-    ...fatture.map(f=>({desc:f.desc||'—', cat:f.cat||'Altro', importo:+(f.importo||0), data:f.data||'', id:f.id, fonte:'fattura'})),
-    ...movBancaUnici.map(m=>({desc:m.desc||'—', cat:m.cat||'Altro', importo:Math.abs(m.importo), data:m.data||'', id:m.key||m.id, fonte:'banca'}))
+    ...fatture.map(f=>({desc:f.desc||'—', cat:f.cat||'Altro', importo:+(f.importo||0), data:f.data||'', id:f.id, fonte:'fattura'}))
   ];
 
   // Raggruppa per categoria
@@ -2743,7 +2726,6 @@ function renderCosti(c) {
       <div style="font-size:10px;color:rgba(255,255,255,.55);display:flex;gap:12px;flex-wrap:wrap">
         <span>👷 Mdo: ${fE(totMdo)}</span>
         <span>🧾 Fatture: ${fE(totFatture)}</span>
-        ${totMovBanca>0?`<span>🏦 Banca: ${fE(totMovBanca)}</span>`:''}
         <span>📋 Target: ${targetM}%</span>
       </div>
     </div>
