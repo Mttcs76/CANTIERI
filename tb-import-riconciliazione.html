@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TB Works — Import Riconciliazione</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700&family=Nunito:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',sans-serif;background:#f0f5f2;color:#1a2e22;padding:16px}
+.card{background:#fff;border-radius:14px;border:1px solid #e2ede6;padding:16px;margin-bottom:14px;max-width:820px;margin-left:auto;margin-right:auto}
+h1{font-family:'Barlow Condensed',sans-serif;font-size:22px;color:#1a4a2e;margin-bottom:2px}
+h2{font-family:'Barlow Condensed',sans-serif;font-size:14px;color:#1a4a2e;margin-bottom:10px;letter-spacing:.5px;text-transform:uppercase}
+.btn{width:100%;background:#1a4a2e;color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:6px}
+.btn:hover{background:#2d6a4f}.btn:disabled{background:#b8d4c0;cursor:not-allowed}
+.btn-danger{background:#dc2626}.btn-danger:hover{background:#b91c1c}
+.btn-outline{background:#f0f5f2;color:#1a4a2e;border:1.5px solid #b8d4c0}
+.status{padding:10px 12px;border-radius:10px;font-size:12px;font-weight:600;margin-top:10px;line-height:1.8}
+.ok{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
+.err{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.info{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+.warn{background:#fffbeb;color:#d97706;border:1px solid #fde68a}
+.drop-zone{border:2.5px dashed #b8d4c0;border-radius:12px;padding:32px;text-align:center;cursor:pointer;background:#f8faf8;transition:all .15s}
+.drop-zone:hover,.drop-zone.drag{border-color:#1a4a2e;background:#f0fdf4}
+.drop-zone input{display:none}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.kpi{background:#f0f5f2;border-radius:10px;padding:10px;text-align:center}
+.kpi-n{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:#1a4a2e}
+.kpi-l{font-size:9px;color:#6a9478;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+.kpi.warn-k .kpi-n{color:#d97706}
+.kpi.red-k .kpi-n{color:#dc2626}
+.preview-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+.preview-table th{background:#1a4a2e;color:#fff;padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+.preview-table td{padding:5px 8px;border-bottom:1px solid #f0f5f2;vertical-align:middle}
+.preview-table tr:hover td{background:#f8faf8}
+.badge{display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700}
+.badge-f{background:#dbeafe;color:#1e3a8a}
+.badge-b{background:#dcfce7;color:#14532d}
+.badge-g{background:#fef3c7;color:#92400e}
+.badge-p{background:#f3e8ff;color:#6b21a8}
+.badge-fi{background:#fee2e2;color:#991b1b}
+.badge-n{background:#f3f4f6;color:#374151}
+.table-wrap{overflow-x:auto;max-height:400px;overflow-y:auto;border-radius:8px;border:1px solid #e2ede6}
+#log{font-size:11px;line-height:1.8;max-height:200px;overflow-y:auto;background:#1a2e22;color:#d8f3dc;border-radius:8px;padding:10px;margin-top:8px;font-family:monospace;display:none}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>TB WORKS — IMPORT RICONCILIAZIONE</h1>
+  <p style="font-size:12px;color:#6a9478;margin-bottom:14px">
+    Carica il file Excel mensile generato dallo script riconciliazione<br>
+    <strong>Legge il foglio "⬆️ IMPORT TB Works"</strong> e importa tutto su Firebase
+  </p>
+
+  <div class="drop-zone" id="dropZone"
+    onclick="document.getElementById('fileInput').click()"
+    ondragover="event.preventDefault();this.classList.add('drag')"
+    ondragleave="this.classList.remove('drag')"
+    ondrop="handleDrop(event)">
+    <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(event)">
+    <div style="font-size:32px;margin-bottom:8px">📂</div>
+    <div style="font-weight:700;color:#1a4a2e">Trascina il file Excel di riconciliazione</div>
+    <div style="font-size:12px;color:#6a9478;margin-top:4px">TB_Riconciliazione_MeseAnno.xlsx</div>
+  </div>
+  <div id="uploadStatus"></div>
+</div>
+
+<!-- Anteprima -->
+<div id="previewCard" class="card" style="display:none">
+  <h2>📊 ANTEPRIMA DATI DA IMPORTARE</h2>
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="table-wrap">
+    <table class="preview-table">
+      <thead><tr>
+        <th>Tipo</th>
+        <th>Descrizione</th>
+        <th style="text-align:right">Importo €</th>
+        <th>Centro di costo</th>
+        <th>Categoria</th>
+        <th>Data</th>
+      </tr></thead>
+      <tbody id="previewTbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Opzioni import -->
+  <div style="margin-top:12px;background:#f0f5f2;border-radius:10px;padding:12px">
+    <h2 style="margin-bottom:8px">OPZIONI IMPORT</h2>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;font-size:13px">
+      <input type="checkbox" id="opt-azzera" style="width:16px;height:16px"> Azzera spese esistenti prima di importare
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;font-size:13px">
+      <input type="checkbox" id="opt-duplicati" checked style="width:16px;height:16px"> Salta duplicati (stesso numero fattura + fornitore)
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+      <input type="checkbox" id="opt-banca" checked style="width:16px;height:16px"> Importa anche costi POS e fisco
+    </label>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+    <button class="btn" id="importBtn" onclick="importaFirebase()">☁️ Importa su Firebase</button>
+    <button class="btn btn-outline" onclick="document.getElementById('previewCard').style.display='none'">✕ Annulla</button>
+  </div>
+  <div id="importStatus" style="display:none"></div>
+  <div id="log"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const fb = initializeApp({
+  apiKey:"AIzaSyDvXu1k4kPWBDnmBZxDs6McM9fqntMMphw",
+  authDomain:"tb-cantieri.firebaseapp.com",
+  projectId:"tb-cantieri",
+  storageBucket:"tb-cantieri.firebasestorage.app",
+  messagingSenderId:"91212110377",
+  appId:"1:91212110377:web:cbb842678fb0d311a79a38"
+});
+const db = getFirestore(fb);
+
+let righe = [];
+let S = null;
+
+const CENTRI_LABEL = {
+  fontanasanta: '🏗 Fontanasanta',
+  borghetto:    '🏗 Borghetto',
+  sarnonico:    '🏗 Sarnonico',
+  generale:     '🏢 Generale',
+  personale:    '👤 Personale',
+  fisco:        '🏛 Fisco',
+  nc:           '⚠️ Da classif.',
+};
+const BADGE_CLASS = {
+  fontanasanta:'badge-f', borghetto:'badge-b', sarnonico:'badge-b',
+  generale:'badge-g', personale:'badge-p', fisco:'badge-fi', nc:'badge-n',
+};
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function fmtEur(n){ return '€ '+Math.abs(+(n||0)).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function log(m){ const l=document.getElementById('log'); l.style.display='block'; l.innerHTML+=m+'\n'; l.scrollTop=l.scrollHeight; }
+
+function leggiExcel(buffer) {
+  const wb = XLSX.read(buffer, {type:'array'});
+  // Cerca foglio IMPORT
+  const sheetName = wb.SheetNames.find(n => n.includes('IMPORT') || n.includes('Import'));
+  if(!sheetName) throw new Error('Foglio "IMPORT TB Works" non trovato. Hai caricato il file corretto?');
+  const ws = wb.Sheets[sheetName];
+  const data = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+  // Trova riga header (tipo, descrizione, importo, ...)
+  let headerRow = -1;
+  for(let i=0; i<data.length; i++){
+    const r = data[i].map(c=>(c||'').toString().toLowerCase());
+    if(r.includes('tipo') && r.includes('descrizione') && r.includes('importo')){
+      headerRow = i; break;
+    }
+  }
+  if(headerRow < 0) throw new Error('Intestazioni non trovate nel foglio IMPORT');
+
+  const headers = data[headerRow].map(c=>(c||'').toString().toLowerCase().trim());
+  const iT = headers.indexOf('tipo');
+  const iD = headers.indexOf('descrizione');
+  const iI = headers.indexOf('importo');
+  const iC = headers.indexOf('centro');
+  const iK = headers.indexOf('categoria');
+  const iDt= headers.indexOf('data');
+  const iN = headers.indexOf('numero');
+  const iF = headers.indexOf('fonte');
+
+  const result = [];
+  for(let i=headerRow+1; i<data.length; i++){
+    const r = data[i];
+    const tipo = (r[iT]||'').toString().trim();
+    if(!tipo) continue;
+    const desc = (r[iD]||'').toString().trim();
+    const importo = parseFloat((r[iI]||'0').toString().replace(',','.')) || 0;
+    const centro = (r[iC]||'').toString().trim().toLowerCase();
+    const cat = (r[iK]||'').toString().trim();
+    const data_str = (r[iDt]||'').toString().trim();
+    const numero = (r[iN]||'').toString().trim();
+    const fonte = (r[iF]||'').toString().trim();
+    if(!desc || !importo) continue;
+    result.push({ tipo, desc, importo, centro, cat, data: data_str, numero, fonte });
+  }
+  return result;
+}
+
+function aggiornaKPI(righe) {
+  const fatture = righe.filter(r=>r.tipo==='fattura_passiva');
+  const pos = righe.filter(r=>r.tipo==='costo_pos');
+  const fisco = righe.filter(r=>r.tipo==='fisco');
+  const nc = righe.filter(r=>r.centro==='nc');
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi"><div class="kpi-n">${fatture.length}</div><div class="kpi-l">🧾 Fatture</div></div>
+    <div class="kpi"><div class="kpi-n">${pos.length}</div><div class="kpi-l">💸 Costi POS</div></div>
+    <div class="kpi"><div class="kpi-n">${fisco.length}</div><div class="kpi-l">🏛 Fisco</div></div>
+    <div class="kpi ${nc.length>0?'warn-k':''}"><div class="kpi-n">${nc.length}</div><div class="kpi-l">⚠️ Da classif.</div></div>
+  `;
+}
+
+function renderPreview(righe) {
+  aggiornaKPI(righe);
+  const tbody = document.getElementById('previewTbody');
+  const TIPO_LABEL = {
+    fattura_passiva: '🧾 Fattura',
+    costo_pos:       '💸 POS',
+    fisco:           '🏛 Fisco',
+  };
+  tbody.innerHTML = righe.map(r => {
+    const bc = BADGE_CLASS[r.centro] || 'badge-n';
+    const cl = CENTRI_LABEL[r.centro] || r.centro;
+    return `<tr>
+      <td><span style="font-size:10px;font-weight:700">${TIPO_LABEL[r.tipo]||r.tipo}</span></td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.desc}">${r.desc}</td>
+      <td style="text-align:right;font-weight:700;color:#dc2626">−${fmtEur(r.importo)}</td>
+      <td><span class="badge ${bc}">${cl}</span></td>
+      <td style="color:#6a9478;font-size:10px">${r.cat}</td>
+      <td style="color:#6a9478;font-size:10px;white-space:nowrap">${r.data}</td>
+    </tr>`;
+  }).join('');
+}
+
+function processFile(file) {
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      righe = leggiExcel(new Uint8Array(e.target.result));
+      if(!righe.length) throw new Error('Nessuna riga trovata nel foglio IMPORT');
+      const st = document.getElementById('uploadStatus');
+      st.className = 'status ok';
+      st.textContent = `✅ Caricato: ${righe.length} voci da ${file.name}`;
+      document.getElementById('previewCard').style.display = 'block';
+      renderPreview(righe);
+    } catch(err) {
+      const st = document.getElementById('uploadStatus');
+      st.className = 'status err';
+      st.textContent = '❌ ' + err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+window.handleFile = e => processFile(e.target.files[0]);
+window.handleDrop = e => {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag');
+  processFile(e.dataTransfer.files[0]);
+};
+
+window.importaFirebase = async function() {
+  const btn = document.getElementById('importBtn');
+  const st = document.getElementById('importStatus');
+  const azzera = document.getElementById('opt-azzera').checked;
+  const skipDup = document.getElementById('opt-duplicati').checked;
+  const inclBanca = document.getElementById('opt-banca').checked;
+
+  btn.disabled=true; btn.textContent='Connessione...';
+  st.style.display='block'; st.className='status info'; st.textContent='Connessione a Firebase...';
+
+  try {
+    const snap = await getDoc(doc(db,'tbcantieri','shared'));
+    if(!snap.exists()) throw new Error('Database non trovato. Apri TB Works e sincronizza prima.');
+    S = snap.data();
+    S.azienda = S.azienda||{};
+    S.azienda.fatture = S.azienda.fatture||[];
+    S.azienda.costiFissi = S.azienda.costiFissi||[];
+    S.cantieri = S.cantieri||[];
+
+    // Trova cantieri
+    const cantieri = {
+      fontanasanta: S.cantieri.find(c=>(c.nome||'').toLowerCase().includes('fontanasanta')),
+      borghetto:    S.cantieri.find(c=>(c.nome||'').toLowerCase().includes('borghetto')),
+      sarnonico:    S.cantieri.find(c=>(c.nome||'').toLowerCase().includes('sarnonico')),
+    };
+    Object.values(cantieri).forEach(c=>{ if(c) c.speseMateriali=c.speseMateriali||[]; });
+
+    // Azzera se richiesto
+    if(azzera) {
+      Object.values(cantieri).forEach(c=>{ if(c) c.speseMateriali=[]; });
+      S.azienda.costiFissi = S.azienda.costiFissi.filter(x=>x.key); // mantieni solo quelli da banca
+      S.azienda.fatture = [];
+      log('🗑 Spese azzerate');
+    }
+
+    // Chiavi per deduplicazione
+    const keysFatture = new Set(S.azienda.fatture.map(f=>f.key||''));
+    const keysCantieri = {};
+    Object.entries(cantieri).forEach(([k,c])=>{
+      if(c) keysCantieri[k] = new Set((c.speseMateriali||[]).map(s=>s.key||s.id||''));
+    });
+    const keysCF = new Set((S.azienda.costiFissi||[]).map(f=>f.key||''));
+
+    let nFatt=0, nPos=0, nFisco=0, nDup=0, nSkip=0, nNoCantiere=0;
+
+    const righeFiltered = righe.filter(r => {
+      if(!inclBanca && (r.tipo==='costo_pos'||r.tipo==='fisco')) return false;
+      return true;
+    });
+
+    for(const r of righeFiltered) {
+      const key = (r.numero||r.desc.slice(0,30))+'|'+r.importo+'|'+r.data;
+
+      // ── FATTURE PASSIVE → registro centrale + speseMateriali cantiere ──
+      if(r.tipo==='fattura_passiva') {
+        // Registro centrale fatture
+        if(skipDup && keysFatture.has(key)) { nDup++; continue; }
+        const fatt = {
+          id: uid(), key, data: r.data, numero: r.numero,
+          fornitore: r.desc.replace(/\s*-\s*Fatt\..*$/,'').trim(),
+          desc: r.desc, importo: r.importo, cat: r.cat,
+          centro: r.centro, stato: 'assegnata', fonte: r.fonte||'Riconciliazione',
+          created: Date.now()
+        };
+        S.azienda.fatture.push(fatt);
+        keysFatture.add(key);
+
+        // Collega a speseMateriali cantiere se è un cantiere
+        const c = cantieri[r.centro];
+        if(c) {
+          if(!skipDup || !keysCantieri[r.centro]?.has(key)) {
+            c.speseMateriali.push({
+              id: fatt.id, key, desc: r.desc, cat: r.cat,
+              importo: r.importo, data: r.data, capId: '', note: '',
+              utente: 'Import riconciliazione', created: Date.now()
+            });
+            if(keysCantieri[r.centro]) keysCantieri[r.centro].add(key);
+          }
+        } else if(['generale','personale','fisco'].includes(r.centro)) {
+          if(!skipDup || !keysCF.has(key)) {
+            S.azienda.costiFissi.push({
+              id: fatt.id, key, desc: r.desc, cat: r.cat, freq: 'una-tantum',
+              importo: r.importo, scadenza: r.data, centro: r.centro, note: '',
+              created: Date.now()
+            });
+            keysCF.add(key);
+          }
+        } else {
+          nNoCantiere++;
+          log(`⚠️ Centro non trovato: ${r.centro} — ${r.desc.slice(0,40)}`);
+        }
+        nFatt++;
+        log(`✅ Fatt: ${r.desc.slice(0,45)} → ${r.centro}`);
+      }
+
+      // ── COSTI POS ──
+      else if(r.tipo==='costo_pos') {
+        if(skipDup && keysCF.has(key) ) { nDup++; continue; }
+        const c = cantieri[r.centro];
+        if(c) {
+          if(!skipDup || !keysCantieri[r.centro]?.has(key)) {
+            c.speseMateriali.push({
+              id: uid(), key, desc: r.desc, cat: r.cat,
+              importo: r.importo, data: r.data, capId: '', note: 'POS diretto',
+              utente: 'Import riconciliazione', created: Date.now()
+            });
+          }
+        } else {
+          S.azienda.costiFissi.push({
+            id: uid(), key, desc: r.desc, cat: r.cat, freq: 'una-tantum',
+            importo: r.importo, scadenza: r.data, centro: r.centro, note: 'POS diretto',
+            created: Date.now()
+          });
+          keysCF.add(key);
+        }
+        nPos++;
+        log(`💸 POS: ${r.desc.slice(0,45)} → ${r.centro}`);
+      }
+
+      // ── FISCO / TASSE ──
+      else if(r.tipo==='fisco') {
+        if(skipDup && keysCF.has(key)) { nDup++; continue; }
+        S.azienda.costiFissi.push({
+          id: uid(), key, desc: r.desc, cat: r.cat, freq: 'una-tantum',
+          importo: r.importo, scadenza: r.data, centro: 'fisco', note: '',
+          created: Date.now()
+        });
+        keysCF.add(key);
+        nFisco++;
+        log(`🏛 Fisco: ${r.desc.slice(0,45)}`);
+      }
+
+      else { nSkip++; }
+    }
+
+    // Aggiorna saldo
+    S.azienda.updated = Date.now();
+    await setDoc(doc(db,'tbcantieri','shared'), S);
+
+    st.className = 'status ok';
+    st.innerHTML = `<strong>✅ IMPORTAZIONE COMPLETATA</strong><br>
+      🧾 Fatture importate: ${nFatt}<br>
+      💸 Costi POS: ${nPos}<br>
+      🏛 Fisco/Tasse: ${nFisco}<br>
+      🔄 Duplicati saltati: ${nDup}<br>
+      ${nNoCantiere>0?`⚠️ Centri non trovati: ${nNoCantiere} (vedi log)<br>`:''}
+      <br><em>Apri TB Works e ricarica per vedere i dati aggiornati.</em>`;
+    btn.textContent='✅ Importato!'; btn.style.background='#22c55e';
+
+  } catch(e) {
+    st.className='status err'; st.textContent='❌ Errore: '+e.message;
+    btn.disabled=false; btn.textContent='☁️ Importa su Firebase';
+    console.error(e);
+  }
+};
+</script>
+</body>
+</html>
