@@ -281,10 +281,12 @@ window.importaFirebase = async function() {
 
     // Azzera se richiesto
     if(azzera) {
+      const movBancaSalvati = S.azienda.movimentiBanca || [];
       Object.values(cantieri).forEach(c=>{ if(c) c.speseMateriali=[]; });
       S.azienda.costiFissi = [];
       S.azienda.fatture = [];
-      log('🗑 Spese azzerate completamente');
+      S.azienda.movimentiBanca = movBancaSalvati; // preserva sempre i movimenti banca
+      log(`🗑 Spese azzerate. Movimenti banca preservati (${movBancaSalvati.length} voci).`);
     }
 
     // Chiavi per deduplicazione
