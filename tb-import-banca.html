@@ -85,14 +85,12 @@ select.mini{font-size:11px;padding:3px 5px;border-radius:6px;border:1px solid #b
   <!-- Filtri -->
   <div class="filtri" id="filtriBar">
     <button class="active" onclick="filtra(this,'tutti')">Tutti</button>
-    <button onclick="filtra(this,'entrata')">🟢 Entrate</button>
-    <button onclick="filtra(this,'uscita')">🔴 Uscite</button>
-    <button onclick="filtra(this,'nc')">⚠️ Da classificare</button>
-    <button onclick="filtra(this,'fontanasanta')">🏗 Fontanasanta</button>
-    <button onclick="filtra(this,'borghetto')">🏗 Borghetto</button>
-    <button onclick="filtra(this,'generale')">🏢 Generale</button>
-    <button onclick="filtra(this,'personale')">👤 Personale</button>
-    <button onclick="filtra(this,'fisco')">🏛 Fisco/Tasse</button>
+    <button onclick="filtra(this,'incasso')">📥 Incassi</button>
+    <button onclick="filtra(this,'costo_diretto')">💸 Costi diretti</button>
+    <button onclick="filtra(this,'pagamento')">✅ Pagamenti</button>
+    <button onclick="filtra(this,'tassa')">🏛 Fisco</button>
+    <button onclick="filtra(this,'interno')">🔄 Interni</button>
+    <button onclick="filtra(this,'nc')">⚠️ Da classif.</button>
   </div>
 
   <div class="table-wrap">
@@ -100,10 +98,10 @@ select.mini{font-size:11px;padding:3px 5px;border-radius:6px;border:1px solid #b
       <thead><tr>
         <th>Data</th>
         <th>Importo</th>
-        <th style="min-width:280px">Descrizione</th>
-        <th>Categoria auto</th>
+        <th style="min-width:260px">Descrizione</th>
+        <th>Tipo movimento</th>
         <th>Centro di costo</th>
-        <th>Tipo</th>
+        <th>Categoria</th>
       </tr></thead>
       <tbody id="tbody"></tbody>
     </table>
@@ -136,61 +134,69 @@ let _filtro = 'tutti';
 
 // ── REGOLE DI CLASSIFICAZIONE AUTOMATICA ──
 // Ogni regola: { match: string/regex, centro, cat, tipo }
+// ── TIPI DI MOVIMENTO ──
+// 'costo_diretto'  → POS senza fattura, va in spese cantiere/generali
+// 'pagamento'      → bonifico a fornitore già in fattura, marca fattura pagata (non aggiunge costo)
+// 'incasso'        → entrata da cliente
+// 'interno'        → ricarica carta, trasferimento interno → IGNORA
+// 'tassa'          → F24, imposte, ritenute → costo generale fisco
+// 'banca'          → commissioni, interessi → costo generale fisco
+
 const REGOLE = [
-  // ENTRATE — incassi clienti
-  { match: /FONTANASANTA/i,         centro:'fontanasanta', cat:'Incasso cliente',    tipo:'entrata' },
-  { match: /BORGHETTO/i,            centro:'borghetto',    cat:'Incasso cliente',    tipo:'entrata' },
-  // Ritenute fiscali su bonifici in entrata Fontanasanta → rimangono su fontanasanta
-  { match: /RITENUTA FISCALE.*BONIFICO RICEV.*FONTANASANTA/i, centro:'fontanasanta', cat:'Incasso cliente', tipo:'entrata' },
-  { match: /RITENUTA FISCALE.*FONTANASANTA/i, centro:'fontanasanta', cat:'Incasso cliente', tipo:'entrata' },
-  // Fornitori cantiere Fontanasanta
-  { match: /CALLIARI FRANCO/i,      centro:'fontanasanta', cat:'Subappalto',         tipo:'uscita' },
-  { match: /NEW DELHI/i,            centro:'fontanasanta', cat:'Vitto cantiere',     tipo:'uscita' },
-  { match: /BRENNERPONT/i,          centro:'fontanasanta', cat:'Subappalto/Nolo',    tipo:'uscita' },
-  { match: /DECARLI MATTHIEU|DE CARLI MATTHIEU/i, centro:'fontanasanta', cat:'Subappalto', tipo:'uscita' },
-  { match: /CARPENTERIA ROSSI/i,    centro:'fontanasanta', cat:'Subappalto',         tipo:'uscita' },
-  { match: /EDILRAVANELLI/i,        centro:'fontanasanta', cat:'Materiali',          tipo:'uscita' },
-  { match: /COLORIFICIO FAILONI/i,  centro:'fontanasanta', cat:'Materiali',          tipo:'uscita' },
-  { match: /SATIVA/i,               centro:'fontanasanta', cat:'Materiali',          tipo:'uscita' },
-  { match: /MGTEC/i,                centro:'fontanasanta', cat:'Materiali',          tipo:'uscita' },
-  { match: /TECNOEDIL NOLEGGI/i,    centro:'fontanasanta', cat:'Noleggi',            tipo:'uscita' },
-  // Fornitori Borghetto
-  { match: /BOSSONG/i,              centro:'borghetto',    cat:'Materiali',          tipo:'uscita' },
-  // Vitto cantiere Borghetto (Antica Trattoria + Secchi Francesca)
-  { match: /ANTICA TRATTORIA/i,     centro:'borghetto',    cat:'Vitto cantiere',     tipo:'uscita' },
-  { match: /SECCHI FRANCESCA/i,     centro:'borghetto',    cat:'Vitto cantiere',     tipo:'uscita' },
-  // Personale (compensi soci)
-  { match: /MIHALI ILIE/i,          centro:'personale',    cat:'Compenso socio',     tipo:'uscita' },
-  { match: /BORGES SOUZA CASSIO/i,  centro:'personale',    cat:'Compenso socio',     tipo:'uscita' },
-  // Costi generali
-  { match: /KUWAIT PETROLEUM|Q8/i,  centro:'generale',     cat:'Carburante',         tipo:'uscita' },
-  { match: /PV 2203/i,              centro:'generale',     cat:'Carburante',         tipo:'uscita' },  // POS carburante anonimo
-  { match: /AUTODESK/i,             centro:'generale',     cat:'Software/Licenze',   tipo:'uscita' },
-  { match: /ARUBA/i,                centro:'generale',     cat:'Software/Licenze',   tipo:'uscita' },
-  { match: /ESNA SOA/i,             centro:'generale',     cat:'Certificazioni/SOA', tipo:'uscita' },
-  { match: /PEDROTTI.*BEATRICE|BEATRICE.*PEDROTTI/i, centro:'generale', cat:'INAIL/Sicurezza', tipo:'uscita' },
-  { match: /AUSUGUM ASSICURAZIONI/i, centro:'generale',    cat:'Assicurazioni',      tipo:'uscita' },
-  { match: /STUDIO GBS|COMMERCIALISTI/i, centro:'generale', cat:'Commercialista',   tipo:'uscita' },
-  { match: /iNotai|i Notai|NOTAI.*ROMANO/i, centro:'generale', cat:'Legale/Notaio', tipo:'uscita' },
-  { match: /CONFARTIGIANATO/i,      centro:'generale',     cat:'Associazioni',       tipo:'uscita' },
-  { match: /CONFIDI TRENTINO/i,     centro:'generale',     cat:'Associazioni',       tipo:'uscita' },
-  { match: /LONGO EVENTS/i,         centro:'generale',     cat:'Servizi',            tipo:'uscita' },
-  { match: /ANTHROPIC/i,            centro:'generale',     cat:'Software/Licenze',   tipo:'uscita' },
-  { match: /Servizi e Gestioni Italia/i, centro:'generale', cat:'Servizi',           tipo:'uscita' },
-  { match: /SAPI/i,                 centro:'generale',     cat:'Formazione/Sicurezza', tipo:'uscita' },
-  { match: /DALFOVO MAURO/i,        centro:'generale',     cat:'Carburante',         tipo:'uscita' },
-  { match: /ORO STUBE/i,            centro:'generale',     cat:'Vitto/Trasferte',    tipo:'uscita' },
-  { match: /PIFFER PAOLO/i,         centro:'generale',     cat:'Vitto/Trasferte',    tipo:'uscita' },
-  { match: /CCIAA TRENTO/i,         centro:'generale',     cat:'Tassa CCIAA',        tipo:'uscita' },
-  { match: /NEXI/i,                 centro:'generale',     cat:'Servizi',            tipo:'uscita' },
-  { match: /Ricarica carta prepagate/i, centro:'generale', cat:'Ricarica carta',     tipo:'uscita' },
-  { match: /Ricarica carta RICCC/i,  centro:'generale',    cat:'Commissioni banca',  tipo:'uscita' },
-  // Fisco
-  { match: /Imposte e tasse|Scadenza delega/i, centro:'fisco', cat:'Imposte/Tasse', tipo:'uscita' },
-  { match: /Interessi e competenze/i, centro:'fisco',      cat:'Interessi bancari',  tipo:'uscita' },
-  { match: /CANONE.*VIRTUAL BANKING|COMMISSIONI.*VIRTUAL/i, centro:'fisco', cat:'Commissioni banca', tipo:'uscita' },
-  // Versamenti interni
-  { match: /Versamento assegni/i,    centro:'generale',    cat:'Versamento',         tipo:'entrata' },
+  // ── ENTRATE ──
+  { match: /FONTANASANTA/i,              centro:'fontanasanta', cat:'Incasso cliente',      tipo:'incasso' },
+  { match: /Versamento assegni/i,        centro:'nc',           cat:'Versamento',            tipo:'interno' },
+
+  // ── INTERNI — IGNORA (ricariche carta, trasferimenti) ──
+  { match: /Ricarica carta prepagate/i,  centro:'skip',         cat:'Ricarica carta',        tipo:'interno' },
+  { match: /Ricarica carta RICCC/i,      centro:'skip',         cat:'Ricarica carta',        tipo:'interno' },
+  { match: /NEXI/i,                      centro:'skip',         cat:'Addebito NEXI',         tipo:'interno' },
+
+  // ── PAGAMENTI FORNITORI (bonifici = fattura già in Tieni il Conto) ──
+  { match: /CALLIARI FRANCO/i,           centro:'fontanasanta', cat:'Subappalto',            tipo:'pagamento' },
+  { match: /NEW DELHI/i,                 centro:'fontanasanta', cat:'Vitto cantiere',        tipo:'pagamento' },
+  { match: /BRENNERPONT/i,              centro:'fontanasanta', cat:'Subappalto/Nolo',       tipo:'pagamento' },
+  { match: /DECARLI MATTHIEU|DE CARLI/i,centro:'fontanasanta', cat:'Subappalto',            tipo:'pagamento' },
+  { match: /CARPENTERIA ROSSI/i,         centro:'fontanasanta', cat:'Subappalto',            tipo:'pagamento' },
+  { match: /EDILRAVANELLI/i,             centro:'fontanasanta', cat:'Materiali',             tipo:'pagamento' },
+  { match: /COLORIFICIO FAILONI/i,       centro:'fontanasanta', cat:'Materiali',             tipo:'pagamento' },
+  { match: /SATIVA/i,                    centro:'fontanasanta', cat:'Materiali',             tipo:'pagamento' },
+  { match: /MGTEC/i,                     centro:'fontanasanta', cat:'Materiali',             tipo:'pagamento' },
+  { match: /TECNOEDIL NOLEGGI/i,         centro:'fontanasanta', cat:'Noleggi',               tipo:'pagamento' },
+  { match: /BOSSONG/i,                   centro:'borghetto',    cat:'Materiali',             tipo:'pagamento' },
+  { match: /AUTODESK/i,                  centro:'generale',     cat:'Software/Licenze',      tipo:'pagamento' },
+  { match: /ARUBA/i,                     centro:'generale',     cat:'Software/Licenze',      tipo:'pagamento' },
+  { match: /ESNA SOA/i,                  centro:'generale',     cat:'Certificazioni/SOA',    tipo:'pagamento' },
+  { match: /PEDROTTI.*BEATRICE|BEATRICE.*PEDROTTI/i, centro:'generale', cat:'INAIL/Sicurezza', tipo:'pagamento' },
+  { match: /AUSUGUM ASSICURAZIONI/i,     centro:'generale',     cat:'Assicurazioni',         tipo:'pagamento' },
+  { match: /STUDIO GBS|COMMERCIALISTI/i, centro:'generale',     cat:'Commercialista',        tipo:'pagamento' },
+  { match: /iNotai|i Notai|NOTAI.*ROMANO/i,centro:'generale',  cat:'Legale/Notaio',         tipo:'pagamento' },
+  { match: /CONFARTIGIANATO/i,           centro:'generale',     cat:'Associazioni',          tipo:'pagamento' },
+  { match: /CONFIDI TRENTINO/i,          centro:'generale',     cat:'Associazioni',          tipo:'pagamento' },
+  { match: /LONGO EVENTS/i,              centro:'generale',     cat:'Servizi',               tipo:'pagamento' },
+  { match: /ANTHROPIC/i,                 centro:'generale',     cat:'Software/Licenze',      tipo:'pagamento' },
+  { match: /Servizi e Gestioni Italia/i, centro:'generale',     cat:'Servizi',               tipo:'pagamento' },
+  { match: /SAPI/i,                      centro:'generale',     cat:'Formazione/Sicurezza',  tipo:'pagamento' },
+  { match: /DALFOVO MAURO/i,             centro:'generale',     cat:'Carburante',            tipo:'pagamento' },
+  { match: /MIHALI ILIE/i,               centro:'personale',    cat:'Compenso socio',        tipo:'pagamento' },
+  { match: /BORGES SOUZA CASSIO/i,       centro:'personale',    cat:'Compenso socio',        tipo:'pagamento' },
+  { match: /KUWAIT PETROLEUM|Q8/i,       centro:'generale',     cat:'Carburante',            tipo:'pagamento' },
+
+  // ── COSTI DIRETTI POS — nessuna fattura, vanno come costo ──
+  { match: /ANTICA TRATTORIA/i,          centro:'borghetto',    cat:'Vitto cantiere',        tipo:'costo_diretto' },
+  { match: /SECCHI FRANCESCA/i,          centro:'borghetto',    cat:'Vitto cantiere',        tipo:'costo_diretto' },
+  { match: /ORO STUBE/i,                 centro:'generale',     cat:'Vitto/Trasferte',       tipo:'costo_diretto' },
+  { match: /PV 2203/i,                   centro:'generale',     cat:'Carburante',            tipo:'costo_diretto' },
+  { match: /CCIAA TRENTO/i,              centro:'generale',     cat:'Tassa CCIAA',           tipo:'costo_diretto' },
+  { match: /PIFFER PAOLO/i,              centro:'generale',     cat:'Vitto/Trasferte',       tipo:'costo_diretto' },
+
+  // ── FISCO — F24, imposte, ritenute ──
+  { match: /Scadenza delega|F24/i,       centro:'fisco',        cat:'F24/Imposte',           tipo:'tassa' },
+  { match: /Imposte e tasse/i,           centro:'fisco',        cat:'Imposte/Tasse',         tipo:'tassa' },
+  { match: /RITENUTA FISCALE.*FONTANASANTA/i, centro:'fontanasanta', cat:'Ritenuta acconto', tipo:'tassa' },
+  { match: /RITENUTA FISCALE/i,          centro:'fisco',        cat:'Ritenuta acconto',      tipo:'tassa' },
+  { match: /Interessi e competenze/i,    centro:'fisco',        cat:'Interessi bancari',     tipo:'banca' },
+  { match: /CANONE.*VIRTUAL|COMMISSIONI.*VIRTUAL/i, centro:'fisco', cat:'Commissioni banca', tipo:'banca' },
 ];
 
 const CENTRI_LABEL = {
@@ -203,25 +209,31 @@ const CENTRI_LABEL = {
   skip:         '⛔ Ignora',
 };
 
+const TIPO_CONF = {
+  incasso:       { label:'📥 Incasso',         color:'#15803d' },
+  pagamento:     { label:'✅ Pagamento fatt.',  color:'#1d4ed8' },
+  costo_diretto: { label:'💸 Costo diretto',   color:'#d97706' },
+  tassa:         { label:'🏛 Fisco/F24',       color:'#dc2626' },
+  banca:         { label:'🏦 Banca',           color:'#6b7280' },
+  interno:       { label:'🔄 Interno/Ignora',  color:'#9ca3af' },
+  nc:            { label:'⚠️ Da classif.',     color:'#f59e0b' },
+};
+
 const CATS = [
   'Incasso cliente','Subappalto','Subappalto/Nolo','Materiali','Noleggi',
   'Vitto cantiere','Vitto/Trasferte','Carburante','Compenso socio',
   'Software/Licenze','Certificazioni/SOA','INAIL/Sicurezza','Assicurazioni',
   'Legale/Notaio','Commercialista','Consulenza','Associazioni','Servizi',
-  'Formazione/Sicurezza','Imposte/Tasse','Ritenuta d\'acconto','Interessi bancari',
-  'Commissioni banca','Tassa CCIAA','Ricarica carta','Versamento','Altro'
+  'Formazione/Sicurezza','F24/Imposte','Imposte/Tasse','Ritenuta acconto',
+  'Interessi bancari','Commissioni banca','Tassa CCIAA','Versamento','Altro'
 ];
 
 function classifica(desc) {
   for (const r of REGOLE) {
-    if (typeof r.match === 'string') {
-      if (desc.toLowerCase().includes(r.match.toLowerCase()))
-        return { centro: r.centro, cat: r.cat, tipo: r.tipo };
-    } else {
-      if (r.match.test(desc))
-        return { centro: r.centro, cat: r.cat, tipo: r.tipo };
-    }
+    if (r.match.test(desc))
+      return { centro: r.centro, cat: r.cat, tipo: r.tipo };
   }
+  // Default: uscita non classificata
   return { centro: 'nc', cat: 'Altro', tipo: 'nc' };
 }
 
@@ -246,6 +258,8 @@ function parseCSV(text) {
 
     const desc = descParts.join(' ').trim().replace(/;$/, '').trim();
     const cl = classifica(desc + ' ' + causale);
+    const tipoEffettivo = cl.tipo === 'interno' || cl.centro === 'skip' ? 'interno' :
+                          importo > 0 ? 'incasso' : cl.tipo;
 
     movs.push({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,5),
@@ -257,7 +271,7 @@ function parseCSV(text) {
       desc,
       centro: cl.centro,
       cat: cl.cat,
-      tipo: cl.tipo === 'nc' ? (importo > 0 ? 'entrata' : 'uscita') : cl.tipo,
+      tipo: tipoEffettivo,
       classificatoAuto: cl.centro !== 'nc',
     });
   }
@@ -270,27 +284,27 @@ function fmtEur(n) {
 }
 
 function renderKPI() {
-  const entrate = movimenti.filter(m=>m.tipo==='entrata').reduce((s,m)=>s+m.importo,0);
-  const uscite = Math.abs(movimenti.filter(m=>m.tipo==='uscita').reduce((s,m)=>s+m.importo,0));
-  const saldo = movimenti.reduce((s,m)=>s+m.importo,0);
-  const nc = movimenti.filter(m=>m.centro==='nc').length;
-  const classificati = movimenti.filter(m=>m.classificatoAuto).length;
+  const incassi = movimenti.filter(m=>m.tipo==='incasso').reduce((s,m)=>s+m.importo,0);
+  const costiDir = movimenti.filter(m=>m.tipo==='costo_diretto').reduce((s,m)=>s+Math.abs(m.importo),0);
+  const pagamenti = movimenti.filter(m=>m.tipo==='pagamento').reduce((s,m)=>s+Math.abs(m.importo),0);
+  const tasse = movimenti.filter(m=>m.tipo==='tassa'||m.tipo==='banca').reduce((s,m)=>s+Math.abs(m.importo),0);
+  const nc = movimenti.filter(m=>m.tipo==='nc').length;
+  const interni = movimenti.filter(m=>m.tipo==='interno').length;
   document.getElementById('kpiGrid').innerHTML = `
-    <div class="kpi pos"><div class="kpi-n">${(entrate).toLocaleString('it-IT',{minimumFractionDigits:0})} €</div><div class="kpi-l">Entrate</div></div>
-    <div class="kpi neg"><div class="kpi-n">${(uscite).toLocaleString('it-IT',{minimumFractionDigits:0})} €</div><div class="kpi-l">Uscite</div></div>
-    <div class="kpi ${saldo>=0?'pos':'neg'}"><div class="kpi-n">${saldo.toLocaleString('it-IT',{minimumFractionDigits:0})} €</div><div class="kpi-l">Saldo periodo</div></div>
-    <div class="kpi"><div class="kpi-n">${movimenti.length}</div><div class="kpi-l">Movimenti</div></div>
-    <div class="kpi ${nc>0?'warn-k':'pos'}"><div class="kpi-n">${nc}</div><div class="kpi-l">Da classificare</div></div>
+    <div class="kpi pos"><div class="kpi-n">${incassi.toLocaleString('it-IT',{minimumFractionDigits:0})} €</div><div class="kpi-l">📥 Incassi</div></div>
+    <div class="kpi neg"><div class="kpi-n">${costiDir.toLocaleString('it-IT',{minimumFractionDigits:0})} €</div><div class="kpi-l">💸 Costi diretti</div></div>
+    <div class="kpi"><div class="kpi-n" style="color:#1d4ed8">${pagamenti.toLocaleString('it-IT',{minimumFractionDigits:0})} €</div><div class="kpi-l">✅ Pagamenti fatt.</div></div>
+    <div class="kpi"><div class="kpi-n" style="color:#dc2626">${tasse.toLocaleString('it-IT',{minimumFractionDigits:0})} €</div><div class="kpi-l">🏛 Fisco/Banca</div></div>
+    <div class="kpi ${nc>0?'warn-k':''}"><div class="kpi-n">${nc}</div><div class="kpi-l">⚠️ Da classif.</div></div>
   `;
+  document.getElementById('totFatture').textContent = movimenti.length + ' movimenti';
+  document.getElementById('totImporto').textContent = interni + ' interni ignorati';
 }
 
 function renderTabella() {
   const filtered = movimenti.filter(m => {
     if (_filtro === 'tutti') return true;
-    if (_filtro === 'nc') return m.centro === 'nc';
-    if (_filtro === 'entrata') return m.tipo === 'entrata';
-    if (_filtro === 'uscita') return m.tipo === 'uscita';
-    return m.centro === _filtro;
+    return m.tipo === _filtro;
   });
 
   document.getElementById('tbody').innerHTML = filtered.map((m,i) => {
@@ -299,14 +313,17 @@ function renderTabella() {
     ).join('');
     const catOpts = CATS.map(c => `<option ${c===m.cat?'selected':''}>${c}</option>`).join('');
     const idx = movimenti.indexOf(m);
-    const rowClass = m.tipo==='entrata' ? 'entrata' : m.centro==='nc' ? 'nc' : 'uscita';
-    return `<tr class="${rowClass}">
+    const tc = TIPO_CONF[m.tipo] || TIPO_CONF.nc;
+    const rowBg = m.tipo==='interno'||m.centro==='skip' ? '#f5f5f5' :
+                  m.tipo==='incasso' ? '#f0fdf4' :
+                  m.centro==='nc' ? '#fffbeb' : '#fff';
+    return `<tr style="background:${rowBg};opacity:${m.tipo==='interno'?'0.5':'1'}">
       <td style="white-space:nowrap;font-size:11px;color:#6a9478">${m.data}</td>
       <td class="${m.importo>=0?'imp-pos':'imp-neg'}">${fmtEur(m.importo)}</td>
       <td class="desc-cell" title="${m.desc.replace(/"/g,'')}">${m.desc||'—'}</td>
-      <td><select class="mini" onchange="setCentro(${idx},this.value)">${centroOpts}</select></td>
-      <td><select class="mini" onchange="setCat(${idx},this.value)">${catOpts}</select></td>
-      <td style="font-size:10px;color:${m.classificatoAuto?'#22c55e':'#f59e0b'};font-weight:600">${m.classificatoAuto?'✓ Auto':'✎ Manuale'}</td>
+      <td><span style="font-size:10px;font-weight:700;color:${tc.color};white-space:nowrap">${tc.label}</span></td>
+      <td><select class="mini" onchange="setCentro(${idx},this.value)" ${m.centro==='skip'?'disabled':''}>${centroOpts}</select></td>
+      <td><select class="mini" onchange="setCat(${idx},this.value)" ${m.centro==='skip'?'disabled':''}>${catOpts}</select></td>
     </tr>`;
   }).join('');
 }
@@ -382,61 +399,31 @@ window.importaFirebase = async () => {
     S.azienda.costiFissi = S.azienda.costiFissi || [];
     S.cantieri = S.cantieri || [];
 
-    // Trova cantieri
     const cF = S.cantieri.find(c=>(c.nome||'').toLowerCase().includes('fontanasanta'));
     const cB = S.cantieri.find(c=>(c.nome||'').toLowerCase().includes('borghetto'));
     if(cF) cF.speseMateriali = cF.speseMateriali || [];
     if(cB) cB.speseMateriali = cB.speseMateriali || [];
 
-    let nNuovi=0, nDup=0, nF=0, nB=0, nG=0, nSkip=0;
+    let nNuovi=0, nDup=0, nSkip=0;
 
     for (const m of movimenti) {
-      if (m.centro === 'skip') { nSkip++; continue; }
+      if (m.centro === 'skip' || m.tipo === 'interno') { nSkip++; continue; }
       const key = m.data+'|'+m.importo+'|'+m.desc.slice(0,30);
 
-      // Registra in movimentiBanca (tutti, entrate e uscite)
+      // Tutti i movimenti vanno SOLO in movimentiBanca
+      // Le fatture e costi vengono dalla riconciliazione — non duplicare qui
       if (!S.azienda.movimentiBanca.some(x=>x.key===key)) {
         S.azienda.movimentiBanca.push({ ...m, key, importedAt: Date.now() });
         nNuovi++;
-      } else {
-        nDup++; continue;
-      }
-
-      // Solo uscite → distribuisci ai centri di costo
-      if (m.importo >= 0) continue;
-      const importoAbs = Math.abs(m.importo);
-      const desc = m.desc.slice(0,80);
-
-      if (m.centro === 'fontanasanta' && cF) {
-        if (!cF.speseMateriali.some(s=>s.key===key)) {
-          cF.speseMateriali.push({ id:key, desc, cat:m.cat||'Altro', importo:importoAbs, data:m.data, capId:'', note:'', utente:'Import banca', key, created:Date.now() });
-          nF++;
-        }
-      } else if (m.centro === 'borghetto' && cB) {
-        if (!cB.speseMateriali.some(s=>s.key===key)) {
-          cB.speseMateriali.push({ id:key, desc, cat:m.cat||'Altro', importo:importoAbs, data:m.data, capId:'', note:'', utente:'Import banca', key, created:Date.now() });
-          nB++;
-        }
-      } else if (['generale','personale','fisco'].includes(m.centro)) {
-        if (!S.azienda.costiFissi.some(s=>s.key===key)) {
-          S.azienda.costiFissi.push({ id:key, desc, cat:m.cat||'Altro', freq:'una-tantum', importo:importoAbs, scadenza:m.data, centro:m.centro, note:'', key, created:Date.now() });
-          nG++;
-        }
-      }
-      // nc → solo movimentiBanca, nessun collegamento
+      } else { nDup++; }
     }
 
-    S.azienda.saldoBanca = parseFloat((S.azienda.movimentiBanca.reduce((s,m)=>s+m.importo,0)).toFixed(2));
-
+    S.azienda.saldoBanca = parseFloat((S.azienda.movimentiBanca.reduce((s,m)=>s+(+m.importo||0),0)).toFixed(2));
     await setDoc(doc(db,'tbcantieri','shared'), S);
     st.className = 'status ok';
     st.innerHTML = `<strong>✅ IMPORTATO SU FIREBASE</strong><br>
-      Movimenti registrati: ${nNuovi} · Duplicati saltati: ${nDup}<br>
-      🏗 Fontanasanta: +${nF} spese<br>
-      🏗 Borghetto: +${nB} spese<br>
-      🏢 Costi generali/personale/fisco: +${nG} voci<br>
-      ⛔ Saltati: ${nSkip}<br>
-      <em>Apri TB Works → ricarica la pagina.</em>`;
+      Movimenti registrati: ${nNuovi} · Duplicati saltati: ${nDup} · Interni ignorati: ${nSkip}<br>
+      <em>Movimenti visibili in TB Works → Impresa → Banca.</em>`;
     btn.textContent = '✅ Salvato!'; btn.style.background = '#22c55e';
   } catch(e) {
     st.className = 'status err'; st.textContent = '❌ Errore: ' + e.message;
