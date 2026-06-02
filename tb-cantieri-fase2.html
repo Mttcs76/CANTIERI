@@ -2649,9 +2649,28 @@ function renderCosti(c) {
   const targetM = +(c.targetMargine||20);
   const totRicavo = calcolaConsuntivo(c);
   const totMdo = calcolaManodopera(c);
+
+  // Fatture importate da tb-import.html
   const fatture = (c.speseMateriali||[]);
+
+  // Movimenti banca assegnati a questo cantiere (da tb-import-banca.html)
+  // Prende il nome del cantiere per identificare il centro di costo
+  const nomeLower = (c.nome||'').toLowerCase();
+  const centroId = nomeLower.includes('fontanasanta') ? 'fontanasanta' :
+                   nomeLower.includes('borghetto') ? 'borghetto' : null;
+  const movBanca = centroId ?
+    (S.azienda?.movimentiBanca||[]).filter(m => m.centro===centroId && m.importo<0) : [];
+
+  // Evita duplicati: escludi movimenti banca già presenti come fatture (stesso importo+data)
+  const fattureKeys = new Set(fatture.map(f=>`${f.data}|${Math.abs(+f.importo||0)}`));
+  const movBancaUnici = movBanca.filter(m => {
+    const k = `${m.data}|${Math.abs(m.importo)}`;
+    return !fattureKeys.has(k);
+  });
+
   const totFatture = fatture.reduce((s,x)=>s+(+x.importo||0),0);
-  const totCosti = totMdo + totFatture;
+  const totMovBanca = movBancaUnici.reduce((s,m)=>s+Math.abs(m.importo),0);
+  const totCosti = totMdo + totFatture + totMovBanca;
   const margine = totRicavo - totCosti;
   const margPct = totRicavo>0 ? Math.round(margine/totRicavo*100) : 0;
   const semaforo = margPct>=targetM?'#22c55e':margPct>=targetM/2?'#f59e0b':'#dc2626';
@@ -2669,9 +2688,15 @@ function renderCosti(c) {
     </div>`;
   }).join('');
 
-  // Fatture per categoria
+  // Tutte le voci di costo (fatture + movimenti banca unici)
+  const tutteVoci = [
+    ...fatture.map(f=>({desc:f.desc||'—', cat:f.cat||'Altro', importo:+(f.importo||0), data:f.data||'', id:f.id, fonte:'fattura'})),
+    ...movBancaUnici.map(m=>({desc:m.desc||'—', cat:m.cat||'Altro', importo:Math.abs(m.importo), data:m.data||'', id:m.key||m.id, fonte:'banca'}))
+  ];
+
+  // Raggruppa per categoria
   const perCat = {};
-  fatture.forEach(f => { const k=f.cat||'Altro'; if(!perCat[k]) perCat[k]=0; perCat[k]+=(+f.importo||0); });
+  tutteVoci.forEach(v => { const k=v.cat||'Altro'; if(!perCat[k]) perCat[k]=0; perCat[k]+=v.importo; });
   const catRows = Object.entries(perCat).sort((a,b)=>b[1]-a[1]).map(([cat,imp]) =>
     `<div style="display:flex;justify-content:space-between;padding:6px 14px;border-bottom:1px solid var(--s1);font-size:12px">
       <span style="color:var(--text)">${esc(cat)}</span>
@@ -2679,15 +2704,15 @@ function renderCosti(c) {
     </div>`
   ).join('');
 
-  // Lista fatture completa
-  const fattureRows = [...fatture].sort((a,b)=>b.data?.localeCompare(a.data||'')).map(f =>
+  // Lista completa voci
+  const fattureRows = [...tutteVoci].sort((a,b)=>b.data.localeCompare(a.data)).map(v =>
     `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--s1)">
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.desc||'—')}</div>
-        <div style="font-size:10px;color:var(--soft)">${esc(f.cat||'')} · ${esc(f.data||'')}</div>
+        <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v.desc)}</div>
+        <div style="font-size:10px;color:var(--soft)">${esc(v.cat||'')} · ${esc(v.data||'')} · <span style="color:${v.fonte==='banca'?'#0e7490':'#6a9478'}">${v.fonte==='banca'?'🏦 banca':'🧾 fattura'}</span></div>
       </div>
-      <div style="font-size:13px;font-weight:700;color:var(--red);flex-shrink:0">−${fE(+f.importo||0)}</div>
-      <button onclick="eliminaSpesaMat('${f.id}')" style="background:none;border:none;color:var(--s4);cursor:pointer;font-size:14px;padding:2px 4px;flex-shrink:0">✕</button>
+      <div style="font-size:13px;font-weight:700;color:var(--red);flex-shrink:0">−${fE(v.importo)}</div>
+      ${v.fonte==='fattura'?`<button onclick="eliminaSpesaMat('${v.id}')" style="background:none;border:none;color:var(--s4);cursor:pointer;font-size:14px;padding:2px 4px;flex-shrink:0">✕</button>`:''}
     </div>`
   ).join('');
 
@@ -2718,6 +2743,7 @@ function renderCosti(c) {
       <div style="font-size:10px;color:rgba(255,255,255,.55);display:flex;gap:12px;flex-wrap:wrap">
         <span>👷 Mdo: ${fE(totMdo)}</span>
         <span>🧾 Fatture: ${fE(totFatture)}</span>
+        ${totMovBanca>0?`<span>🏦 Banca: ${fE(totMovBanca)}</span>`:''}
         <span>📋 Target: ${targetM}%</span>
       </div>
     </div>
@@ -2744,7 +2770,7 @@ function renderCosti(c) {
     <!-- LISTA FATTURE -->
     <div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);overflow:hidden">
       <div style="padding:10px 14px;background:var(--s1);display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--s2)">
-        <span style="font-size:12px;font-weight:700;color:var(--text)">🧾 Tutte le fatture (${fatture.length})</span>
+        <span style="font-size:12px;font-weight:700;color:var(--text)">🧾 Tutte le voci (${tutteVoci.length})</span>
         <button onclick="openModal('mSpesaMateriali')" style="background:var(--g1);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">+ Aggiungi</button>
       </div>
       ${fattureRows||`<div style="padding:16px;font-size:12px;color:var(--soft);text-align:center">Nessuna fattura. Usa tb-import.html per importare.</div>`}
@@ -3138,10 +3164,7 @@ function aggiornaKPIImpresa() {
   const fE = n => '€ ' + Math.round(Math.abs(n||0)).toLocaleString('it-IT');
   const az = S.azienda || {};
   const saldo = (az.movimentiBanca||[]).reduce((s,m)=>s+(+m.importo||0),0);
-  const cg = [
-    ...(az.fatture||[]).filter(f=>f.centro==='generale'),
-    ...(az.costiFissi||[]).filter(c=>!c.freq||c.freq==='una-tantum')
-  ].reduce((s,f)=>s+(+f.importo||0),0);
+  const cg = (az.fatture||[]).filter(f=>f.centro==='generale').reduce((s,f)=>s+(+f.importo||0),0);
   const ricavi = getRicaviCantieri();
   const kpiS = $('kpi-saldo'); if(kpiS) kpiS.textContent = saldo ? fE(saldo) : '—';
   const kpiC = $('kpi-cg'); if(kpiC) kpiC.textContent = cg ? fE(cg) : '—';
@@ -3257,14 +3280,8 @@ function renderBanca(az) {
 // ── COSTI GENERALI ──
 function renderCostiGenerali(az) {
   const fE=n=>'€ '+Math.round(n||0).toLocaleString('it-IT');
-  // Fatture assegnate a "generale" — supporta sia az.fatture che az.costiFissi (legacy)
-  const fatGen = [
-    ...(az.fatture||[]).filter(f=>f.centro==='generale'),
-    ...(az.costiFissi||[]).filter(c=>!c.freq||c.freq==='una-tantum').map(c=>({
-      fornitore: c.desc, desc: c.desc, cat: c.cat||'Altro',
-      importo: c.importo, data: c.scadenza||c.data||'', centro:'generale'
-    }))
-  ];
+  // Fatture assegnate a "generale" — fonte unica: az.fatture
+  const fatGen = (az.fatture||[]).filter(f=>f.centro==='generale');
   // Movimenti banca assegnati a "generale"
   const movGen = (az.movimentiBanca||[]).filter(m=>m.centro==='generale'&&m.importo<0);
   const totFatGen = fatGen.reduce((s,f)=>s+(+f.importo||0),0);
