@@ -282,9 +282,9 @@ window.importaFirebase = async function() {
     // Azzera se richiesto
     if(azzera) {
       Object.values(cantieri).forEach(c=>{ if(c) c.speseMateriali=[]; });
-      S.azienda.costiFissi = S.azienda.costiFissi.filter(x=>x.key); // mantieni solo quelli da banca
+      S.azienda.costiFissi = [];
       S.azienda.fatture = [];
-      log('🗑 Spese azzerate');
+      log('🗑 Spese azzerate completamente');
     }
 
     // Chiavi per deduplicazione
