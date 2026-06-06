@@ -3407,8 +3407,7 @@ function exportPresenzeCSV() {
     rows.push([op.nome, op.qualifica||'', ggOrd, oreOrd, ggStr, oreStr, ggFerie, ggMal, ggPerm, ggAss, costoTot.toFixed(2)]);
   });
 
-  const csv = rows.map(r => r.join(';')).join('
-');
+  const csv = rows.map(r => r.join(';')).join('\n');
   const a = document.createElement('a');
   a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
   a.download = 'Presenze_' + mese + '_Tecnobase.csv';
