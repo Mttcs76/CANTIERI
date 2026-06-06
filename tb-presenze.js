@@ -69,11 +69,25 @@ function renderPresenzeGiorno() {
   if (!inp || !list) return;
   const data = inp.value;
   if (!data) return;
+  // Aggiorna display data leggibile
+  const display = document.getElementById('prezDateDisplay');
+  if (display) {
+    const d = new Date(data + 'T12:00:00');
+    const oggi = new Date().toISOString().slice(0,10);
+    const ieri = new Date(Date.now()-86400000).toISOString().slice(0,10);
+    const label = data === oggi ? 'Oggi' : data === ieri ? 'Ieri' : '';
+    const giorni = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+    const mesi = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+    display.textContent = (label ? label + ' · ' : '') + giorni[d.getDay()] + ' ' + d.getDate() + ' ' + mesi[d.getMonth()] + ' ' + d.getFullYear();
+  }
   const operai = S.operaiGlobali || [];
   const pres = getPresenzeGiorno(data);
 
   if (!operai.length) {
-    list.innerHTML = '<div style="text-align:center;padding:16px;font-size:13px;color:var(--soft)">Nessun operaio in anagrafica.<br>Aggiungili dalla sezione Operai.</div>';
+    const isConnected = window._fbEnabled;
+    list.innerHTML = isConnected
+      ? '<div style="text-align:center;padding:16px;font-size:13px;color:var(--soft)">⏳ Caricamento operai...</div>'
+      : '<div style="text-align:center;padding:16px;font-size:13px;color:var(--soft)">Nessun operaio in anagrafica.<br>Aggiungili dalla sezione Operai.</div>';
     return;
   }
 
@@ -137,6 +151,11 @@ function initPresenzeUI() {
     inp.value = new Date().toISOString().slice(0,10);
   }
   renderPresenzeGiorno();
+  // Se operai non ancora caricati da Firebase, riprova
+  if (!(S.operaiGlobali && S.operaiGlobali.length)) {
+    setTimeout(renderPresenzeGiorno, 800);
+    setTimeout(renderPresenzeGiorno, 2000);
+  }
 }
 
 function exportPresenzeCSV() {
