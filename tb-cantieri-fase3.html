@@ -15,7 +15,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <!-- Firebase App + Firestore -->
 <script type="module">import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, setDoc, onSnapshot, getDoc, collection, addDoc, getDocs, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, setDoc, onSnapshot, getDoc, collection, addDoc, getDocs, query, orderBy, limit, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 const firebaseConfig = {
   apiKey: "AIzaSyDvXu1k4kPWBDnmBZxDs6McM9fqntMMphw",
   authDomain: "tb-cantieri.firebaseapp.com",
@@ -24,60 +24,117 @@ const firebaseConfig = {
   messagingSenderId: "91212110377",
   appId: "1:91212110377:web:cbb842678fb0d311a79a38"
 };
-let fbApp = null, fbDb = null, fbEnabled = false;
+let fbApp = null, fbDb = null;
 try {
   if (!firebaseConfig.apiKey.includes('LA_TUA')) {
     fbApp = initializeApp(firebaseConfig);
     fbDb = getFirestore(fbApp);
-    fbEnabled = true;
     window._fbDb = fbDb;
     window._fbEnabled = true;
     console.log('Firebase connesso ✅');
-  } else {
-    window._fbEnabled = false;
-  }
-} catch(e) {
-  window._fbEnabled = false;
-  console.warn('Firebase non attivo:', e.message);
-}
-window._fbSave = async (data) => {
+  } else { window._fbEnabled = false; }
+} catch(e) { window._fbEnabled = false; console.warn('Firebase non attivo:', e.message); }
+
+// ─── SEZIONI che vengono salvate/mergeate indipendentemente per cantiere ───
+const SEZIONI_CANTIERE = ['capitoli','rapportini','operai','foto','documenti','speseGenerali','speseMateriali','ordini','giornale'];
+
+// Salva TUTTE le sezioni di un singolo cantiere + i metadati
+window._fbSaveCantiere = async (c, updatedBy) => {
+  if (!fbDb || !c || !c.id) return;
+  const now = Date.now();
+  const cantiereRef = doc(fbDb, 'tbcantieri_v2', c.id);
+  // Meta: dati anagrafici cantiere (nome, indirizzo, importo, ecc.)
+  const meta = { nome: c.nome, indirizzo: c.indirizzo||'', resp: c.resp||'', data: c.data||'',
+    importo: c.importo||0, note: c.note||'', stato: c.stato||'', pctCostiGenerali: c.pctCostiGenerali||18,
+    targetMargine: c.targetMargine||20, created: c.created||now,
+    metaUpdatedAt: now, metaUpdatedBy: updatedBy||'—' };
+  try {
+    await setDoc(cantiereRef, meta, { merge: true });
+  } catch(e) { console.warn('fbSaveCantiere meta error:', e); }
+};
+
+// Salva UNA SOLA sezione di un cantiere (es. 'rapportini', 'capitoli', ecc.)
+window._fbSaveSezione = async (cantiereId, sezione, dati, updatedBy) => {
+  if (!fbDb || !cantiereId || !sezione) return;
+  const now = Date.now();
+  const ref = doc(fbDb, 'tbcantieri_v2', cantiereId);
+  try {
+    await setDoc(ref, {
+      [sezione]: dati,
+      [sezione + '_updatedAt']: now,
+      [sezione + '_updatedBy']: updatedBy || '—'
+    }, { merge: true });
+  } catch(e) { console.warn('fbSaveSezione error:', sezione, e); }
+};
+
+// Salva operai globali e presenze (condivisi tra tutti)
+window._fbSaveGlobali = async (operaiGlobali, presenze, azienda, updatedBy) => {
   if (!fbDb) return;
   try {
-    await setDoc(doc(fbDb, 'tbcantieri', 'shared'), {
-      cantieri: data.cantieri,
-      operaiGlobali: data.operaiGlobali || [],
-      azienda: data.azienda || null,
-      presenze: data.presenze || {},
-      updated: Date.now()
-    });
-  } catch(e) { console.warn('Firebase save error:', e); }
+    await setDoc(doc(fbDb, 'tbcantieri_v2', '__globali'), {
+      operaiGlobali: operaiGlobali || [],
+      presenze: presenze || {},
+      azienda: azienda || null,
+      globaliUpdatedAt: Date.now(),
+      globaliUpdatedBy: updatedBy || '—'
+    }, { merge: true });
+  } catch(e) { console.warn('fbSaveGlobali error:', e); }
 };
-window._fbLoad = async () => {
+
+// Carica tutti i cantieri + globali
+window._fbLoadAll = async () => {
   if (!fbDb) return null;
   try {
-    const snap = await getDoc(doc(fbDb, 'tbcantieri', 'shared'));
-    return snap.exists() ? snap.data() : null;
-  } catch(e) { console.warn('Firebase load error:', e); return null; }
+    const snap = await getDocs(collection(fbDb, 'tbcantieri_v2'));
+    const cantieri = [];
+    let globali = null;
+    snap.forEach(d => {
+      if (d.id === '__globali') { globali = d.data(); }
+      else { cantieri.push({ id: d.id, ...d.data() }); }
+    });
+    return { cantieri, globali };
+  } catch(e) { console.warn('fbLoadAll error:', e); return null; }
 };
-window._fbListen = (callback) => {
+
+// Listener realtime — notifica quando cambia qualsiasi documento della collection
+window._fbListenAll = (callback) => {
   if (!fbDb) return;
-  onSnapshot(doc(fbDb, 'tbcantieri', 'shared'), (snap) => {
-    if (snap.exists()) callback(snap.data());
+  onSnapshot(collection(fbDb, 'tbcantieri_v2'), (snap) => {
+    const cantieri = [];
+    let globali = null;
+    snap.forEach(d => {
+      if (d.id === '__globali') { globali = d.data(); }
+      else { cantieri.push({ id: d.id, ...d.data() }); }
+    });
+    callback({ cantieri, globali });
   });
 };
+
+// ─── COMPATIBILITÀ con il vecchio _fbSave (usato da backup e codice legacy) ───
+window._fbSave = async (data) => {
+  if (!fbDb || !data) return;
+  const updatedBy = (data.uid) || '—';
+  // Salva ogni cantiere separatamente
+  for (const c of (data.cantieri || [])) {
+    await window._fbSaveCantiere(c, updatedBy);
+    for (const sez of SEZIONI_CANTIERE) {
+      if (c[sez] !== undefined) {
+        await window._fbSaveSezione(c.id, sez, c[sez], updatedBy);
+      }
+    }
+  }
+  await window._fbSaveGlobali(data.operaiGlobali, data.presenze, data.azienda, updatedBy);
+};
+
+// ─── BACKUP ───
 window._fbSaveBackup = async (data, label) => {
   if (!fbDb) return false;
   try {
-    const backupsRef = collection(fbDb, 'tbcantieri_backups');
-    await addDoc(backupsRef, {
-      cantieri: data.cantieri,
-      operaiGlobali: data.operaiGlobali || [],
-      exportedBy: data.exportedBy || 'Auto',
-      label: label || 'Auto',
-      createdAt: Date.now()
+    await addDoc(collection(fbDb, 'tbcantieri_backups'), {
+      cantieri: data.cantieri, operaiGlobali: data.operaiGlobali || [],
+      exportedBy: data.exportedBy || 'Auto', label: label || 'Auto', createdAt: Date.now()
     });
-    console.log('Backup Firebase salvato ✅');
-    return true;
+    console.log('Backup Firebase salvato ✅'); return true;
   } catch(e) { console.warn('Firebase backup error:', e); return false; }
 };
 window._fbLoadBackups = async () => {
@@ -86,7 +143,7 @@ window._fbLoadBackups = async () => {
     const q = query(collection(fbDb, 'tbcantieri_backups'), orderBy('createdAt', 'desc'), limit(10));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch(e) { console.warn('Firebase backup load error:', e); return []; }
+  } catch(e) { return []; }
 };
 window._fbLoadBackup = async (id) => {
   if (!fbDb) return null;
@@ -97,7 +154,7 @@ window._fbLoadBackup = async (id) => {
 };</script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Bebas+Neue&family=Nunito:wght@400;500;600;700;800&display=swap');:root{--g0:#0d2b1a;--g1:#1a4a2e;--g2:#2d6a4f;--g3:#40916c;--g4:#52b788;--g5:#95d5b2;--g6:#d8f3dc;--white:#fff;--off:#f7faf8;--s1:#f0f5f2;--s2:#e2ede6;--s3:#b8d4c0;--s4:#6a9478;--text:#1a2e22;--soft:#4d6b58;--amber:#d97706;--amber-bg:#fffbeb;--amber-border:#fde68a;--red:#dc2626;--red-bg:#fef2f2;--red-border:#fecaca;--blue:#1d4ed8;--blue-bg:#eff6ff;--blue-border:#bfdbfe;--shadow:0 2px 12px rgba(26,74,46,.10);--shadow-md:0 4px 24px rgba(26,74,46,.14);--r:12px;--r-sm:8px;}*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}html,body{height:100%;overflow:hidden}body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);display:flex;flex-direction:column}.topbar{background:var(--g1);color:#fff;height:66px;display:flex;align-items:center;gap:11px;padding:0 14px;flex-shrink:0;position:relative;z-index:60;box-shadow:0 2px 10px rgba(0,0,0,.2)}.tb-logo{width:54px;height:54px;background:transparent;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:0}.tb-logo img{width:54px;height:54px;object-fit:cover;border-radius:50%;display:block}.tb-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;letter-spacing:2px;color:#fff}.tb-sub{font-size:11px;color:rgba(255,255,255,.55);font-weight:400}.tb-back{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:var(--r-sm);padding:5px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif;display:none;align-items:center;gap:4px;margin-right:4px}.tb-back.show{display:flex}.tb-user{margin-left:auto;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:50%;width:34px;height:34px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;justify-content:center;flex-shrink:0}.app-body{flex:1;overflow:hidden;display:flex;flex-direction:column;max-width:800px;margin:0 auto;width:100%;position:relative}.screen{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:72px}.screen::-webkit-scrollbar{width:4px}.screen::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px}.tabs{display:flex;background:#fff;border-bottom:1px solid var(--s2);position:sticky;top:0;z-index:40;overflow-x:auto;scrollbar-width:none;flex-shrink:0}.tabs::-webkit-scrollbar{display:none}.tab{flex:none;padding:12px 14px;border:none;background:none;font-size:12px;font-weight:500;color:var(--s4);cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-1px;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:5px;transition:color .15s}.tab.active{color:var(--g1);border-bottom-color:var(--g1)}.tab-cnt{background:var(--g6);color:var(--g2);border-radius:99px;padding:1px 6px;font-size:10px;font-weight:600}.tab.active .tab-cnt{background:var(--g1);color:#fff}.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:#fff;border-top:1px solid var(--s2);display:flex;padding:6px 0 calc(env(safe-area-inset-bottom,0px) + 6px);z-index:60;box-shadow:0 -2px 12px rgba(26,74,46,.07)}.nav-btn{flex:1;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:3px 0;color:var(--s4);font-family:'Nunito',sans-serif;transition:color .15s}.nav-btn.active{color:var(--g1)}.nav-ic{font-size:20px;line-height:1}.nav-lb{font-size:10px;font-weight:500;letter-spacing:.2px}.fab{position:fixed;bottom:76px;right:50%;transform:translateX(calc(50% - min(400px,50vw) + 18px));width:52px;height:52px;border-radius:50%;background:var(--g1);color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 18px rgba(26,74,46,.35);display:none;align-items:center;justify-content:center;z-index:55;transition:transform .15s,background .15s}.fab:active{transform:translateX(calc(50% - min(400px,50vw) + 18px)) scale(.93)}.fab.show{display:flex}.sec-head{padding:16px 14px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}.sec-title{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--g1);letter-spacing:.8px}.c-card{margin:0 10px 10px;background:#fff;border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--s2);overflow:hidden;cursor:pointer;transition:transform .15s}.c-card:active{transform:scale(.985)}.c-card-head{background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 100%);padding:14px 16px;display:flex;gap:12px;align-items:center}.c-initials{width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,.18);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid rgba(255,255,255,.25)}.c-name{font-weight:800;font-size:14px;color:#fff;line-height:1.2}.c-loc{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px}.c-stats{display:grid;grid-template-columns:repeat(4,1fr)}.c-stat{padding:10px 6px;text-align:center;border-right:1px solid var(--s1)}.c-stat:last-child{border-right:none}.c-stat-n{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--g2)}.c-stat-l{font-size:9px;color:var(--soft);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:1px}.item-card{background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.item-head{padding:10px 14px;background:var(--s1);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.item-title{font-weight:600;font-size:14px;color:var(--text)}.item-meta{font-size:11px;color:var(--soft);margin-top:1px}.item-body{padding:11px 14px}.item-text{font-size:13px;color:var(--text);line-height:1.5}.item-note{font-size:12px;color:var(--soft);border-left:3px solid var(--g4);padding-left:9px;margin-top:7px}.item-footer{font-size:10px;color:var(--s4);margin-top:8px}.chip{display:inline-flex;align-items:center;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:500;white-space:nowrap}.chip-green{background:var(--g6);color:var(--g1)}.chip-amber{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}.chip-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}.chip-blue{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}.chip-gray{background:var(--s1);color:var(--soft);border:1px solid var(--s2)}.computo-wrap{margin:0 10px 10px;background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.cap-header{padding:10px 14px;background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between}.cap-total{font-size:13px;font-weight:600;color:var(--g5)}.voce-row{display:grid;grid-template-columns:1fr 36px 52px 64px 72px;gap:4px;padding:8px 14px;border-bottom:1px solid var(--s1);align-items:center}.voce-row:last-child{border-bottom:none}.voce-row:hover{background:var(--s1)}.voce-desc{font-size:12px;font-weight:500;color:var(--text)}.voce-um{font-size:10px;color:var(--soft);text-align:center}.voce-qty{font-size:12px;font-weight:500;color:var(--text);text-align:right;min-width:48px}.voce-pu{font-size:11px;color:var(--soft);text-align:right;min-width:60px}.voce-price{font-size:12px;font-weight:600;color:var(--g2);text-align:right;min-width:72px}.voce-input{width:60px;background:var(--s1);border:1px solid var(--s3);border-radius:5px;padding:3px 6px;font-size:12px;font-weight:500;color:var(--g1);text-align:right;font-family:'Nunito',sans-serif;outline:none}.voce-input:focus{border-color:var(--g3)}.voce-delta-pos{font-size:11px;font-weight:500;color:var(--red);min-width:56px;text-align:right}.voce-delta-neg{font-size:11px;font-weight:500;color:var(--g3);min-width:56px;text-align:right}.table-header{display:grid;grid-template-columns:1fr 36px 52px 64px 72px;gap:4px;padding:6px 14px;background:var(--s1);border-bottom:1px solid var(--s2)}.th-label{font-size:9px;font-weight:600;color:var(--soft);text-transform:uppercase;letter-spacing:.5px}.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 10px 0}.kpi-box{background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);padding:10px 12px;text-align:center;box-shadow:var(--shadow)}.kpi-n{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--g1)}.kpi-l{font-size:9px;color:var(--soft);font-weight:500;letter-spacing:.5px;text-transform:uppercase;margin-top:1px}.kpi-box.danger .kpi-n{color:var(--red)}.kpi-box.success .kpi-n{color:var(--g3)}.import-zone{margin:12px 10px;border:2px dashed var(--s3);border-radius:var(--r);padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}.import-zone:hover,.import-zone.dragover{border-color:var(--g3);background:var(--g6)}.import-icon{font-size:40px;margin-bottom:10px}.import-title{font-weight:600;font-size:15px;color:var(--g1);margin-bottom:4px}.import-sub{font-size:12px;color:var(--soft);line-height:1.5}.import-btn{background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:12px;display:inline-block}.foto-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 10px 10px}.foto-thumb{aspect-ratio:1;background:var(--s1);border-radius:var(--r-sm);overflow:hidden;position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:28px;border:1px solid var(--s2)}.foto-thumb img{width:100%;height:100%;object-fit:cover}.foto-tag-badge{position:absolute;bottom:4px;left:4px;background:rgba(26,74,46,.82);color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:2px 5px}.foto-date{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.5);color:#fff;font-size:9px;border-radius:3px;padding:1px 5px}.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s}.overlay.show{opacity:1;pointer-events:all}.modal{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:800px;max-height:92vh;overflow-y:auto;transform:translateY(100%);transition:transform .28s cubic-bezier(.32,1.02,.6,1)}.overlay.show .modal{transform:translateY(0)}.modal-handle{width:36px;height:4px;background:var(--s2);border-radius:99px;margin:12px auto 0}.modal-title{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--g1);padding:10px 18px 14px;letter-spacing:.8px;border-bottom:1px solid var(--s2)}.modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:13px}.f-label{font-size:11px;color:var(--soft);font-weight:600;letter-spacing:.7px;text-transform:uppercase;margin-bottom:4px;display:block}.f-in,.f-sel,.f-ta{width:100%;background:var(--s1);border:1.5px solid var(--s2);border-radius:var(--r-sm);color:var(--text);padding:10px 12px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;transition:border-color .15s}.f-in:focus,.f-sel:focus,.f-ta:focus{border-color:var(--g3)}.f-ta{resize:vertical}.f-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.f-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}.btn-prim{width:100%;background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:6px;transition:background .15s}.btn-prim:active{background:var(--g2)}.upload-zone{border:2px dashed var(--s3);border-radius:var(--r-sm);padding:20px;text-align:center;cursor:pointer;transition:border-color .2s}.upload-zone:active{border-color:var(--g3)}.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;opacity:0;pointer-events:none;transition:opacity .2s}.lightbox.show{opacity:1;pointer-events:all}.lightbox img{max-width:95vw;max-height:72vh;border-radius:8px;object-fit:contain}.lb-close{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.15);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer}.lb-info{color:rgba(255,255,255,.65);font-size:12px;text-align:center}.empty{text-align:center;padding:40px 20px}.empty-ic{font-size:44px;margin-bottom:12px}.empty-txt{font-size:13px;color:var(--soft);font-weight:600;line-height:1.5}#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--g0);color:#fff;padding:9px 18px;border-radius:99px;font-size:12px;font-weight:700;z-index:400;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}.install-bar{background:var(--g1);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;flex-shrink:0}.install-bar button{background:#fff;color:var(--g1);border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif}.ios-hint{background:var(--g6);padding:10px 14px;font-size:12px;color:var(--g1);border-bottom:1px solid var(--s2);flex-shrink:0}.doc-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border-radius:var(--r-sm);margin:0 10px 7px;border:1px solid var(--s2);box-shadow:var(--shadow)}.doc-ic{font-size:24px;flex-shrink:0}.doc-info{flex:1;min-width:0}.doc-name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.doc-meta{font-size:11px;color:var(--soft);margin-top:1px}.doc-dl{background:var(--g6);border:none;color:var(--g1);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;flex-shrink:0}.operaio-row{background:#fff;border-radius:var(--r-sm);margin:0 10px 7px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.operaio-head{padding:10px 14px;background:var(--s1);display:flex;align-items:center;justify-content:space-between}.operaio-name{font-weight:800;font-size:14px;color:var(--text)}.operaio-role{font-size:11px;color:var(--soft)}.operaio-stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--s2)}.op-stat{padding:8px 10px;text-align:center;border-right:1px solid var(--s1)}.op-stat:last-child{border-right:none}.op-stat-n{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;color:var(--g2)}.op-stat-l{font-size:9px;color:var(--soft);font-weight:700;text-transform:uppercase;letter-spacing:.4px}.presenze-row{padding:8px 14px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--s1);flex-wrap:wrap}.presenza-dot{width:28px;height:28px;border-radius:50%;background:var(--s2);border:1.5px solid var(--s3);font-size:9px;font-weight:700;color:var(--soft);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0}.presenza-dot.present{background:var(--g4);border-color:var(--g3);color:#fff}.presenza-dot.absent{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}.pdf-page{position:fixed;left:-9999px;top:-9999px;width:794px;background:#fff;font-family:'Nunito',sans-serif;font-size:12px;color:#1a2e22;padding:32px}@media(min-width:600px){.f-grid-3{grid-template-columns:1fr 1fr 1fr}}
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Bebas+Neue&family=Nunito:wght@400;500;600;700;800&display=swap');:root{--g0:#0d2b1a;--g1:#1a4a2e;--g2:#2d6a4f;--g3:#40916c;--g4:#52b788;--g5:#95d5b2;--g6:#d8f3dc;--white:#fff;--off:#f7faf8;--s1:#f0f5f2;--s2:#e2ede6;--s3:#b8d4c0;--s4:#6a9478;--text:#1a2e22;--soft:#4d6b58;--amber:#d97706;--amber-bg:#fffbeb;--amber-border:#fde68a;--red:#dc2626;--red-bg:#fef2f2;--red-border:#fecaca;--blue:#1d4ed8;--blue-bg:#eff6ff;--blue-border:#bfdbfe;--shadow:0 2px 12px rgba(26,74,46,.10);--shadow-md:0 4px 24px rgba(26,74,46,.14);--r:12px;--r-sm:8px;}*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}html,body{height:100%;overflow:hidden}body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);display:flex;flex-direction:column}.topbar{background:var(--g1);color:#fff;height:66px;display:flex;align-items:center;gap:11px;padding:0 14px;flex-shrink:0;position:relative;z-index:60;box-shadow:0 2px 10px rgba(0,0,0,.2)}.tb-logo{width:54px;height:54px;background:transparent;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:0}.tb-logo img{width:54px;height:54px;object-fit:cover;border-radius:50%;display:block}.tb-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;letter-spacing:2px;color:#fff}.tb-sub{font-size:11px;color:rgba(255,255,255,.55);font-weight:400}.tb-back{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:var(--r-sm);padding:5px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif;display:none;align-items:center;gap:4px;margin-right:4px}.tb-back.show{display:flex}.tb-user{margin-left:auto;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:50%;width:34px;height:34px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;justify-content:center;flex-shrink:0}.app-body{flex:1;overflow:hidden;display:flex;flex-direction:column;max-width:800px;margin:0 auto;width:100%;position:relative}.screen{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:72px}.screen::-webkit-scrollbar{width:4px}.screen::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px}.tabs{display:flex;background:#fff;border-bottom:1px solid var(--s2);position:sticky;top:0;z-index:40;overflow-x:auto;scrollbar-width:none;flex-shrink:0}.tabs::-webkit-scrollbar{display:none}.tab{flex:none;padding:12px 14px;border:none;background:none;font-size:12px;font-weight:500;color:var(--s4);cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-1px;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:5px;transition:color .15s}.tab.active{color:var(--g1);border-bottom-color:var(--g1)}.tab-cnt{background:var(--g6);color:var(--g2);border-radius:99px;padding:1px 6px;font-size:10px;font-weight:600}.tab.active .tab-cnt{background:var(--g1);color:#fff}.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:#fff;border-top:1px solid var(--s2);display:flex;padding:6px 0 calc(env(safe-area-inset-bottom,0px) + 6px);z-index:60;box-shadow:0 -2px 12px rgba(26,74,46,.07)}.nav-btn{flex:1;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:3px 0;color:var(--s4);font-family:'Nunito',sans-serif;transition:color .15s}.nav-btn.active{color:var(--g1)}.nav-ic{font-size:20px;line-height:1}.nav-lb{font-size:10px;font-weight:500;letter-spacing:.2px}.fab{position:fixed;bottom:76px;right:50%;transform:translateX(calc(50% - min(400px,50vw) + 18px));width:52px;height:52px;border-radius:50%;background:var(--g1);color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 18px rgba(26,74,46,.35);display:none;align-items:center;justify-content:center;z-index:55;transition:transform .15s,background .15s}.fab:active{transform:translateX(calc(50% - min(400px,50vw) + 18px)) scale(.93)}.fab.show{display:flex}.sec-head{padding:16px 14px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}.sec-title{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--g1);letter-spacing:.8px}.c-card{margin:0 10px 10px;background:#fff;border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--s2);overflow:hidden;cursor:pointer;transition:transform .15s}.c-card:active{transform:scale(.985)}.c-card-head{background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 100%);padding:14px 16px;display:flex;gap:12px;align-items:center}.c-initials{width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,.18);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid rgba(255,255,255,.25)}.c-name{font-weight:800;font-size:14px;color:#fff;line-height:1.2}.c-loc{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px}.c-stats{display:grid;grid-template-columns:repeat(4,1fr)}.c-stat{padding:10px 6px;text-align:center;border-right:1px solid var(--s1)}.c-stat:last-child{border-right:none}.c-stat-n{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--g2)}.c-stat-l{font-size:9px;color:var(--soft);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:1px}.item-card{background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.item-head{padding:10px 14px;background:var(--s1);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.item-title{font-weight:600;font-size:14px;color:var(--text)}.item-meta{font-size:11px;color:var(--soft);margin-top:1px}.item-body{padding:11px 14px}.item-text{font-size:13px;color:var(--text);line-height:1.5}.item-note{font-size:12px;color:var(--soft);border-left:3px solid var(--g4);padding-left:9px;margin-top:7px}.item-footer{font-size:10px;color:var(--s4);margin-top:8px}.chip{display:inline-flex;align-items:center;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:500;white-space:nowrap}.chip-green{background:var(--g6);color:var(--g1)}.chip-amber{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}.chip-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}.chip-blue{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}.chip-gray{background:var(--s1);color:var(--soft);border:1px solid var(--s2)}.computo-wrap{margin:0 10px 10px;background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.cap-header{padding:10px 14px;background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between}.cap-total{font-size:13px;font-weight:600;color:var(--g5)}.voce-row{display:grid;grid-template-columns:1fr 36px 52px 64px 72px;gap:4px;padding:8px 14px;border-bottom:1px solid var(--s1);align-items:center}.voce-row:last-child{border-bottom:none}.voce-row:hover{background:var(--s1)}.voce-desc{font-size:12px;font-weight:500;color:var(--text)}.voce-um{font-size:10px;color:var(--soft);text-align:center}.voce-qty{font-size:12px;font-weight:500;color:var(--text);text-align:right;min-width:48px}.voce-pu{font-size:11px;color:var(--soft);text-align:right;min-width:60px}.voce-price{font-size:12px;font-weight:600;color:var(--g2);text-align:right;min-width:72px}.voce-input{width:60px;background:var(--s1);border:1px solid var(--s3);border-radius:5px;padding:3px 6px;font-size:12px;font-weight:500;color:var(--g1);text-align:right;font-family:'Nunito',sans-serif;outline:none}.voce-input:focus{border-color:var(--g3)}.voce-delta-pos{font-size:11px;font-weight:500;color:var(--red);min-width:56px;text-align:right}.voce-delta-neg{font-size:11px;font-weight:500;color:var(--g3);min-width:56px;text-align:right}.table-header{display:grid;grid-template-columns:1fr 36px 52px 64px 72px;gap:4px;padding:6px 14px;background:var(--s1);border-bottom:1px solid var(--s2)}.th-label{font-size:9px;font-weight:600;color:var(--soft);text-transform:uppercase;letter-spacing:.5px}.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 10px 0}.kpi-box{background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);padding:10px 12px;text-align:center;box-shadow:var(--shadow)}.kpi-n{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--g1)}.kpi-l{font-size:9px;color:var(--soft);font-weight:500;letter-spacing:.5px;text-transform:uppercase;margin-top:1px}.kpi-box.danger .kpi-n{color:var(--red)}.kpi-box.success .kpi-n{color:var(--g3)}.import-zone{margin:12px 10px;border:2px dashed var(--s3);border-radius:var(--r);padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}.import-zone:hover,.import-zone.dragover{border-color:var(--g3);background:var(--g6)}.import-icon{font-size:40px;margin-bottom:10px}.import-title{font-weight:600;font-size:15px;color:var(--g1);margin-bottom:4px}.import-sub{font-size:12px;color:var(--soft);line-height:1.5}.import-btn{background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:12px;display:inline-block}.foto-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 10px 10px}.foto-thumb{aspect-ratio:1;background:var(--s1);border-radius:var(--r-sm);overflow:hidden;position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:28px;border:1px solid var(--s2)}.foto-thumb img{width:100%;height:100%;object-fit:cover}.foto-tag-badge{position:absolute;bottom:4px;left:4px;background:rgba(26,74,46,.82);color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:2px 5px}.foto-date{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.5);color:#fff;font-size:9px;border-radius:3px;padding:1px 5px}.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s}.overlay.show{opacity:1;pointer-events:all}.modal{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:800px;max-height:92vh;overflow-y:auto;transform:translateY(100%);transition:transform .28s cubic-bezier(.32,1.02,.6,1)}.overlay.show .modal{transform:translateY(0)}.modal-handle{width:36px;height:4px;background:var(--s2);border-radius:99px;margin:12px auto 0}.modal-title{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--g1);padding:10px 18px 14px;letter-spacing:.8px;border-bottom:1px solid var(--s2)}.modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:13px}.f-label{font-size:11px;color:var(--soft);font-weight:600;letter-spacing:.7px;text-transform:uppercase;margin-bottom:4px;display:block}.f-in,.f-sel,.f-ta{width:100%;background:var(--s1);border:1.5px solid var(--s2);border-radius:var(--r-sm);color:var(--text);padding:10px 12px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;transition:border-color .15s}.f-in:focus,.f-sel:focus,.f-ta:focus{border-color:var(--g3)}.f-ta{resize:vertical}.f-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.f-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}.btn-prim{width:100%;background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:6px;transition:background .15s}.btn-prim:active{background:var(--g2)}.upload-zone{border:2px dashed var(--s3);border-radius:var(--r-sm);padding:20px;text-align:center;cursor:pointer;transition:border-color .2s}.upload-zone:active{border-color:var(--g3)}.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;opacity:0;pointer-events:none;transition:opacity .2s}.lightbox.show{opacity:1;pointer-events:all}.lightbox img{max-width:95vw;max-height:72vh;border-radius:8px;object-fit:contain}.lb-close{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.15);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer}.lb-info{color:rgba(255,255,255,.65);font-size:12px;text-align:center}.empty{text-align:center;padding:40px 20px}.empty-ic{font-size:44px;margin-bottom:12px}.empty-txt{font-size:13px;color:var(--soft);font-weight:600;line-height:1.5}#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--g0);color:#fff;padding:9px 18px;border-radius:99px;font-size:12px;font-weight:700;z-index:400;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}.install-bar{background:var(--g1);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;flex-shrink:0}.install-bar button{background:#fff;color:var(--g1);border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif}.ios-hint{background:var(--g6);padding:10px 14px;font-size:12px;color:var(--g1);border-bottom:1px solid var(--s2);flex-shrink:0}.doc-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border-radius:var(--r-sm);margin:0 10px 7px;border:1px solid var(--s2);box-shadow:var(--shadow)}.doc-ic{font-size:24px;flex-shrink:0}.doc-info{flex:1;min-width:0}.doc-name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.doc-meta{font-size:11px;color:var(--soft);margin-top:1px}.doc-dl{background:var(--g6);border:none;color:var(--g1);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;flex-shrink:0}.operaio-row{background:#fff;border-radius:var(--r-sm);margin:0 10px 7px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.operaio-head{padding:10px 14px;background:var(--s1);display:flex;align-items:center;justify-content:space-between}.operaio-name{font-weight:800;font-size:14px;color:var(--text)}.operaio-role{font-size:11px;color:var(--soft)}.operaio-stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--s2)}.op-stat{padding:8px 10px;text-align:center;border-right:1px solid var(--s1)}.op-stat:last-child{border-right:none}.op-stat-n{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;color:var(--g2)}.op-stat-l{font-size:9px;color:var(--soft);font-weight:700;text-transform:uppercase;letter-spacing:.4px}.presenze-row{padding:8px 14px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--s1);flex-wrap:wrap}.presenza-dot{width:28px;height:28px;border-radius:50%;background:var(--s2);border:1.5px solid var(--s3);font-size:9px;font-weight:700;color:var(--soft);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0}.presenza-dot.present{background:var(--g4);border-color:var(--g3);color:#fff}.presenza-dot.absent{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}.pdf-page{position:fixed;left:-9999px;top:-9999px;width:794px;background:#fff;font-family:'Nunito',sans-serif;font-size:12px;color:#1a2e22;padding:32px}@media(min-width:600px){.f-grid-3{grid-template-columns:1fr 1fr 1fr}}@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -158,10 +215,11 @@ window._fbLoadBackup = async (id) => {
     <div class="tb-title">TB WORKS</div>
     <div class="tb-sub" id="tbSub">Tecnobase Restauri</div>
   </div>
-  <div id="fbStatus" style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:10px;color:rgba(255,255,255,.5);font-weight:500">
-    <div id="fbDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.3)"></div>
+  <button id="fbStatus" onclick="manualeSync()" title="Sincronizza adesso" style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:10px;color:rgba(255,255,255,.5);font-weight:500;background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.1)'" onmouseleave="this.style.background='none'">
+    <div id="fbDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.3);flex-shrink:0"></div>
     <span id="fbLabel">locale</span>
-  </div>
+    <span id="fbSyncIcon" style="font-size:13px;opacity:.6;margin-left:1px">🔄</span>
+  </button>
   <button class="tb-user" id="userBtn" onclick="openUserMenu()" title="Menu utente">?</button>
 </div>
 
@@ -966,24 +1024,88 @@ function load() {
 function save() {
   localStorage.setItem(SK, JSON.stringify({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: Date.now() }));
   autoSnapshot();
-  if (window._fbEnabled && window._fbSave) {
-    window._fbSave({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{} }).then(()=>{
-      setFbStatus(true);
-    }).catch(()=>setFbStatus(false));
+  if (window._fbEnabled && window._fbSaveGlobali) {
+    window._fbSaveGlobali(S.operaiGlobali, S.presenze||{}, S.azienda, S.uid||'—')
+      .then(()=>setFbStatus(true)).catch(()=>setFbStatus(false));
   }
 }
 
-function setFbStatus(online) {
-  const dot = $('fbDot'), label = $('fbLabel');
+// Salva solo la sezione specifica di un cantiere su Firebase
+function saveSezione(cantiereId, sezione) {
+  const c = S.cantieri.find(x => x.id === cantiereId);
+  if (!c) return;
+  localStorage.setItem(SK, JSON.stringify({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: Date.now() }));
+  if (window._fbEnabled && window._fbSaveSezione && window._fbSaveCantiere) {
+    const updatedBy = S.uid || '—';
+    window._fbSaveCantiere(c, updatedBy).then(() =>
+      window._fbSaveSezione(cantiereId, sezione, c[sezione] || [], updatedBy)
+        .then(()=>setFbStatus(true)).catch(()=>setFbStatus(false))
+    );
+  }
+}
+
+function setFbStatus(online, syncing) {
+  const dot = $('fbDot'), label = $('fbLabel'), icon = $('fbSyncIcon');
   if (!dot || !label) return;
-  if (online) {
+  if (syncing) {
+    dot.style.background = '#f59e0b';
+    dot.style.boxShadow = '0 0 4px #f59e0b80';
+    label.textContent = 'sync...';
+    if (icon) icon.style.animation = 'spin 1s linear infinite';
+  } else if (online) {
     dot.style.background = '#52b788';
     dot.style.boxShadow = '0 0 4px #52b78880';
     label.textContent = 'sync';
+    if (icon) { icon.style.animation = ''; }
   } else {
     dot.style.background = 'rgba(255,255,255,.3)';
     dot.style.boxShadow = 'none';
     label.textContent = 'locale';
+    if (icon) { icon.style.animation = ''; }
+  }
+}
+
+// Sincronizzazione manuale forzata
+async function manualeSync() {
+  if (!window._fbEnabled || !window._fbLoadAll) {
+    toast('⚠️ Firebase non disponibile'); return;
+  }
+  setFbStatus(true, true); // giallo — "sync in corso"
+  try {
+    const remote = await window._fbLoadAll();
+    if (!remote) { setFbStatus(false); toast('⚠️ Nessun dato remoto'); return; }
+    
+    // Analizza cosa è stato modificato da altri
+    const aggiornamenti = [];
+    if (remote.cantieri) {
+      remote.cantieri.forEach(remC => {
+        const localC = S.cantieri.find(c => c.id === remC.id);
+        const sezioni = ['capitoli','rapportini','operai','foto','documenti','speseGenerali','speseMateriali','ordini','giornale'];
+        sezioni.forEach(sez => {
+          const remTs = remC[sez + '_updatedAt'] || 0;
+          const locTs = localC ? (localC[sez + '_updatedAt'] || 0) : 0;
+          if (remTs > locTs + 500) {
+            const chi = remC[sez + '_updatedBy'] || '?';
+            const nomeC = remC.nome ? remC.nome.slice(0,20) : remC.id.slice(0,8);
+            aggiornamenti.push(chi + ' → ' + sez + ' [' + nomeC + ']');
+          }
+        });
+      });
+    }
+
+    _applyRemoteData(remote);
+    renderCurrentScreen();
+    setFbStatus(true);
+    
+    if (aggiornamenti.length > 0) {
+      toast('☁️ ' + aggiornamenti.slice(0,2).join(', ') + (aggiornamenti.length > 2 ? ' +altri' : ''));
+    } else {
+      toast('✅ Già aggiornato');
+    }
+  } catch(e) {
+    console.warn('manualeSync error:', e);
+    setFbStatus(false);
+    toast('❌ Errore sync');
   }
 }
 
@@ -1000,53 +1122,78 @@ async function initFirebase() {
   setFbStatus(true);
 
   try {
-    const remoteData = await window._fbLoad();
-    if (remoteData && remoteData.cantieri && remoteData.cantieri.length > 0) {
-      S.cantieri = remoteData.cantieri;
-      if (remoteData.operaiGlobali && remoteData.operaiGlobali.length > 0) {
-        S.operaiGlobali = remoteData.operaiGlobali;
-        // Se la sezione presenze è aperta, aggiorna la lista
-        const bodyPres = document.getElementById('body-presenze');
-        if (bodyPres && bodyPres.style.maxHeight && bodyPres.style.maxHeight !== '0px' && typeof renderPresenzeGiorno === 'function') {
-          setTimeout(renderPresenzeGiorno, 100);
-        }
-      }
-      if (remoteData.azienda) S.azienda = remoteData.azienda;
-      if (remoteData.presenze) S.presenze = remoteData.presenze;
-      if (remoteData.uid) S.uid = remoteData.uid;
-      localStorage.setItem(SK, JSON.stringify({
-        cantieri: S.cantieri, operaiGlobali: S.operaiGlobali,
-        azienda: S.azienda, uid: S.uid, updated: Date.now()
-      }));
+    const remote = await window._fbLoadAll();
+    if (remote) {
+      _applyRemoteData(remote);
       renderCantieri();
       aggiornaKPIImpresa();
-      toast('☁️ Dati sincronizzati da Firebase');
+      toast('☁️ Dati sincronizzati');
     } else if (S.cantieri.length > 0) {
-      await window._fbSave({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda });
-      toast('☁️ Dati locali salvati su Firebase');
+      // Prima volta: carica dati locali su Firebase
+      await window._fbSave({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid||'—' });
+      toast('☁️ Dati locali caricati su Firebase');
     }
   } catch(e) { console.warn('Firebase init error:', e); setFbStatus(false); }
 
-  if (window._fbListen) {
-    window._fbListen((remoteData) => {
+  // Listener realtime: aggiorna quando un altro utente modifica qualcosa
+  if (window._fbListenAll) {
+    window._fbListenAll((remote) => {
       if (_fbSyncing) return;
-      if (!remoteData || !remoteData.cantieri) return;
-      const remoteUpdated = remoteData.updated || 0;
-      const localUpdated = (() => { try { return JSON.parse(localStorage.getItem(SK)||'{}').updated||0; } catch(e){return 0;} })();
-      if (remoteUpdated > localUpdated + 500) {
-        S.cantieri = remoteData.cantieri;
-        if (remoteData.operaiGlobali) S.operaiGlobali = remoteData.operaiGlobali;
-        if (remoteData.azienda) S.azienda = remoteData.azienda;
-        if (remoteData.presenze) S.presenze = remoteData.presenze;
-        localStorage.setItem(SK, JSON.stringify({
-          cantieri: S.cantieri, operaiGlobali: S.operaiGlobali,
-          azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: remoteUpdated
-        }));
-        renderCurrentScreen();
-        setFbStatus(true);
+      _applyRemoteData(remote);
+      renderCurrentScreen();
+      setFbStatus(true);
+    });
+  }
+}
+
+// Applica i dati remoti a S — merge per sezione, vince il più recente per ogni sezione
+function _applyRemoteData(remote) {
+  if (!remote) return;
+  const { cantieri: remoteCantieri, globali } = remote;
+
+  // ── Globali (operai, presenze, azienda) ──
+  if (globali) {
+    if (globali.operaiGlobali && globali.operaiGlobali.length > 0) {
+      S.operaiGlobali = globali.operaiGlobali;
+      const bodyPres = document.getElementById('body-presenze');
+      if (bodyPres && bodyPres.style.maxHeight && bodyPres.style.maxHeight !== '0px' && typeof renderPresenzeGiorno === 'function')
+        setTimeout(renderPresenzeGiorno, 100);
+    }
+    if (globali.presenze) S.presenze = globali.presenze;
+    if (globali.azienda) S.azienda = globali.azienda;
+  }
+
+  // ── Cantieri: merge per sezione ──
+  const SEZIONI = ['capitoli','rapportini','operai','foto','documenti','speseGenerali','speseMateriali','ordini','giornale'];
+  if (remoteCantieri && remoteCantieri.length > 0) {
+    remoteCantieri.forEach(remC => {
+      const localIdx = S.cantieri.findIndex(c => c.id === remC.id);
+      if (localIdx === -1) {
+        // Cantiere nuovo (creato da altro utente) — aggiungilo
+        S.cantieri.push(remC);
+      } else {
+        const localC = S.cantieri[localIdx];
+        // Meta cantiere: vince il più recente
+        if ((remC.metaUpdatedAt || 0) > (localC.metaUpdatedAt || 0)) {
+          const sezioniSalvate = {};
+          SEZIONI.forEach(s => { sezioniSalvate[s] = localC[s]; });
+          S.cantieri[localIdx] = { ...remC, ...sezioniSalvate };
+        }
+        // Per ogni sezione: vince il più recente
+        SEZIONI.forEach(sez => {
+          const remTs = remC[sez + '_updatedAt'] || 0;
+          const locTs = localC[sez + '_updatedAt'] || 0;
+          if (remTs > locTs && remC[sez] !== undefined) {
+            S.cantieri[localIdx][sez] = remC[sez];
+            S.cantieri[localIdx][sez + '_updatedAt'] = remTs;
+            S.cantieri[localIdx][sez + '_updatedBy'] = remC[sez + '_updatedBy'] || '—';
+          }
+        });
       }
     });
   }
+
+  localStorage.setItem(SK, JSON.stringify({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: Date.now() }));
 }
 
 function renderCurrentScreen() {
@@ -1860,7 +2007,7 @@ function salvaVoceGiornale() {
   c.giornale = c.giornale || [];
   c.giornale.push({ id:uid(), data:v('gn-data')||today(), cat:v('gn-cat')||'nota', testo, foto:_gnFotoDataUrl||null, utente:S.uid||'Utente', created:Date.now() });
   _gnFotoDataUrl = null;
-  save(); closeModal('mNuovaVoceGiornale');
+  save(); if(S.cantiereId) saveSezione(S.cantiereId, 'giornale'); closeModal('mNuovaVoceGiornale');
   const el=$('gn-testo'); if(el) el.value='';
   const inp=$('gn-fotoInput'); if(inp) inp.value='';
   const wrap=$('gn-fotoPreview'); if(wrap) wrap.style.display='none';
@@ -1935,7 +2082,8 @@ function saveCantiere() {
     speseGenerali: [], speseMateriali: [], ordini: [],
     created: Date.now()
   });
-  save(); closeModal('mNuovoCantiere');
+  const newC = S.cantieri[S.cantieri.length-1];
+  save(); if(window._fbEnabled && window._fbSaveCantiere) window._fbSaveCantiere(newC, S.uid||'—'); closeModal('mNuovoCantiere');
   ['nc-nome','nc-ind','nc-resp','nc-data','nc-importo','nc-note'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
   renderCantieri(); toast('✅ Cantiere creato!');
 }
@@ -1983,6 +2131,7 @@ function saveVoce() {
   cap.voci.push({ id: uid(), desc, um: v('nv-um'), qty, pu, created: Date.now() });
 
   save();
+  if(S.cantiereId) saveSezione(S.cantiereId, 'capitoli');
   closeModal('mNuovaVoce');
   ['nv-cap-nome','nv-desc','nv-um','nv-qty','nv-pu'].forEach(id => { const el=$(id); if(el) el.value=''; });
   const tot = $('nv-totale'); if(tot) tot.style.display = 'none';
@@ -2035,6 +2184,7 @@ function saveRapportino() {
     created: Date.now()
   });
   save();
+  if(S.cantiereId) saveSezione(S.cantiereId, 'rapportini');
   closeModal('mRapportino');
   ['rp-data','rp-dir','rp-lav','rp-mat','rp-note'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
   (c.operai||[]).forEach(op => {
@@ -2059,7 +2209,7 @@ function saveOre() {
   if(!op) return;
   op.ore = op.ore||[];
   op.ore.push({ id: uid(), data: v('ore-data')||today(), ore: ore||0, tipo: v('ore-tipo'), note: v('ore-note'), created: Date.now() });
-  save(); closeModal('mOre');
+  save(); if(S.cantiereId) saveSezione(S.cantiereId, 'operai'); closeModal('mOre');
   ['ore-data','ore-ore','ore-note'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
   renderTab(S.tab); toast('✅ Ore registrate!');
 }
@@ -2075,6 +2225,7 @@ function saveFoto() {
   });
   fotoDataUrl = null;
   save();
+  if(S.cantiereId) saveSezione(S.cantiereId, 'foto');
   closeModal('mFoto');
   const wrap = $('fotoPreviewWrap'); if (wrap) wrap.style.display = 'none';
   const inp = $('fotoInputMain'); if (inp) inp.value = '';
@@ -2089,7 +2240,7 @@ function saveDocumento() {
   c.documenti = c.documenti||[];
   c.documenti.push({ id: uid(), nome, tipo: v('dc-tipo'), data: v('dc-data')||today(), note: v('dc-note'), fileData: docFileData, dim: docFileData?fmtBytes(docFileData.length):null, utente: S.uid||'Utente', created: Date.now() });
   docFileData = null;
-  save(); closeModal('mDocumento');
+  save(); if(S.cantiereId) saveSezione(S.cantiereId, 'documenti'); closeModal('mDocumento');
   $('dcFileName').textContent = 'Allega file (opzionale)';
   ['dc-nome','dc-data','dc-note'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
   updateCounts(); renderTab(S.tab); toast('✅ Documento salvato!');
@@ -2397,7 +2548,7 @@ function saveSpesaGenerale() {
   const c=getCantiere();if(!c)return;
   c.speseGenerali=c.speseGenerali||[];
   c.speseGenerali.push({id:uid(),desc,cat:v('sg-cat'),tipo:v('sg-tipo'),importo,data:v('sg-data')||today(),note:v('sg-note'),utente:S.uid||'Utente',created:Date.now()});
-  save();closeModal('mSpesaGenerale');
+  save(); if(S.cantiereId) saveSezione(S.cantiereId, 'speseGenerali'); closeModal('mSpesaGenerale');
   ['sg-desc','sg-importo','sg-data','sg-note'].forEach(id=>{const el=$(id);if(el)el.value='';});
   renderTab(S.tab);toast('✅ Spesa generale salvata!');
 }
@@ -2409,7 +2560,7 @@ function saveSpesaMateriali() {
   const c=getCantiere();if(!c)return;
   c.speseMateriali=c.speseMateriali||[];
   c.speseMateriali.push({id:uid(),desc,capId:v('sm-cap'),cat:v('sm-cat'),importo,data:v('sm-data')||today(),note:v('sm-note'),utente:S.uid||'Utente',created:Date.now()});
-  save();closeModal('mSpesaMateriali');
+  save(); if(S.cantiereId) saveSezione(S.cantiereId, 'speseMateriali'); closeModal('mSpesaMateriali');
   ['sm-desc','sm-importo','sm-data','sm-note'].forEach(id=>{const el=$(id);if(el)el.value='';});
   renderTab(S.tab);toast('✅ Spesa materiali salvata!');
 }
@@ -2845,14 +2996,11 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(checkWeeklyBackup, 4000);
 
   document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'visible' && window._fbEnabled && window._fbLoad) {
+    if (document.visibilityState === 'visible' && window._fbEnabled && window._fbLoadAll) {
       try {
-        const remoteData = await window._fbLoad();
-        if (remoteData) {
-          if (remoteData.cantieri && remoteData.cantieri.length > 0) S.cantieri = remoteData.cantieri;
-          if (remoteData.operaiGlobali) S.operaiGlobali = remoteData.operaiGlobali;
-          if (remoteData.azienda) S.azienda = remoteData.azienda;
-          if (remoteData.presenze) S.presenze = remoteData.presenze;
+        const remote = await window._fbLoadAll();
+        if (remote) {
+          _applyRemoteData(remote);
           renderCurrentScreen();
           aggiornaKPIImpresa();
         }
