@@ -243,6 +243,69 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
   </div>
 </div>
 
+<div class="overlay" id="mFatturaManuale" onclick="closeOv(event,'mFatturaManuale')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="mFatturaManualeTitle">NUOVA FATTURA MANUALE</div>
+    <div class="modal-body">
+      <div>
+        <label class="f-label">Tipo *</label>
+        <select class="f-sel" id="fm-tipo" onchange="document.getElementById('fm-contatto-label').textContent=this.value==='attiva'?'Cliente *':'Fornitore *'">
+          <option value="passiva">Fattura passiva (fornitore)</option>
+          <option value="attiva">Fattura attiva (cliente)</option>
+        </select>
+      </div>
+      <div>
+        <label class="f-label" id="fm-contatto-label">Fornitore *</label>
+        <input class="f-in" id="fm-contatto" placeholder="Nome fornitore / cliente">
+      </div>
+      <div class="f-grid">
+        <div>
+          <label class="f-label">Numero fattura</label>
+          <input class="f-in" id="fm-numero" placeholder="es. FM32">
+        </div>
+        <div>
+          <label class="f-label">Data fattura *</label>
+          <input class="f-in" type="date" id="fm-data">
+        </div>
+        <div>
+          <label class="f-label">Imponibile (€)</label>
+          <input class="f-in" type="number" id="fm-imponibile" step="0.01" placeholder="0.00" oninput="aggiornaLordoManuale()">
+        </div>
+        <div>
+          <label class="f-label">IVA %</label>
+          <select class="f-sel" id="fm-iva" onchange="aggiornaLordoManuale()">
+            <option value="22">22%</option>
+            <option value="10">10%</option>
+            <option value="4">4%</option>
+            <option value="0">0% / esente</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="f-label">Totale lordo (€) *</label>
+        <input class="f-in" type="number" id="fm-totale" step="0.01" placeholder="0.00">
+        <div style="font-size:10px;color:var(--soft);margin-top:3px">Calcolato automaticamente da imponibile+IVA, oppure inserisci direttamente</div>
+      </div>
+      <div>
+        <label class="f-label">Ritenuta d'acconto (€)</label>
+        <input class="f-in" type="number" id="fm-ritenuta" step="0.01" placeholder="0.00">
+      </div>
+      <div>
+        <label class="f-label">Scadenza pagamento</label>
+        <input class="f-in" type="date" id="fm-scadenza">
+      </div>
+      <div>
+        <label class="f-label">Note</label>
+        <input class="f-in" id="fm-note" placeholder="Motivo inserimento manuale, riferimenti, ecc.">
+      </div>
+      <input type="hidden" id="fm-edit-id">
+      <button class="btn-prim" onclick="salvaFatturaManuale()">SALVA FATTURA</button>
+      <button id="fm-btn-elimina" style="display:none;width:100%;background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:var(--r-sm);padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:4px" onclick="eliminaFatturaManuale()">🗑️ Elimina fattura</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <input type="file" id="inputZip" accept=".zip" style="display:none" onchange="importZip(this)">
@@ -407,6 +470,7 @@ function renderFatture(){
   html += '<button onclick="triggerImportZip()" style="background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:11px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">📦 Importa ZIP TIC</button>';
   html += '<button onclick="triggerImportCsv()" style="background:var(--g2);color:#fff;border:none;border-radius:var(--r-sm);padding:11px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">🏦 Importa CSV banca</button>';
   html += '</div>';
+  html += '<div style="padding:0 12px 8px"><button onclick="apriNuovaFatturaManuale()" style="width:100%;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);border-radius:var(--r-sm);padding:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">✏️ + Fattura manuale</button></div>';
   if(_contabile.updatedAt) {
     html += '<div style="text-align:center;font-size:10px;color:var(--soft);padding:4px 0">Ultimo aggiornamento: ' + new Date(_contabile.updatedAt).toLocaleDateString('it-IT') + '</div>';
   }
@@ -448,7 +512,9 @@ function buildFatturaRow(f){
   if(assegnata) row += '<span style="color:var(--g2);font-weight:700">' + (f.assegnazione==='cantiere' ? '🏗️ '+cantNome : '📋 Generale') + '</span>';
   row += '</div>';
   row += '<div class="fattura-actions"><button class="btn-assign' + (assegnata?' done':'') + '" onclick="apriAssegna(\'' + f.id + '\')">' + (assegnata ? '✅ Riassegna' : 'Assegna →') + '</button>';
+  if(f.fonte === 'manuale') row += '<button onclick="apriModificaFatturaManuale(\'' + f.id + '\')" style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">✏️ Modifica</button>';
   if(f.ritenuta && f.ritenuta > 0) row += '<span class="chip chip-amber">Rit. ' + fmtDec(f.ritenuta) + '</span>';
+  if(f.fonte === 'manuale') row += '<span class="chip chip-amber">manuale</span>';
   row += '</div></div>';
   return row;
 }
@@ -731,6 +797,111 @@ async function salvaAssegnazione(){
   document.getElementById('mAssegna').classList.remove('show');
   showToast('✅ Fattura assegnata');
   renderTab(_activeTab);
+}
+
+// ─── FATTURA MANUALE ───
+function apriNuovaFatturaManuale(){
+  document.getElementById('mFatturaManualeTitle').textContent = 'NUOVA FATTURA MANUALE';
+  document.getElementById('fm-tipo').value = 'passiva';
+  document.getElementById('fm-contatto').value = '';
+  document.getElementById('fm-contatto-label').textContent = 'Fornitore *';
+  document.getElementById('fm-numero').value = '';
+  document.getElementById('fm-data').value = new Date().toISOString().slice(0,10);
+  document.getElementById('fm-imponibile').value = '';
+  document.getElementById('fm-iva').value = '22';
+  document.getElementById('fm-totale').value = '';
+  document.getElementById('fm-ritenuta').value = '';
+  document.getElementById('fm-scadenza').value = '';
+  document.getElementById('fm-note').value = '';
+  document.getElementById('fm-edit-id').value = '';
+  document.getElementById('fm-btn-elimina').style.display = 'none';
+  openModal('mFatturaManuale');
+}
+
+function apriModificaFatturaManuale(id){
+  const f = (_contabile.fatture||[]).find(function(x){ return x.id === id; });
+  if(!f) return;
+  document.getElementById('mFatturaManualeTitle').textContent = 'MODIFICA FATTURA';
+  document.getElementById('fm-tipo').value = f.tipo || 'passiva';
+  document.getElementById('fm-contatto').value = f.fornitore || f.cliente || '';
+  document.getElementById('fm-contatto-label').textContent = f.tipo === 'attiva' ? 'Cliente *' : 'Fornitore *';
+  document.getElementById('fm-numero').value = f.numeroFattura || '';
+  document.getElementById('fm-data').value = f.dataFattura || '';
+  document.getElementById('fm-imponibile').value = f.imponibile || '';
+  document.getElementById('fm-iva').value = String(f.aliquotaIva || 22);
+  document.getElementById('fm-totale').value = f.totale || '';
+  document.getElementById('fm-ritenuta').value = f.ritenuta || '';
+  document.getElementById('fm-scadenza').value = f.scadenza || '';
+  document.getElementById('fm-note').value = f.note || '';
+  document.getElementById('fm-edit-id').value = id;
+  document.getElementById('fm-btn-elimina').style.display = 'block';
+  openModal('mFatturaManuale');
+}
+
+function aggiornaLordoManuale(){
+  const imp = parseFloat(document.getElementById('fm-imponibile').value) || 0;
+  const iva = parseFloat(document.getElementById('fm-iva').value) || 0;
+  if(imp > 0) {
+    const lordo = imp * (1 + iva/100);
+    document.getElementById('fm-totale').value = lordo.toFixed(2);
+  }
+}
+
+async function salvaFatturaManuale(){
+  const tipo = document.getElementById('fm-tipo').value;
+  const contatto = document.getElementById('fm-contatto').value.trim();
+  const data = document.getElementById('fm-data').value;
+  const totale = parseFloat(document.getElementById('fm-totale').value);
+  if(!contatto){ showToast('Inserisci il nome fornitore/cliente'); return; }
+  if(!data){ showToast('Inserisci la data fattura'); return; }
+  if(!totale || isNaN(totale)){ showToast('Inserisci il totale'); return; }
+  const imponibile = parseFloat(document.getElementById('fm-imponibile').value) || 0;
+  const aliquotaIva = parseFloat(document.getElementById('fm-iva').value) || 0;
+  const ritenuta = parseFloat(document.getElementById('fm-ritenuta').value) || 0;
+  const editId = document.getElementById('fm-edit-id').value;
+  const fattura = {
+    id: editId || ('man_' + uid()),
+    fonte: 'manuale',
+    tipo: tipo,
+    tipdoc: 'FA',
+    numeroFattura: document.getElementById('fm-numero').value.trim(),
+    dataFattura: data,
+    fornitore: tipo === 'passiva' ? contatto : '',
+    cliente: tipo === 'attiva' ? contatto : '',
+    imponibile: imponibile,
+    iva: imponibile > 0 ? imponibile * aliquotaIva / 100 : 0,
+    totale: totale,
+    ritenuta: ritenuta,
+    aliquotaIva: aliquotaIva,
+    scadenza: document.getElementById('fm-scadenza').value || null,
+    note: document.getElementById('fm-note').value.trim(),
+    stato: 'importata',
+    assegnazione: null, cantiereId: null, categoria: null,
+    createdAt: Date.now()
+  };
+  let fatture;
+  if(editId) {
+    fatture = (_contabile.fatture||[]).map(function(f){ return f.id === editId ? Object.assign({}, f, fattura) : f; });
+  } else {
+    fatture = (_contabile.fatture||[]).concat([fattura]);
+  }
+  _contabile.fatture = fatture;
+  await window._fbSaveContabile({ fatture: fatture, movimenti: _contabile.movimenti||[] });
+  document.getElementById('mFatturaManuale').classList.remove('show');
+  showToast(editId ? '✅ Fattura aggiornata' : '✅ Fattura aggiunta');
+  renderFatture();
+}
+
+async function eliminaFatturaManuale(){
+  const id = document.getElementById('fm-edit-id').value;
+  if(!id) return;
+  if(!confirm('Eliminare questa fattura?')) return;
+  const fatture = (_contabile.fatture||[]).filter(function(f){ return f.id !== id; });
+  _contabile.fatture = fatture;
+  await window._fbSaveContabile({ fatture: fatture, movimenti: _contabile.movimenti||[] });
+  document.getElementById('mFatturaManuale').classList.remove('show');
+  showToast('🗑️ Fattura eliminata');
+  renderFatture();
 }
 
 window.addEventListener('DOMContentLoaded', function(){
