@@ -9,7 +9,6 @@
 <meta name="apple-mobile-web-app-title" content="TB Gestione">
 <title>TB Gestione</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, doc, setDoc, getDoc, getDocs, collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
@@ -21,15 +20,14 @@ const firebaseConfig = {
   messagingSenderId: "91212110377",
   appId: "1:91212110377:web:cbb842678fb0d311a79a38"
 };
-let fbApp = null, fbDb = null;
+let fbDb = null;
 try {
-  fbApp = initializeApp(firebaseConfig);
+  const fbApp = initializeApp(firebaseConfig);
   fbDb = getFirestore(fbApp);
   window._fbDb = fbDb;
   window._fbEnabled = true;
-} catch(e) { window._fbEnabled = false; console.warn('Firebase non attivo:', e.message); }
+} catch(e) { window._fbEnabled = false; }
 
-// Carica tutti i cantieri da tbcantieri_v2
 window._fbLoadCantieri = async () => {
   if (!fbDb) return [];
   try {
@@ -39,129 +37,86 @@ window._fbLoadCantieri = async () => {
       if (d.id !== '__globali' && d.id !== '__contabile') cantieri.push({ id: d.id, ...d.data() });
     });
     return cantieri;
-  } catch(e) { console.warn('fbLoadCantieri error:', e); return []; }
+  } catch(e) { return []; }
 };
 
-// Carica dati contabili
 window._fbLoadContabile = async () => {
   if (!fbDb) return null;
   try {
     const snap = await getDoc(doc(fbDb, 'tbcantieri_v2', '__contabile'));
-    return snap.exists() ? snap.data() : null;
-  } catch(e) { console.warn('fbLoadContabile error:', e); return null; }
+    return snap.exists() ? snap.data() : { fatture: [], movimenti: [], updatedAt: null };
+  } catch(e) { return { fatture: [], movimenti: [], updatedAt: null }; }
 };
 
-// Salva dati contabili
-window._fbSaveContabile = async (dati) => {
-  if (!fbDb) return false;
+window._fbSaveContabile = async (data) => {
+  if (!fbDb) return;
   try {
     await setDoc(doc(fbDb, 'tbcantieri_v2', '__contabile'), {
-      ...dati,
-      _updatedAt: Date.now(),
-      _updatedBy: window._utente || 'Matteo'
+      ...data,
+      updatedAt: Date.now(),
+      updatedBy: window._currentUser || 'Matteo'
     }, { merge: true });
-    return true;
-  } catch(e) { console.warn('fbSaveContabile error:', e); return false; }
+  } catch(e) { console.warn('fbSaveContabile error:', e); }
 };
 
-// Listener realtime su __contabile
 window._fbListenContabile = (cb) => {
   if (!fbDb) return;
   onSnapshot(doc(fbDb, 'tbcantieri_v2', '__contabile'), snap => {
-    cb(snap.exists() ? snap.data() : null);
+    cb(snap.exists() ? snap.data() : { fatture: [], movimenti: [] });
   });
 };
-
-// Init app dopo Firebase
-window.addEventListener('load', () => { setTimeout(initApp, 300); });
 </script>
-
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Nunito:wght@400;500;600;700;800&display=swap');
-:root{
-  --g0:#0d2b1a;--g1:#1a4a2e;--g2:#2d6a4f;--g3:#40916c;--g4:#52b788;--g5:#95d5b2;--g6:#d8f3dc;
-  --white:#fff;--off:#f7faf8;--s1:#f0f5f2;--s2:#e2ede6;--s3:#b8d4c0;--s4:#6a9478;
-  --text:#1a2e22;--soft:#4d6b58;
-  --amber:#d97706;--amber-bg:#fffbeb;--amber-border:#fde68a;
-  --red:#dc2626;--red-bg:#fef2f2;--red-border:#fecaca;
-  --blue:#1d4ed8;--blue-bg:#eff6ff;--blue-border:#bfdbfe;
-  --shadow:0 2px 12px rgba(26,74,46,.10);--r:12px;--r-sm:8px;
-}
+:root{--g0:#0d2b1a;--g1:#1a4a2e;--g2:#2d6a4f;--g3:#40916c;--g4:#52b788;--g5:#95d5b2;--g6:#d8f3dc;--white:#fff;--off:#f7faf8;--s1:#f0f5f2;--s2:#e2ede6;--s3:#b8d4c0;--s4:#6a9478;--text:#1a2e22;--soft:#4d6b58;--amber:#d97706;--amber-bg:#fffbeb;--amber-border:#fde68a;--red:#dc2626;--red-bg:#fef2f2;--red-border:#fecaca;--blue:#1d4ed8;--blue-bg:#eff6ff;--blue-border:#bfdbfe;--shadow:0 2px 12px rgba(26,74,46,.10);--r:12px;--r-sm:8px;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
 body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);display:flex;flex-direction:column}
-/* TOPBAR */
-.topbar{background:var(--g1);color:#fff;height:56px;display:flex;align-items:center;gap:10px;padding:0 14px;flex-shrink:0;z-index:60;box-shadow:0 2px 10px rgba(0,0,0,.2)}
-.tb-logo{width:36px;height:36px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
-.tb-logo img{width:36px;height:36px;object-fit:cover;border-radius:50%}
+.topbar{background:var(--g1);color:#fff;height:62px;display:flex;align-items:center;gap:10px;padding:0 14px;flex-shrink:0;position:relative;z-index:60;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+.tb-logo{width:44px;height:44px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.tb-logo img{width:44px;height:44px;object-fit:cover;border-radius:50%}
 .tb-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;letter-spacing:2px;color:#fff}
 .tb-sub{font-size:10px;color:rgba(255,255,255,.55)}
-.tb-user{margin-left:auto;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:50%;width:32px;height:32px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.fb-dot{width:10px;height:10px;border-radius:50%;background:#9ca3af;flex-shrink:0;transition:background .3s}
+.tb-user{margin-left:auto;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:50%;width:34px;height:34px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.fb-dot{width:10px;height:10px;border-radius:50%;background:#888;flex-shrink:0;margin-left:6px}
 .fb-dot.ok{background:#4ade80}
 .fb-dot.err{background:#f87171}
-/* NAV TABS */
-.nav-tabs{display:flex;background:#fff;border-bottom:1px solid var(--s2);overflow-x:auto;scrollbar-width:none;flex-shrink:0;position:sticky;top:0;z-index:40}
-.nav-tabs::-webkit-scrollbar{display:none}
-.nav-tab{flex:none;padding:11px 14px;border:none;background:none;font-size:12px;font-weight:600;color:var(--s4);cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-1px;font-family:'Nunito',sans-serif;transition:color .15s}
-.nav-tab.active{color:var(--g1);border-bottom-color:var(--g1)}
-/* BODY */
 .app-body{flex:1;overflow:hidden;display:flex;flex-direction:column;max-width:800px;margin:0 auto;width:100%;position:relative}
-.screen{flex:1;overflow-y:auto;padding-bottom:24px}
+.nav-tabs{display:flex;background:#fff;border-bottom:1px solid var(--s2);overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.nav-tabs::-webkit-scrollbar{display:none}
+.nav-tab{flex:none;padding:12px 16px;border:none;background:none;font-size:12px;font-weight:600;color:var(--s4);cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-1px;font-family:'Nunito',sans-serif;letter-spacing:.3px;transition:color .15s}
+.nav-tab.active{color:var(--g1);border-bottom-color:var(--g1)}
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:20px}
 .screen::-webkit-scrollbar{width:4px}
 .screen::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px}
-/* LOGIN */
-#scrLogin{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:32px 24px;gap:20px}
-.login-card{background:#fff;border-radius:var(--r);border:1px solid var(--s2);box-shadow:var(--shadow);padding:28px 24px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:16px}
-.login-logo{width:72px;height:72px;background:#fff;border-radius:50%;border:2px solid var(--s2);margin:0 auto;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.login-logo img{width:72px;height:72px;object-fit:cover;border-radius:50%}
-.login-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--g1);text-align:center;letter-spacing:1px}
-.login-sub{font-size:12px;color:var(--soft);text-align:center}
-/* KPI */
-.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:14px 12px 6px}
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:14px 12px 4px}
 .kpi-box{background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);padding:12px 14px;box-shadow:var(--shadow)}
-.kpi-label{font-size:10px;color:var(--soft);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px}
+.kpi-label{font-size:10px;color:var(--soft);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
 .kpi-val{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;color:var(--g1)}
 .kpi-val.green{color:var(--g3)}
 .kpi-val.red{color:var(--red)}
 .kpi-val.amber{color:var(--amber)}
-.kpi-note{font-size:10px;color:var(--soft);margin-top:2px}
-/* SECTION HEADER */
-.sec-head{padding:14px 14px 8px;display:flex;align-items:center;justify-content:space-between}
-.sec-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--g1);letter-spacing:.6px}
-/* CARD */
-.card{background:#fff;border-radius:var(--r-sm);margin:0 12px 10px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}
-.card-head{padding:10px 14px;background:var(--s1);border-bottom:1px solid var(--s2);display:flex;align-items:center;justify-content:space-between}
-.card-head-title{font-size:12px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.5px}
-/* ROW LIST */
-.list-row{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--s1);gap:10px;font-size:13px}
-.list-row:last-child{border-bottom:none}
-.list-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.dot-red{background:var(--red)}
-.dot-amber{background:var(--amber)}
-.dot-green{background:var(--g3)}
-/* CHIP */
-.chip{display:inline-flex;align-items:center;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:600;white-space:nowrap}
-.chip-green{background:var(--g6);color:var(--g1)}
-.chip-amber{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
-.chip-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
-.chip-blue{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
-.chip-gray{background:var(--s1);color:var(--soft);border:1px solid var(--s2)}
-/* IMPORT ZONE */
-.import-zone{margin:10px 12px;border:2px dashed var(--s3);border-radius:var(--r);padding:22px 16px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
-.import-zone:active,.import-zone.dragover{border-color:var(--g3);background:var(--g6)}
-.import-icon{font-size:36px;margin-bottom:8px}
-.import-title{font-weight:700;font-size:14px;color:var(--g1);margin-bottom:3px}
-.import-sub{font-size:11px;color:var(--soft);line-height:1.5}
-/* BTN */
+.section-card{background:#fff;border-radius:var(--r);border:1px solid var(--s2);box-shadow:var(--shadow);margin:10px 12px;overflow:hidden}
+.section-head{padding:12px 14px;background:var(--s1);border-bottom:1px solid var(--s2);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--g1);letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.row-item{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--s1);font-size:13px}
+.row-item:last-child{border-bottom:none}
+.row-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.row-main{flex:1;min-width:0}
+.row-name{font-weight:600;color:var(--text)}
+.row-sub{font-size:11px;color:var(--soft);margin-top:1px}
+.row-amount{font-weight:700;white-space:nowrap}
+.row-amount.pos{color:var(--g2)}
+.row-amount.neg{color:var(--red)}
+.row-date{font-size:11px;color:var(--soft);white-space:nowrap;margin-left:6px}
+.chip{display:inline-flex;align-items:center;border-radius:99px;padding:2px 9px;font-size:10px;font-weight:700;white-space:nowrap}
+.chip-green{background:var(--g6);color:var(--g2)}
+.chip-amber{background:var(--amber-bg);color:var(--amber)}
+.chip-red{background:var(--red-bg);color:var(--red)}
+.chip-blue{background:var(--blue-bg);color:var(--blue)}
+.chip-gray{background:var(--s1);color:var(--soft)}
 .btn-prim{background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;transition:background .15s;width:100%}
 .btn-prim:active{background:var(--g2)}
-.btn-sec{background:var(--s1);color:var(--text);border:1px solid var(--s2);border-radius:var(--r-sm);padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif}
-/* FORM */
-.f-label{font-size:11px;color:var(--soft);font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px;display:block}
-.f-in,.f-sel{width:100%;background:var(--s1);border:1.5px solid var(--s2);border-radius:var(--r-sm);color:var(--text);padding:10px 12px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;transition:border-color .15s}
-.f-in:focus,.f-sel:focus{border-color:var(--g3)}
-/* MODAL / OVERLAY */
+.btn-sec{background:var(--s1);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s}
 .overlay.show{opacity:1;pointer-events:all}
 .modal{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:800px;max-height:92vh;overflow-y:auto;transform:translateY(100%);transition:transform .28s cubic-bezier(.32,1.02,.6,1)}
@@ -169,900 +124,611 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
 .modal-handle{width:36px;height:4px;background:var(--s2);border-radius:99px;margin:12px auto 0}
 .modal-title{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--g1);padding:10px 18px 14px;letter-spacing:.8px;border-bottom:1px solid var(--s2)}
 .modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:13px}
-/* TOAST */
-#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--g0);color:#fff;padding:9px 18px;border-radius:99px;font-size:12px;font-weight:700;z-index:400;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
-/* EMPTY */
+.f-label{font-size:11px;color:var(--soft);font-weight:600;letter-spacing:.7px;text-transform:uppercase;margin-bottom:4px;display:block}
+.f-in,.f-sel{width:100%;background:var(--s1);border:1.5px solid var(--s2);border-radius:var(--r-sm);color:var(--text);padding:10px 12px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;transition:border-color .15s}
+.f-in:focus,.f-sel:focus{border-color:var(--g3)}
+.f-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.login-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-card{background:#fff;border-radius:var(--r);border:1px solid var(--s2);box-shadow:var(--shadow);padding:28px 24px;width:100%;max-width:360px}
+.login-logo{width:72px;height:72px;background:#fff;border-radius:50%;border:2px solid var(--s2);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;overflow:hidden}
+.login-logo img{width:72px;height:72px;object-fit:cover;border-radius:50%}
+.login-title{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;color:var(--g1);text-align:center;letter-spacing:1px;margin-bottom:4px}
+.login-sub{font-size:12px;color:var(--soft);text-align:center;margin-bottom:24px}
+.user-btn{width:100%;padding:13px;border:1.5px solid var(--s2);border-radius:var(--r-sm);background:var(--s1);font-size:15px;font-weight:700;color:var(--text);cursor:pointer;font-family:'Nunito',sans-serif;margin-bottom:8px;transition:border-color .15s,background .15s;text-align:left;display:flex;align-items:center;gap:10px}
+.user-btn:hover{border-color:var(--g3);background:var(--g6)}
+.user-avatar{width:34px;height:34px;border-radius:50%;background:var(--g2);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .empty{text-align:center;padding:40px 20px}
 .empty-ic{font-size:40px;margin-bottom:10px}
-.empty-txt{font-size:13px;color:var(--soft);font-weight:600;line-height:1.5}
-/* FATTURE TABLE */
-.fattura-row{padding:10px 14px;border-bottom:1px solid var(--s1);display:flex;flex-direction:column;gap:4px}
+.empty-txt{font-size:13px;color:var(--soft);font-weight:600}
+.bar-wrap{background:var(--s1);border-radius:99px;height:8px;overflow:hidden;margin-top:6px}
+.bar-fill{height:100%;border-radius:99px;background:var(--g3);transition:width .4s}
+.bar-fill.danger{background:var(--red)}
+.bar-fill.warn{background:var(--amber)}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--g0);color:#fff;padding:9px 18px;border-radius:99px;font-size:12px;font-weight:700;z-index:400;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+.fattura-row{padding:12px 14px;border-bottom:1px solid var(--s1);display:flex;flex-direction:column;gap:4px}
 .fattura-row:last-child{border-bottom:none}
 .fattura-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.fattura-nome{font-size:13px;font-weight:700;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fattura-importo{font-size:14px;font-weight:700;font-family:'Barlow Condensed',sans-serif;flex-shrink:0}
+.fattura-nome{font-weight:700;font-size:13px;color:var(--text)}
+.fattura-importo{font-weight:700;font-size:14px}
 .fattura-importo.passiva{color:var(--red)}
 .fattura-importo.attiva{color:var(--g2)}
-.fattura-meta{font-size:11px;color:var(--soft)}
-.fattura-footer{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-/* BANCA */
-.movimento-row{padding:10px 14px;border-bottom:1px solid var(--s1);display:flex;align-items:center;gap:10px}
-.movimento-row:last-child{border-bottom:none}
-.movimento-info{flex:1;min-width:0}
-.movimento-desc{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.movimento-data{font-size:11px;color:var(--soft)}
-.movimento-imp{font-size:14px;font-weight:700;font-family:'Barlow Condensed',sans-serif;flex-shrink:0}
-.movimento-imp.pos{color:var(--g2)}
-.movimento-imp.neg{color:var(--red)}
-/* CANTIERI TABLE */
-.cantiere-row{padding:11px 14px;border-bottom:1px solid var(--s1);display:flex;align-items:center;gap:10px}
-.cantiere-row:last-child{border-bottom:none}
-.cantiere-info{flex:1}
-.cantiere-nome{font-size:13px;font-weight:700;color:var(--text)}
-.cantiere-meta{font-size:11px;color:var(--soft);margin-top:1px}
-.margine-bar-wrap{width:70px;flex-shrink:0}
-.margine-bar{height:6px;background:var(--s2);border-radius:3px;overflow:hidden;margin-top:4px}
-.margine-fill{height:100%;border-radius:3px;transition:width .4s}
-@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-.spin{animation:spin 1s linear infinite}
+.fattura-meta{font-size:11px;color:var(--soft);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.fattura-actions{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;align-items:center}
+.btn-assign{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif}
+.btn-assign.done{background:var(--g6);color:var(--g2);border-color:var(--s3)}
+.mov-row{padding:11px 14px;border-bottom:1px solid var(--s1);display:flex;align-items:flex-start;gap:10px}
+.mov-row:last-child{border-bottom:none}
+.mov-desc{flex:1;font-size:12px;color:var(--text);line-height:1.4}
+.mov-amount{font-weight:700;font-size:13px;white-space:nowrap}
+.mov-date{font-size:10px;color:var(--soft);white-space:nowrap}
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="tb-logo">
-    <img src="logo_TB.jpg" alt="TB" onerror="this.style.display='none';this.parentNode.innerHTML='<span style=\'font-family:Barlow Condensed,sans-serif;font-weight:900;font-size:13px;color:#1f5c35\'>TB</span>'">
+<div id="scrLogin" style="display:flex;flex-direction:column;height:100%">
+  <div class="topbar">
+    <div class="tb-logo"><img src="logo_TB.jpg" alt="TB" onerror="this.parentElement.innerHTML='<span style=font-size:18px;font-weight:800;color:#1a4a2e>TB</span>'"></div>
+    <div><div class="tb-title">TB GESTIONE</div><div class="tb-sub">Modulo contabile</div></div>
   </div>
-  <div style="margin-left:4px">
-    <div class="tb-title">TB GESTIONE</div>
-    <div class="tb-sub">Contabilità & Flussi</div>
-  </div>
-  <div id="fbDot" class="fb-dot" title="Firebase"></div>
-  <div class="tb-user" id="tbUser" onclick="doLogout()">M</div>
-</div>
-
-<!-- LOGIN -->
-<div id="scrLogin" style="display:none">
-  <div class="login-card">
-    <div class="login-logo">
-      <img src="logo_TB.jpg" alt="TB" onerror="this.style.display='none'">
-    </div>
-    <div class="login-title">TB GESTIONE</div>
-    <div class="login-sub">Accesso riservato — solo Matteo</div>
-    <button class="btn-prim" onclick="doLogin()">&#128274; ACCEDI</button>
-  </div>
-</div>
-
-<!-- APP PRINCIPALE -->
-<div id="scrApp" style="display:none;flex:1;overflow:hidden;display:none;flex-direction:column">
-  <div class="nav-tabs" id="navTabs">
-    <button class="nav-tab active" onclick="switchTab('flusso')" id="tab-flusso">💰 Flusso di cassa</button>
-    <button class="nav-tab" onclick="switchTab('fatture')" id="tab-fatture">📄 Fatture</button>
-    <button class="nav-tab" onclick="switchTab('banca')" id="tab-banca">🏦 Banca</button>
-    <button class="nav-tab" onclick="switchTab('cantieri')" id="tab-cantieri">🏗️ Cantieri</button>
-    <button class="nav-tab" onclick="switchTab('generali')" id="tab-generali">🏢 Generali</button>
-  </div>
-
-  <!-- FLUSSO DI CASSA -->
-  <div class="screen" id="scr-flusso">
-    <div class="kpi-grid">
-      <div class="kpi-box">
-        <div class="kpi-label">Saldo banca</div>
-        <div class="kpi-val" id="kpi-saldo">—</div>
-        <div class="kpi-note" id="kpi-saldo-data"></div>
-      </div>
-      <div class="kpi-box">
-        <div class="kpi-label">Da incassare</div>
-        <div class="kpi-val green" id="kpi-incassare">—</div>
-        <div class="kpi-note">fatture attive aperte</div>
-      </div>
-      <div class="kpi-box">
-        <div class="kpi-label">Da pagare</div>
-        <div class="kpi-val red" id="kpi-pagare">—</div>
-        <div class="kpi-note">fatture passive aperte</div>
-      </div>
-      <div class="kpi-box">
-        <div class="kpi-label">Saldo proiettato</div>
-        <div class="kpi-val amber" id="kpi-proiettato">—</div>
-        <div class="kpi-note">banca + incassare − pagare</div>
-      </div>
-    </div>
-
-    <div class="sec-head"><div class="sec-title">⏰ PROSSIME SCADENZE</div></div>
-    <div class="card" id="cardScadenze">
-      <div class="empty"><div class="empty-ic">📭</div><div class="empty-txt">Nessuna scadenza.<br>Importa ZIP Tieni il Conto.</div></div>
-    </div>
-
-    <div class="sec-head"><div class="sec-title">📊 MARGINI CANTIERI</div></div>
-    <div class="card" id="cardMargini">
-      <div class="empty"><div class="empty-ic">🏗️</div><div class="empty-txt">Nessun cantiere trovato.</div></div>
-    </div>
-
-    <div class="sec-head" style="padding-bottom:4px"><div class="sec-title">📥 IMPORT DATI</div></div>
-    <div class="import-zone" id="izTIC" onclick="document.getElementById('fileZipTIC').click()" ondragover="this.classList.add('dragover');event.preventDefault()" ondragleave="this.classList.remove('dragover')" ondrop="handleDropZip(event)">
-      <div class="import-icon">🗂️</div>
-      <div class="import-title">ZIP Tieni il Conto</div>
-      <div class="import-sub">Trascina o tocca per importare<br>511029_TIC2TIC_*.zip</div>
-      <div id="ticStatus" style="margin-top:8px;font-size:11px;color:var(--soft)"></div>
-    </div>
-    <input type="file" id="fileZipTIC" accept=".zip" style="display:none" onchange="handleZipTIC(this.files[0])">
-
-    <div class="import-zone" id="izBTS" onclick="document.getElementById('fileCsvBTS').click()" ondragover="this.classList.add('dragover');event.preventDefault()" ondragleave="this.classList.remove('dragover')" ondrop="handleDropCsv(event)">
-      <div class="import-icon">🏦</div>
-      <div class="import-title">CSV Banca BTS</div>
-      <div class="import-sub">Trascina o tocca per importare<br>ListaMovimentiMultipla*.csv</div>
-      <div id="btsStatus" style="margin-top:8px;font-size:11px;color:var(--soft)"></div>
-    </div>
-    <input type="file" id="fileCsvBTS" accept=".csv" style="display:none" onchange="handleCsvBTS(this.files[0])">
-  </div>
-
-  <!-- FATTURE -->
-  <div class="screen" id="scr-fatture" style="display:none">
-    <div class="sec-head">
-      <div class="sec-title">📄 FATTURE</div>
-      <div style="display:flex;gap:6px">
-        <select id="filtroTipoFattura" class="f-sel" style="padding:6px 10px;font-size:12px;width:auto" onchange="renderFatture()">
-          <option value="">Tutte</option>
-          <option value="passiva">Passive</option>
-          <option value="attiva">Attive</option>
-        </select>
-        <select id="filtroStatoFattura" class="f-sel" style="padding:6px 10px;font-size:12px;width:auto" onchange="renderFatture()">
-          <option value="">Tutti gli stati</option>
-          <option value="importata">Importata</option>
-          <option value="assegnata">Assegnata</option>
-          <option value="pagata">Pagata</option>
-          <option value="riconciliata">Riconciliata</option>
-        </select>
-      </div>
-    </div>
-    <div class="card" id="cardFatture">
-      <div class="empty"><div class="empty-ic">📄</div><div class="empty-txt">Nessuna fattura.<br>Importa ZIP Tieni il Conto.</div></div>
-    </div>
-  </div>
-
-  <!-- BANCA -->
-  <div class="screen" id="scr-banca" style="display:none">
-    <div class="sec-head">
-      <div class="sec-title">🏦 MOVIMENTI BANCA</div>
-    </div>
-    <div class="kpi-grid" style="padding-top:4px">
-      <div class="kpi-box">
-        <div class="kpi-label">Ultimo saldo</div>
-        <div class="kpi-val" id="kpi-saldo-banca2">—</div>
-      </div>
-      <div class="kpi-box">
-        <div class="kpi-label">Riconciliati</div>
-        <div class="kpi-val green" id="kpi-ricon">—</div>
-      </div>
-    </div>
-    <div class="card" id="cardBanca">
-      <div class="empty"><div class="empty-ic">🏦</div><div class="empty-txt">Nessun movimento.<br>Importa CSV banca BTS.</div></div>
-    </div>
-  </div>
-
-  <!-- CANTIERI -->
-  <div class="screen" id="scr-cantieri" style="display:none">
-    <div class="sec-head"><div class="sec-title">🏗️ CANTIERI — RIEPILOGO</div></div>
-    <div class="card" id="cardCantieri">
-      <div class="empty"><div class="empty-ic">🏗️</div><div class="empty-txt">Caricamento cantieri…</div></div>
-    </div>
-  </div>
-
-  <!-- COSTI GENERALI -->
-  <div class="screen" id="scr-generali" style="display:none">
-    <div class="sec-head">
-      <div class="sec-title">🏢 COSTI GENERALI</div>
-      <button class="btn-sec" style="font-size:12px;padding:7px 12px" onclick="openModal('mCostoGen')">+ Aggiungi</button>
-    </div>
-    <div class="kpi-grid" style="padding-top:4px">
-      <div class="kpi-box">
-        <div class="kpi-label">Totale mese</div>
-        <div class="kpi-val red" id="kpi-gen-mese">—</div>
-      </div>
-      <div class="kpi-box">
-        <div class="kpi-label">Totale anno</div>
-        <div class="kpi-val red" id="kpi-gen-anno">—</div>
-      </div>
-    </div>
-    <div class="card" id="cardGenerali">
-      <div class="empty"><div class="empty-ic">🏢</div><div class="empty-txt">Nessun costo generale registrato.</div></div>
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-logo"><img src="logo_TB.jpg" alt="TB" onerror="this.parentElement.innerHTML='<span style=font-size:28px;font-weight:800;color:#1a4a2e>TB</span>'"></div>
+      <div class="login-title">TB GESTIONE</div>
+      <div class="login-sub">Seleziona utente per accedere</div>
+      <button class="user-btn" onclick="doLogin('Matteo')">
+        <div class="user-avatar">M</div><span>Matteo</span>
+      </button>
+      <button class="user-btn" onclick="doLogin('Assistente')">
+        <div class="user-avatar" style="background:var(--g4)">A</div><span>Assistente</span>
+      </button>
     </div>
   </div>
 </div>
 
-<!-- MODALI -->
-<!-- Assegna fattura -->
-<div class="overlay" id="mAssegna">
+<div id="scrApp" style="display:none;flex-direction:column;height:100%">
+  <div class="topbar">
+    <div class="tb-logo"><img src="logo_TB.jpg" alt="TB" onerror="this.parentElement.innerHTML='<span style=font-size:16px;font-weight:800;color:#1a4a2e>TB</span>'"></div>
+    <div><div class="tb-title">TB GESTIONE</div><div class="tb-sub" id="topbarSub">—</div></div>
+    <div class="fb-dot" id="fbDot"></div>
+    <button class="tb-user" id="btnUser" onclick="doLogout()">M</button>
+  </div>
+  <div class="app-body">
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="switchTab('flusso')" id="tab-flusso">💰 Flusso di cassa</button>
+      <button class="nav-tab" onclick="switchTab('fatture')" id="tab-fatture">🧾 Fatture</button>
+      <button class="nav-tab" onclick="switchTab('banca')" id="tab-banca">🏦 Banca</button>
+      <button class="nav-tab" onclick="switchTab('cantieri')" id="tab-cantieri">🏗️ Cantieri</button>
+      <button class="nav-tab" onclick="switchTab('generali')" id="tab-generali">📋 Costi generali</button>
+    </div>
+    <div class="screen" id="mainContent"></div>
+  </div>
+</div>
+
+<div class="overlay" id="mAssegna" onclick="closeOv(event,'mAssegna')">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">ASSEGNA FATTURA</div>
     <div class="modal-body">
-      <div id="mAssegnaInfo" style="background:var(--s1);border-radius:var(--r-sm);padding:12px 14px;font-size:13px;color:var(--text)"></div>
+      <div id="assegnaInfo" style="background:var(--s1);border-radius:var(--r-sm);padding:12px;font-size:13px"></div>
       <div>
         <label class="f-label">Assegna a</label>
-        <select id="assegnaTipo" class="f-sel" onchange="toggleAssegnaTipo()">
+        <select class="f-sel" id="assegnaTipo" onchange="toggleAssegnaFields()">
+          <option value="">— seleziona —</option>
           <option value="cantiere">Cantiere specifico</option>
           <option value="generale">Costo generale</option>
         </select>
       </div>
-      <div id="assegnaCantiereWrap">
+      <div id="assegnaCantiereWrap" style="display:none">
         <label class="f-label">Cantiere</label>
-        <select id="assegnaCantiere" class="f-sel"></select>
+        <select class="f-sel" id="assegnaCantiere"></select>
       </div>
       <div>
         <label class="f-label">Categoria</label>
-        <input type="text" id="assegnaCategoria" class="f-in" placeholder="es. Materiali, Vitto, Noleggio…">
-      </div>
-      <div>
-        <label class="f-label">Note</label>
-        <input type="text" id="assegnaNota" class="f-in" placeholder="Facoltativo">
+        <select class="f-sel" id="assegnaCategoria">
+          <option value="">— seleziona —</option>
+          <option>Materiali</option>
+          <option>Subappalto</option>
+          <option>Noli e attrezzature</option>
+          <option>Vitto cantiere</option>
+          <option>Trasporti</option>
+          <option>Professionisti</option>
+          <option>Assicurazioni</option>
+          <option>Carburante</option>
+          <option>Utenze</option>
+          <option>Altro</option>
+        </select>
       </div>
       <button class="btn-prim" onclick="salvaAssegnazione()">SALVA ASSEGNAZIONE</button>
-      <button class="btn-sec" style="width:100%;text-align:center" onclick="closeModal('mAssegna')">Annulla</button>
-    </div>
-  </div>
-</div>
-
-<!-- Aggiungi costo generale manuale -->
-<div class="overlay" id="mCostoGen">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">COSTO GENERALE</div>
-    <div class="modal-body">
-      <div>
-        <label class="f-label">Descrizione</label>
-        <input type="text" id="cg-desc" class="f-in" placeholder="es. Affitto ufficio, Commercialista…">
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div>
-          <label class="f-label">Imponibile €</label>
-          <input type="number" id="cg-imponibile" class="f-in" placeholder="0.00" step="0.01" oninput="calcCgLordo()">
-        </div>
-        <div>
-          <label class="f-label">IVA %</label>
-          <select id="cg-iva" class="f-sel" onchange="calcCgLordo()">
-            <option value="22">22%</option>
-            <option value="10">10%</option>
-            <option value="4">4%</option>
-            <option value="0">0% / Esente</option>
-          </select>
-        </div>
-      </div>
-      <div>
-        <label class="f-label">Totale lordo €</label>
-        <input type="number" id="cg-lordo" class="f-in" readonly style="background:var(--g6);color:var(--g1);font-weight:700">
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div>
-          <label class="f-label">Data</label>
-          <input type="date" id="cg-data" class="f-in">
-        </div>
-        <div>
-          <label class="f-label">Categoria</label>
-          <select id="cg-cat" class="f-sel">
-            <option>Affitti</option>
-            <option>Commercialista</option>
-            <option>Assicurazioni</option>
-            <option>Utenze</option>
-            <option>Telefonia</option>
-            <option>Carburante</option>
-            <option>Formazione</option>
-            <option>Altro</option>
-          </select>
-        </div>
-      </div>
-      <button class="btn-prim" onclick="saveCostoGenerale()">SALVA</button>
-      <button class="btn-sec" style="width:100%;text-align:center" onclick="closeModal('mCostoGen')">Annulla</button>
     </div>
   </div>
 </div>
 
 <div id="toast"></div>
 
-<script>
-// ─── STATO GLOBALE ───
-const S = {
-  utente: null,
-  cantieri: [],
-  fatture: [],
-  movimenti: [],
-  costiGenerali: [],
-  saldoBanca: null,
-  saldoBancaData: null,
-  tabAttiva: 'flusso',
-  fatturaSelezionata: null
-};
+<input type="file" id="inputZip" accept=".zip" style="display:none" onchange="importZip(this)">
+<input type="file" id="inputCsv" accept=".csv" style="display:none" onchange="importCsv(this)">
 
-// ─── UTILS ───
-function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
-function fmtEur(n) {
-  if (n === null || n === undefined || isNaN(n)) return '—';
-  return '€ ' + Number(n).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-function fmtData(str) {
-  if (!str) return '';
-  const d = new Date(str);
-  if (isNaN(d)) return str;
-  return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-function toast(msg, ms) {
+<script>
+const USERS = ['Matteo','Assistente'];
+let _currentUser = null;
+let _cantieri = [];
+let _contabile = { fatture: [], movimenti: [] };
+let _activeTab = 'flusso';
+let _assegnaFatturaId = null;
+let _toastTimer = null;
+
+function fmt(n){ return new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n||0); }
+function fmtDec(n){ return new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+function showToast(msg, dur){
+  dur = dur || 2400;
   const t = document.getElementById('toast');
   t.textContent = msg; t.style.opacity = 1;
-  setTimeout(() => { t.style.opacity = 0; }, ms || 2500);
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { t.style.opacity = 0; }, dur);
 }
-function openModal(id) { document.getElementById(id).classList.add('show'); }
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
-// ─── LOGIN ───
-function initApp() {
-  const u = localStorage.getItem('tbg_user');
-  if (u) { S.utente = u; showApp(); }
-  else { showLogin(); }
+function closeOv(e, id){
+  if(e.target === e.currentTarget) document.getElementById(id).classList.remove('show');
 }
-function showLogin() {
-  document.getElementById('scrLogin').style.display = 'flex';
-  document.getElementById('scrApp').style.display = 'none';
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+
+function doLogin(user){
+  _currentUser = user;
+  window._currentUser = user;
+  localStorage.setItem('tbg_user', user);
+  document.getElementById('scrLogin').style.display = 'none';
+  document.getElementById('scrApp').style.display = 'flex';
+  document.getElementById('btnUser').textContent = user[0].toUpperCase();
+  document.getElementById('topbarSub').textContent = user;
+  initApp();
 }
-function doLogin() {
-  S.utente = 'Matteo';
-  localStorage.setItem('tbg_user', 'Matteo');
-  window._utente = 'Matteo';
-  showApp();
-}
-function doLogout() {
+
+function doLogout(){
+  if(!confirm('Uscire da TB Gestione?')) return;
   localStorage.removeItem('tbg_user');
   location.reload();
 }
-function showApp() {
-  window._utente = S.utente;
-  document.getElementById('scrLogin').style.display = 'none';
-  const app = document.getElementById('scrApp');
-  app.style.display = 'flex';
-  app.style.flexDirection = 'column';
-  const ini = S.utente ? S.utente[0].toUpperCase() : 'M';
-  document.getElementById('tbUser').textContent = ini;
-  loadAll();
+
+function setFbDot(state){
+  const d = document.getElementById('fbDot');
+  d.className = 'fb-dot' + (state === 'ok' ? ' ok' : state === 'err' ? ' err' : '');
 }
 
-// ─── LOAD DATA ───
-async function loadAll() {
-  setFbDot('loading');
+async function initApp(){
+  setFbDot('');
   try {
-    S.cantieri = await window._fbLoadCantieri() || [];
-    const cont = await window._fbLoadContabile();
-    if (cont) {
-      S.fatture = cont.fatture || [];
-      S.movimenti = cont.movimenti || [];
-      S.costiGenerali = cont.costiGenerali || [];
-      S.saldoBanca = cont.saldoBanca !== undefined ? cont.saldoBanca : null;
-      S.saldoBancaData = cont.saldoBancaData || null;
-    }
+    const [cantieri, contabile] = await Promise.all([
+      window._fbLoadCantieri ? window._fbLoadCantieri() : Promise.resolve([]),
+      window._fbLoadContabile ? window._fbLoadContabile() : Promise.resolve({ fatture:[], movimenti:[] })
+    ]);
+    _cantieri = cantieri || [];
+    _contabile = contabile || { fatture: [], movimenti: [] };
+    if(!_contabile.fatture) _contabile.fatture = [];
+    if(!_contabile.movimenti) _contabile.movimenti = [];
     setFbDot('ok');
-    renderAll();
-    // Listener realtime
-    if (window._fbListenContabile) {
+    if(window._fbListenContabile) {
       window._fbListenContabile(data => {
-        if (!data) return;
-        S.fatture = data.fatture || [];
-        S.movimenti = data.movimenti || [];
-        S.costiGenerali = data.costiGenerali || [];
-        S.saldoBanca = data.saldoBanca !== undefined ? data.saldoBanca : null;
-        S.saldoBancaData = data.saldoBancaData || null;
-        renderAll();
+        _contabile = data || { fatture:[], movimenti:[] };
+        if(!_contabile.fatture) _contabile.fatture = [];
+        if(!_contabile.movimenti) _contabile.movimenti = [];
+        renderTab(_activeTab);
       });
     }
   } catch(e) {
+    console.warn('initApp error:', e);
     setFbDot('err');
-    console.warn('loadAll error:', e);
-    toast('Errore caricamento dati');
   }
-}
-function setFbDot(stato) {
-  const d = document.getElementById('fbDot');
-  d.className = 'fb-dot';
-  if (stato === 'ok') d.classList.add('ok');
-  else if (stato === 'err') d.classList.add('err');
-}
-async function saveContabile() {
-  const ok = await window._fbSaveContabile({
-    fatture: S.fatture,
-    movimenti: S.movimenti,
-    costiGenerali: S.costiGenerali,
-    saldoBanca: S.saldoBanca,
-    saldoBancaData: S.saldoBancaData
-  });
-  if (ok) toast('✅ Salvato');
-  else toast('⚠️ Errore salvataggio');
+  renderTab(_activeTab);
 }
 
-// ─── TAB NAVIGATION ───
-function switchTab(tab) {
-  S.tabAttiva = tab;
+function switchTab(tab){
+  _activeTab = tab;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
   const btn = document.getElementById('tab-' + tab);
-  if (btn) btn.classList.add('active');
-  const scr = document.getElementById('scr-' + tab);
-  if (scr) scr.style.display = 'block';
+  if(btn) btn.classList.add('active');
   renderTab(tab);
 }
-function renderTab(tab) {
-  if (tab === 'flusso') renderFlusso();
-  else if (tab === 'fatture') renderFatture();
-  else if (tab === 'banca') renderBanca();
-  else if (tab === 'cantieri') renderCantieri();
-  else if (tab === 'generali') renderGenerali();
-}
-function renderAll() {
-  renderTab(S.tabAttiva);
+
+function renderTab(tab){
+  if(tab === 'flusso') renderFlusso();
+  else if(tab === 'fatture') renderFatture();
+  else if(tab === 'banca') renderBanca();
+  else if(tab === 'cantieri') renderCantieri();
+  else if(tab === 'generali') renderGenerali();
 }
 
-// ─── RENDER FLUSSO ───
-function renderFlusso() {
-  const passive = S.fatture.filter(f => f.tipo === 'passiva' && f.stato !== 'pagata' && f.stato !== 'riconciliata');
-  const attive = S.fatture.filter(f => f.tipo === 'attiva' && f.stato !== 'pagata' && f.stato !== 'riconciliata');
-  const daPagare = passive.reduce((s, f) => s + (f.totale || 0), 0);
-  const daIncassare = attive.reduce((s, f) => s + (f.totale || 0), 0);
-  const saldo = S.saldoBanca || 0;
-  const proiettato = saldo + daIncassare - daPagare;
-  document.getElementById('kpi-saldo').textContent = S.saldoBanca !== null ? fmtEur(saldo) : '—';
-  document.getElementById('kpi-saldo-data').textContent = S.saldoBancaData ? 'al ' + fmtData(S.saldoBancaData) : '';
-  document.getElementById('kpi-incassare').textContent = daIncassare > 0 ? fmtEur(daIncassare) : '—';
-  document.getElementById('kpi-pagare').textContent = daPagare > 0 ? fmtEur(daPagare) : '—';
-  document.getElementById('kpi-proiettato').textContent = S.saldoBanca !== null ? fmtEur(proiettato) : '—';
-  renderScadenze();
-  renderMargini();
-  aggiornaTICStatus();
-  aggiornaBTSStatus();
-}
-function renderScadenze() {
-  const oggi = new Date(); oggi.setHours(0,0,0,0);
-  const tra30 = new Date(oggi); tra30.setDate(tra30.getDate() + 30);
-  const scad = S.fatture
-    .filter(f => f.scadenza && f.stato !== 'pagata' && f.stato !== 'riconciliata')
-    .map(f => ({ ...f, scadDate: new Date(f.scadenza) }))
-    .filter(f => f.scadDate <= tra30)
-    .sort((a, b) => a.scadDate - b.scadDate)
-    .slice(0, 8);
-  const card = document.getElementById('cardScadenze');
-  if (!scad.length) {
-    card.innerHTML = '<div class="empty"><div class="empty-ic">✅</div><div class="empty-txt">Nessuna scadenza nei prossimi 30 giorni.</div></div>';
-    return;
+function renderFlusso(){
+  const fatture = _contabile.fatture || [];
+  const movimenti = _contabile.movimenti || [];
+  const daIncassare = fatture.filter(f => f.tipo==='attiva' && f.stato!=='pagata' && f.stato!=='riconciliata').reduce((s,f) => s+(f.totale||0), 0);
+  const daPagare = fatture.filter(f => f.tipo==='passiva' && f.stato!=='pagata' && f.stato!=='riconciliata').reduce((s,f) => s+(f.totale||0), 0);
+  const saldoBanca = movimenti.reduce((s,m) => s+(m.importo||0), 0);
+  const proiettato = saldoBanca + daIncassare - daPagare;
+  const oggi = new Date().toISOString().slice(0,10);
+  const tra7 = new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+  const scadenze = fatture.filter(f => f.scadenza && f.stato!=='pagata' && f.stato!=='riconciliata').sort((a,b) => a.scadenza.localeCompare(b.scadenza)).slice(0,6);
+  const margini = _cantieri.filter(c => c.nome && c.importo > 0).map(c => {
+    const costi = fatture.filter(f => f.cantiereId===c.id && f.tipo==='passiva').reduce((s,f) => s+(f.totale||0), 0);
+    const margine = ((c.importo - costi) / c.importo * 100);
+    return { ...c, costiReali: costi, margine };
+  }).sort((a,b) => a.margine - b.margine);
+
+  let html = '<div class="kpi-grid">';
+  html += '<div class="kpi-box"><div class="kpi-label">Saldo banca</div><div class="kpi-val">' + fmt(saldoBanca) + '</div></div>';
+  html += '<div class="kpi-box"><div class="kpi-label">Da incassare</div><div class="kpi-val green">' + fmt(daIncassare) + '</div></div>';
+  html += '<div class="kpi-box"><div class="kpi-label">Da pagare</div><div class="kpi-val red">' + fmt(daPagare) + '</div></div>';
+  html += '<div class="kpi-box"><div class="kpi-label">Saldo proiettato</div><div class="kpi-val ' + (proiettato>=0?'green':'red') + '">' + fmt(proiettato) + '</div></div>';
+  html += '</div>';
+
+  html += '<div class="section-card"><div class="section-head"><span>⏰ Prossime scadenze</span><span style="font-size:11px;font-weight:400;color:var(--soft)">' + scadenze.length + ' in attesa</span></div>';
+  if(scadenze.length === 0) {
+    html += '<div class="empty"><div class="empty-ic">✅</div><div class="empty-txt">Nessuna scadenza in attesa</div></div>';
+  } else {
+    scadenze.forEach(function(f) {
+      const isScaduta = f.scadenza < oggi;
+      const isProx = !isScaduta && f.scadenza <= tra7;
+      const colDot = isScaduta ? 'var(--red)' : isProx ? 'var(--amber)' : 'var(--g4)';
+      const segno = f.tipo==='passiva' ? '−' : '+';
+      const cls = f.tipo==='passiva' ? 'neg' : 'pos';
+      const df = f.scadenza ? f.scadenza.split('-').reverse().join('/') : '';
+      html += '<div class="row-item"><div class="row-dot" style="background:' + colDot + '"></div><div class="row-main"><div class="row-name">' + (f.fornitore||f.cliente||'—') + '</div><div class="row-sub">' + (f.numeroFattura||'') + (f.categoria?' · '+f.categoria:'') + '</div></div><div class="row-amount ' + cls + '">' + segno + fmt(f.totale) + '</div><div class="row-date">' + df + '</div></div>';
+    });
   }
-  card.innerHTML = scad.map(f => {
-    const diff = Math.round((f.scadDate - oggi) / 86400000);
-    const dotClass = diff < 0 ? 'dot-red' : diff <= 7 ? 'dot-amber' : 'dot-green';
-    const diffTxt = diff < 0 ? Math.abs(diff) + 'gg scaduta' : diff === 0 ? 'oggi' : diff + ' gg';
-    const segno = f.tipo === 'passiva' ? '−' : '+';
-    const colore = f.tipo === 'passiva' ? 'var(--red)' : 'var(--g2)';
-    return `<div class="list-row">
-      <div class="list-dot ${dotClass}"></div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.fornitore || f.cliente || '—'}</div>
-        <div style="font-size:11px;color:var(--soft)">${f.numeroFattura || ''} · ${fmtData(f.scadenza)} · ${diffTxt}</div>
-      </div>
-      <div style="font-size:14px;font-weight:700;font-family:'Barlow Condensed',sans-serif;color:${colore};flex-shrink:0">${segno}${fmtEur(f.totale)}</div>
-    </div>`;
-  }).join('');
-}
-function renderMargini() {
-  const card = document.getElementById('cardMargini');
-  if (!S.cantieri.length) {
-    card.innerHTML = '<div class="empty"><div class="empty-ic">🏗️</div><div class="empty-txt">Nessun cantiere trovato.</div></div>';
-    return;
+  html += '</div>';
+
+  html += '<div class="section-card"><div class="section-head">🏗️ Margini cantieri</div>';
+  if(margini.length === 0) {
+    html += '<div class="empty"><div class="empty-ic">🏗️</div><div class="empty-txt">Nessun cantiere con importo contratto</div></div>';
+  } else {
+    margini.forEach(function(c) {
+      const target = c.targetMargine || 20;
+      const chipCls = c.margine < target ? 'chip-red' : c.margine < target+5 ? 'chip-amber' : 'chip-green';
+      const barCls = c.margine < target ? 'danger' : c.margine < target+5 ? 'warn' : '';
+      const barW = Math.min(100, Math.max(0, c.margine));
+      html += '<div style="padding:12px 14px;border-bottom:1px solid var(--s1)"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div><div style="font-weight:700;font-size:13px">' + c.nome + '</div><div style="font-size:11px;color:var(--soft)">contratto ' + fmt(c.importo) + ' · costi ' + fmt(c.costiReali) + '</div></div><span class="chip ' + chipCls + '">' + c.margine.toFixed(0) + '%</span></div><div class="bar-wrap"><div class="bar-fill ' + barCls + '" style="width:' + barW + '%"></div></div></div>';
+    });
   }
-  card.innerHTML = S.cantieri.map(c => {
-    const ricavi = c.importo || 0;
-    const costiMat = (c.speseMateriali || []).reduce((s, x) => s + (x.imponibile || x.importo || 0), 0);
-    const costiGen = (c.speseGenerali || []).reduce((s, x) => s + (x.imponibile || x.importo || 0), 0);
-    const fattPassive = S.fatture.filter(f => f.cantiereId === c.id && f.tipo === 'passiva').reduce((s, f) => s + (f.imponibile || f.totale || 0), 0);
-    const costi = costiMat + costiGen + fattPassive;
-    const margine = ricavi > 0 ? Math.round((ricavi - costi) / ricavi * 100) : null;
-    const barColor = margine === null ? 'var(--s3)' : margine >= 20 ? 'var(--g3)' : margine >= 10 ? 'var(--amber)' : 'var(--red)';
-    const chipClass = margine === null ? 'chip-gray' : margine >= 20 ? 'chip-green' : margine >= 10 ? 'chip-amber' : 'chip-red';
-    const margTxt = margine !== null ? (margine > 0 ? '+' : '') + margine + '%' : '—';
-    return `<div class="cantiere-row">
-      <div class="cantiere-info">
-        <div class="cantiere-nome">${c.nome || '—'}</div>
-        <div class="cantiere-meta">Ricavi ${fmtEur(ricavi)} · Costi ${fmtEur(costi)}</div>
-        <div class="margine-bar" style="margin-top:5px">
-          <div class="margine-fill" style="width:${Math.min(Math.abs(margine || 0), 100)}%;background:${barColor}"></div>
-        </div>
-      </div>
-      <span class="chip ${chipClass}">${margTxt}</span>
-    </div>`;
-  }).join('');
+  html += '</div>';
+
+  html += '<div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn-sec" onclick="switchTab(\'fatture\')">🧾 Vedi fatture</button><button class="btn-sec" onclick="switchTab(\'banca\')">🏦 Vedi banca</button></div></div>';
+
+  document.getElementById('mainContent').innerHTML = html;
 }
 
-// ─── RENDER FATTURE ───
-function renderFatture() {
-  const tipoFiltro = document.getElementById('filtroTipoFattura').value;
-  const statoFiltro = document.getElementById('filtroStatoFattura').value;
-  let lista = S.fatture.filter(f => {
-    if (tipoFiltro && f.tipo !== tipoFiltro) return false;
-    if (statoFiltro && f.stato !== statoFiltro) return false;
-    return true;
-  }).sort((a, b) => (b.dataFattura || '').localeCompare(a.dataFattura || ''));
-  const card = document.getElementById('cardFatture');
-  if (!lista.length) {
-    card.innerHTML = '<div class="empty"><div class="empty-ic">📄</div><div class="empty-txt">Nessuna fattura.<br>Importa ZIP Tieni il Conto.</div></div>';
-    return;
+function renderFatture(){
+  const fatture = (_contabile.fatture || []).slice().sort((a,b) => (b.dataFattura||'').localeCompare(a.dataFattura||''));
+  const passive = fatture.filter(f => f.tipo === 'passiva');
+  const attive = fatture.filter(f => f.tipo === 'attiva');
+  const nAssegnate = fatture.filter(f => f.assegnazione).length;
+
+  let html = '<div style="padding:12px 12px 4px;display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+  html += '<button onclick="triggerImportZip()" style="background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:11px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">📦 Importa ZIP TIC</button>';
+  html += '<button onclick="triggerImportCsv()" style="background:var(--g2);color:#fff;border:none;border-radius:var(--r-sm);padding:11px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">🏦 Importa CSV banca</button>';
+  html += '</div>';
+  if(_contabile.updatedAt) {
+    html += '<div style="text-align:center;font-size:10px;color:var(--soft);padding:4px 0">Ultimo aggiornamento: ' + new Date(_contabile.updatedAt).toLocaleDateString('it-IT') + '</div>';
   }
-  card.innerHTML = lista.map(f => {
-    const statoChip = {
-      importata: 'chip-gray', assegnata: 'chip-blue', pagata: 'chip-amber', riconciliata: 'chip-green'
-    }[f.stato] || 'chip-gray';
-    const assegn = f.cantiereId ? (S.cantieri.find(c => c.id === f.cantiereId) || {}).nome || f.cantiereId : (f.assegnazione === 'generale' ? 'Costo generale' : '');
-    return `<div class="fattura-row" onclick="apriAssegna('${f.id}')">
-      <div class="fattura-top">
-        <div class="fattura-nome">${f.fornitore || f.cliente || '—'}</div>
-        <div class="fattura-importo ${f.tipo}">${f.tipo === 'passiva' ? '−' : '+'}${fmtEur(f.totale)}</div>
-      </div>
-      <div class="fattura-meta">${f.numeroFattura || ''} · ${fmtData(f.dataFattura)}${f.scadenza ? ' · scad. ' + fmtData(f.scadenza) : ''}</div>
-      <div class="fattura-footer">
-        <span class="chip ${statoChip}">${f.stato || 'importata'}</span>
-        ${assegn ? `<span class="chip chip-blue" style="font-size:10px">${assegn}</span>` : ''}
-        ${f.categoria ? `<span class="chip chip-gray" style="font-size:10px">${f.categoria}</span>` : ''}
-      </div>
-    </div>`;
-  }).join('');
+  if(fatture.length > 0) {
+    html += '<div style="text-align:center;font-size:11px;color:var(--soft);padding:2px 0 8px">' + fatture.length + ' fatture · ' + nAssegnate + ' assegnate</div>';
+  }
+
+  html += '<div class="section-card"><div class="section-head"><span>📤 Fatture passive (fornitori)</span><span class="chip chip-red">' + passive.length + '</span></div>';
+  if(passive.length === 0) {
+    html += '<div class="empty"><div class="empty-ic">📭</div><div class="empty-txt">Nessuna fattura passiva<br>Importa ZIP Tieni il Conto</div></div>';
+  } else {
+    passive.forEach(function(f){ html += buildFatturaRow(f); });
+  }
+  html += '</div>';
+
+  html += '<div class="section-card"><div class="section-head"><span>📥 Fatture attive (clienti)</span><span class="chip chip-green">' + attive.length + '</span></div>';
+  if(attive.length === 0) {
+    html += '<div class="empty"><div class="empty-ic">📭</div><div class="empty-txt">Nessuna fattura attiva<br>Importa ZIP Tieni il Conto</div></div>';
+  } else {
+    attive.forEach(function(f){ html += buildFatturaRow(f); });
+  }
+  html += '</div>';
+
+  document.getElementById('mainContent').innerHTML = html;
 }
 
-// ─── RENDER BANCA ───
-function renderBanca() {
-  document.getElementById('kpi-saldo-banca2').textContent = S.saldoBanca !== null ? fmtEur(S.saldoBanca) : '—';
-  const ricon = S.movimenti.filter(m => m.fatturaId).length;
-  document.getElementById('kpi-ricon').textContent = ricon + ' / ' + S.movimenti.length;
-  const card = document.getElementById('cardBanca');
-  if (!S.movimenti.length) {
-    card.innerHTML = '<div class="empty"><div class="empty-ic">🏦</div><div class="empty-txt">Nessun movimento.<br>Importa CSV banca BTS.</div></div>';
-    return;
-  }
-  const lista = [...S.movimenti].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
-  card.innerHTML = lista.map(m => {
-    const pos = (m.importo || 0) >= 0;
-    const riconBadge = m.fatturaId ? `<span class="chip chip-green" style="font-size:10px">✓ riconciliato</span>` : '';
-    return `<div class="movimento-row">
-      <div class="movimento-info">
-        <div class="movimento-desc">${m.descrizione || '—'}</div>
-        <div class="movimento-data">${fmtData(m.data)}</div>
-        ${riconBadge}
-      </div>
-      <div class="movimento-imp ${pos ? 'pos' : 'neg'}">${pos ? '+' : ''}${fmtEur(m.importo)}</div>
-    </div>`;
-  }).join('');
+function buildFatturaRow(f){
+  const statoMap = { importata:'chip-gray', assegnata:'chip-blue', pagata:'chip-green', riconciliata:'chip-green' };
+  const statoChip = statoMap[f.stato || 'importata'] || 'chip-gray';
+  const df = f.dataFattura ? f.dataFattura.split('-').reverse().join('/') : '';
+  const assegnata = f.assegnazione && (f.cantiereId || f.assegnazione === 'generale');
+  const cantNome = assegnata && f.assegnazione === 'cantiere' ? ((_cantieri.find(c => c.id === f.cantiereId)||{}).nome||'?') : '';
+  let row = '<div class="fattura-row">';
+  row += '<div class="fattura-top"><div class="fattura-nome">' + (f.fornitore||f.cliente||'—') + '</div><div class="fattura-importo ' + f.tipo + '">' + fmtDec(f.totale) + '</div></div>';
+  row += '<div class="fattura-meta"><span>' + (f.numeroFattura||'—') + '</span><span>' + df + '</span>';
+  if(f.imponibile && f.iva !== undefined) row += '<span>Imp. ' + fmtDec(f.imponibile) + '</span>';
+  if(f.aliquotaIva !== undefined) row += '<span>IVA ' + f.aliquotaIva + '%</span>';
+  row += '<span class="chip ' + statoChip + '">' + (f.stato||'importata') + '</span>';
+  if(assegnata) row += '<span style="color:var(--g2);font-weight:700">' + (f.assegnazione==='cantiere' ? '🏗️ '+cantNome : '📋 Generale') + '</span>';
+  row += '</div>';
+  row += '<div class="fattura-actions"><button class="btn-assign' + (assegnata?' done':'') + '" onclick="apriAssegna(\'' + f.id + '\')">' + (assegnata ? '✅ Riassegna' : 'Assegna →') + '</button>';
+  if(f.ritenuta && f.ritenuta > 0) row += '<span class="chip chip-amber">Rit. ' + fmtDec(f.ritenuta) + '</span>';
+  row += '</div></div>';
+  return row;
 }
 
-// ─── RENDER CANTIERI ───
-function renderCantieri() {
-  const card = document.getElementById('cardCantieri');
-  if (!S.cantieri.length) {
-    card.innerHTML = '<div class="empty"><div class="empty-ic">🏗️</div><div class="empty-txt">Nessun cantiere trovato.</div></div>';
-    return;
+function renderBanca(){
+  const movimenti = (_contabile.movimenti || []).slice().sort((a,b) => (b.data||'').localeCompare(a.data||''));
+  const saldo = movimenti.reduce((s,m) => s+(m.importo||0), 0);
+
+  let html = '<div class="kpi-grid" style="grid-template-columns:1fr"><div class="kpi-box"><div class="kpi-label">Saldo dai movimenti importati</div><div class="kpi-val ' + (saldo>=0?'green':'red') + '">' + fmtDec(saldo) + '</div></div></div>';
+  html += '<div style="text-align:center;font-size:11px;color:var(--soft);padding:4px 0 8px">' + movimenti.length + ' movimenti</div>';
+  html += '<div class="section-card"><div class="section-head"><span>📋 Movimenti</span><span class="chip chip-gray">' + movimenti.length + '</span></div>';
+  if(movimenti.length === 0) {
+    html += '<div class="empty"><div class="empty-ic">🏦</div><div class="empty-txt">Nessun movimento<br>Importa CSV banca da TB Cantieri</div></div>';
+  } else {
+    movimenti.forEach(function(m) {
+      const df = m.data ? m.data.split('-').reverse().join('/') : '';
+      const cls = m.importo >= 0 ? 'pos' : 'neg';
+      const segno = m.importo >= 0 ? '+' : '';
+      html += '<div class="mov-row"><div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><div class="mov-desc">' + (m.descrizione||'—') + '</div>' + (m.causale ? '<div style="font-size:10px;color:var(--soft)">' + m.causale + '</div>' : '') + '</div><div class="mov-amount ' + cls + '">' + segno + fmtDec(m.importo) + '</div><div class="mov-date">' + df + '</div></div>';
+    });
   }
-  card.innerHTML = S.cantieri.map(c => {
-    const ricavi = c.importo || 0;
-    const costiMat = (c.speseMateriali || []).reduce((s, x) => s + (x.imponibile || x.importo || 0), 0);
-    const costiGen = (c.speseGenerali || []).reduce((s, x) => s + (x.imponibile || x.importo || 0), 0);
-    const fattCant = S.fatture.filter(f => f.cantiereId === c.id && f.tipo === 'passiva').reduce((s, f) => s + (f.imponibile || f.totale || 0), 0);
-    const costiTot = costiMat + costiGen + fattCant;
-    const margine = ricavi > 0 ? ((ricavi - costiTot) / ricavi * 100) : null;
-    const chipClass = margine === null ? 'chip-gray' : margine >= 20 ? 'chip-green' : margine >= 10 ? 'chip-amber' : 'chip-red';
-    const margTxt = margine !== null ? (margine > 0 ? '+' : '') + margine.toFixed(1) + '%' : '—';
-    const stato = c.stato || 'attivo';
-    const statoChip = stato === 'completato' ? 'chip-green' : stato === 'sospeso' ? 'chip-amber' : 'chip-blue';
-    return `<div class="cantiere-row">
-      <div class="cantiere-info">
-        <div style="display:flex;align-items:center;gap:6px">
-          <div class="cantiere-nome">${c.nome || '—'}</div>
-          <span class="chip ${statoChip}" style="font-size:10px">${stato}</span>
-        </div>
-        <div class="cantiere-meta" style="margin-top:3px">
-          Contratto ${fmtEur(ricavi)} · Costi ${fmtEur(costiTot)} · <strong>Margine</strong> ${margTxt}
-        </div>
-        <div style="margin-top:6px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;font-size:11px;color:var(--soft)">
-          <div>Mat. ${fmtEur(costiMat)}</div>
-          <div>Gen. ${fmtEur(costiGen)}</div>
-          <div>Fatt. ${fmtEur(fattCant)}</div>
-        </div>
-      </div>
-      <span class="chip ${chipClass}">${margTxt}</span>
-    </div>`;
-  }).join('');
+  html += '</div>';
+  document.getElementById('mainContent').innerHTML = html;
 }
 
-// ─── RENDER GENERALI ───
-function renderGenerali() {
-  const now = new Date();
-  const meseCorrente = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-  const mese = S.costiGenerali.filter(g => (g.data || '').startsWith(meseCorrente)).reduce((s, g) => s + (g.lordo || 0), 0);
-  const anno = S.costiGenerali.reduce((s, g) => s + (g.lordo || 0), 0);
-  document.getElementById('kpi-gen-mese').textContent = fmtEur(mese);
-  document.getElementById('kpi-gen-anno').textContent = fmtEur(anno);
-  const card = document.getElementById('cardGenerali');
-  if (!S.costiGenerali.length) {
-    card.innerHTML = '<div class="empty"><div class="empty-ic">🏢</div><div class="empty-txt">Nessun costo generale registrato.</div></div>';
-    return;
+function renderCantieri(){
+  const fatture = _contabile.fatture || [];
+  let html = '<div style="padding:14px 12px 6px;font-family:\'Barlow Condensed\',sans-serif;font-size:18px;font-weight:700;color:var(--g1);letter-spacing:.5px">RIEPILOGO CANTIERI</div>';
+
+  const cant = _cantieri.filter(c => c.nome);
+  if(cant.length === 0) {
+    html += '<div class="empty"><div class="empty-ic">🏗️</div><div class="empty-txt">Nessun cantiere trovato su Firebase</div></div>';
+  } else {
+    cant.forEach(function(c) {
+      const costiDaFatture = fatture.filter(f => f.cantiereId===c.id && f.tipo==='passiva').reduce((s,f) => s+(f.totale||0), 0);
+      const speseG = (c.speseGenerali||[]).reduce((s,x) => s+(x.importo||0), 0);
+      const speseM = (c.speseMateriali||[]).reduce((s,x) => s+(x.importo||0), 0);
+      const costiTot = costiDaFatture + speseG + speseM;
+      const ricavi = c.importo || 0;
+      const margine = ricavi > 0 ? ((ricavi - costiTot) / ricavi * 100) : null;
+      const target = c.targetMargine || 20;
+      const nFatture = fatture.filter(f => f.cantiereId===c.id).length;
+      const chipCls = margine===null ? 'chip-gray' : margine < target ? 'chip-red' : margine < target+5 ? 'chip-amber' : 'chip-green';
+      const barCls = margine===null ? '' : margine < target ? 'danger' : margine < target+5 ? 'warn' : '';
+      const barW = margine !== null ? Math.min(100, Math.max(0, margine)) : 0;
+      html += '<div class="section-card"><div class="section-head" style="background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff"><span>' + c.nome + '</span><span class="chip" style="background:rgba(255,255,255,.2);color:#fff">' + (c.stato||'attivo') + '</span></div>';
+      html += '<div style="padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+      html += '<div><div class="kpi-label">Contratto</div><div style="font-family:\'Barlow Condensed\',sans-serif;font-size:18px;font-weight:700;color:var(--g1)">' + fmt(ricavi) + '</div></div>';
+      html += '<div><div class="kpi-label">Costi totali</div><div style="font-family:\'Barlow Condensed\',sans-serif;font-size:18px;font-weight:700;color:var(--red)">' + fmt(costiTot) + '</div></div>';
+      html += '<div><div class="kpi-label">Margine</div><div style="font-family:\'Barlow Condensed\',sans-serif;font-size:18px;font-weight:700">' + (margine!==null ? margine.toFixed(1)+'%' : '—') + ' <span class="chip ' + chipCls + '" style="font-size:11px">' + (margine!==null ? margine.toFixed(0)+'%' : '—') + '</span></div></div>';
+      html += '<div><div class="kpi-label">Fatture assegnate</div><div style="font-family:\'Barlow Condensed\',sans-serif;font-size:18px;font-weight:700">' + nFatture + '</div></div>';
+      html += '</div>';
+      if(ricavi > 0) html += '<div style="padding:0 14px 12px"><div class="bar-wrap"><div class="bar-fill ' + barCls + '" style="width:' + barW + '%"></div></div><div style="font-size:10px;color:var(--soft);margin-top:4px">Target margine: ' + target + '%</div></div>';
+      html += '</div>';
+    });
   }
-  const lista = [...S.costiGenerali].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
-  card.innerHTML = lista.map(g => `<div class="list-row">
-    <div style="flex:1">
-      <div style="font-size:13px;font-weight:600">${g.desc || '—'}</div>
-      <div style="font-size:11px;color:var(--soft)">${fmtData(g.data)} · ${g.categoria || ''}</div>
-      <div style="font-size:11px;color:var(--soft);margin-top:1px">Imponibile ${fmtEur(g.imponibile)} · IVA ${g.iva}% · Lordo ${fmtEur(g.lordo)}</div>
-    </div>
-    <button onclick="event.stopPropagation();eliminaCostoGen('${g.id}')" style="background:var(--red-bg);border:1px solid var(--red-border);color:var(--red);border-radius:6px;padding:5px 8px;font-size:12px;cursor:pointer;font-family:'Nunito',sans-serif">🗑️</button>
-  </div>`).join('');
+  document.getElementById('mainContent').innerHTML = html;
 }
 
-// ─── PARSER ZIP TIC ───
-async function handleDropZip(ev) {
-  ev.preventDefault();
-  ev.currentTarget.classList.remove('dragover');
-  const file = ev.dataTransfer.files[0];
-  if (file) handleZipTIC(file);
+function renderGenerali(){
+  const fatture = (_contabile.fatture || []).filter(f => f.assegnazione === 'generale');
+  const totale = fatture.reduce((s,f) => s+(f.totale||0), 0);
+  const perCat = {};
+  fatture.forEach(function(f){ const k = f.categoria||'Altro'; perCat[k] = (perCat[k]||0) + (f.totale||0); });
+  const catSorted = Object.entries(perCat).sort((a,b) => b[1]-a[1]);
+
+  let html = '<div class="kpi-grid" style="grid-template-columns:1fr"><div class="kpi-box"><div class="kpi-label">Totale costi generali</div><div class="kpi-val red">' + fmt(totale) + '</div></div></div>';
+  if(catSorted.length > 0) {
+    html += '<div class="section-card"><div class="section-head">Per categoria</div>';
+    catSorted.forEach(function(e){ html += '<div class="row-item"><div class="row-main"><div class="row-name">' + e[0] + '</div></div><div class="row-amount neg">' + fmt(e[1]) + '</div></div>'; });
+    html += '</div>';
+  }
+  html += '<div class="section-card"><div class="section-head"><span>🧾 Fatture generali</span><span class="chip chip-gray">' + fatture.length + '</span></div>';
+  if(fatture.length === 0) {
+    html += '<div class="empty"><div class="empty-ic">📋</div><div class="empty-txt">Nessun costo generale<br>Assegna fatture come "Costo generale"</div></div>';
+  } else {
+    fatture.slice().sort((a,b) => (b.dataFattura||'').localeCompare(a.dataFattura||'')).forEach(function(f){ html += buildFatturaRow(f); });
+  }
+  html += '</div>';
+  document.getElementById('mainContent').innerHTML = html;
 }
-async function handleZipTIC(file) {
-  if (!file) return;
-  document.getElementById('ticStatus').textContent = '⏳ Lettura ZIP…';
+
+function triggerImportZip(){ document.getElementById('inputZip').click(); }
+function triggerImportCsv(){ document.getElementById('inputCsv').click(); }
+
+async function importZip(input){
+  const file = input.files[0];
+  if(!file) return;
+  showToast('⏳ Lettura ZIP in corso…', 60000);
   try {
-    const buf = await file.arrayBuffer();
-    const zip = await JSZip.loadAsync(buf);
-    const fatture = await parseZipTIC(zip);
-    // Merge — non sovrascrivere fatture già assegnate
-    let merged = [...S.fatture];
-    let nuove = 0;
-    for (const f of fatture) {
-      const exists = merged.find(x => x.numeroFattura === f.numeroFattura && x.dataFattura === f.dataFattura && x.tipo === f.tipo);
-      if (!exists) { merged.push(f); nuove++; }
-    }
-    S.fatture = merged;
-    await saveContabile();
-    document.getElementById('ticStatus').textContent = `✅ ${nuove} nuove fatture importate (${fatture.length} totali nel file)`;
-    renderAll();
+    const zip = await JSZip.loadAsync(file);
+    const docXml = await readZipEntry(zip, 'su_docume_m.xml');
+    const contXml = await readZipEntry(zip, 'ba_contact.xml');
+    if(!docXml){ showToast('❌ File su_docume_m.xml non trovato nello ZIP'); return; }
+    const anag = parseContatti(contXml || '');
+    const fatture = parseDocumenti(docXml, anag);
+    const existing = _contabile.fatture || [];
+    const existingIds = new Set(existing.map(f => f.id));
+    const nuove = fatture.filter(f => !existingIds.has(f.id));
+    const merged = existing.concat(nuove);
+    _contabile.fatture = merged;
+    await window._fbSaveContabile({ fatture: merged, movimenti: _contabile.movimenti || [] });
+    showToast('✅ ' + nuove.length + ' fatture importate (' + (fatture.length - nuove.length) + ' già presenti)');
+    renderFatture();
   } catch(e) {
-    console.error('ZIP TIC error:', e);
-    document.getElementById('ticStatus').textContent = '❌ Errore: ' + e.message;
+    console.error('importZip error:', e);
+    showToast('❌ Errore import ZIP: ' + e.message);
   }
+  input.value = '';
 }
-async function parseZipTIC(zip) {
-  // Carica anagrafica fornitori/clienti
-  const anagrafica = {};
-  const contFile = Object.keys(zip.files).find(n => n.endsWith('ba_contact.xml') || n.endsWith('BA_CONTACT.XML'));
-  if (contFile) {
-    const xml = await zip.files[contFile].async('text');
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xml, 'text/xml');
-    doc.querySelectorAll('ROW').forEach(r => {
-      const cod = r.querySelector('COCODSOG')?.textContent?.trim();
-      const nome = r.querySelector('CODENANAG')?.textContent?.trim() || r.querySelector('CONOMANAG')?.textContent?.trim() || r.querySelector('CORAGNOMSO')?.textContent?.trim();
-      if (cod && nome) anagrafica[cod] = nome;
+
+async function readZipEntry(zip, name){
+  const entry = Object.values(zip.files).find(function(f){ return !f.dir && f.name.indexOf(name) !== -1; });
+  if(!entry) return null;
+  return entry.async('string');
+}
+
+function parseContatti(xml){
+  const map = {};
+  try {
+    const doc = new DOMParser().parseFromString(xml, 'text/xml');
+    doc.querySelectorAll('ROW').forEach(function(r){
+      const cod = txtEl(r,'COCODSOG');
+      const nome = txtEl(r,'CORAGSO1') || txtEl(r,'COCGNOME') || '';
+      if(cod) map[cod] = nome;
     });
-  }
-  // Carica scadenze
-  const scadMap = {};
-  const scadFile = Object.keys(zip.files).find(n => n.endsWith('su_scaden.xml') || n.endsWith('SU_SCADEN.XML'));
-  if (scadFile) {
-    const xml = await zip.files[scadFile].async('text');
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xml, 'text/xml');
-    doc.querySelectorAll('ROW').forEach(r => {
-      const key = (r.querySelector('SDNUMDOC')?.textContent?.trim() || '') + '|' + (r.querySelector('SDDATDOC')?.textContent?.trim() || '');
-      const datScad = r.querySelector('SDDATSCAD')?.textContent?.trim();
-      if (key && datScad) scadMap[key] = ticData(datScad);
-    });
-  }
-  // Carica testata fatture
-  const docFile = Object.keys(zip.files).find(n => n.endsWith('su_docume_m.xml') || n.endsWith('SU_DOCUME_M.XML'));
-  if (!docFile) throw new Error('su_docume_m.xml non trovato nello ZIP');
-  const xml = await zip.files[docFile].async('text');
-  const parser = new DOMParser();
-  const docXml = parser.parseFromString(xml, 'text/xml');
+  } catch(e){}
+  return map;
+}
+
+function parseDocumenti(xml, anag){
   const fatture = [];
-  docXml.querySelectorAll('ROW').forEach(r => {
-    const tipsog = r.querySelector('DOTIPSOG')?.textContent?.trim(); // FOR | CLI
-    const tipdoc = r.querySelector('DOTIPDOC')?.textContent?.trim(); // FA | NC
-    const numDoc = r.querySelector('DONUMDOCACQ')?.textContent?.trim() || r.querySelector('DONUMDOC')?.textContent?.trim();
-    const datDoc = ticData(r.querySelector('DODATDOC')?.textContent?.trim());
-    const codSog = r.querySelector('DOCODSOG')?.textContent?.trim();
-    const imponibile = parseFloat((r.querySelector('DOIMPIVA')?.textContent || '0').replace(',', '.')) || 0;
-    const iva = parseFloat((r.querySelector('DOTOTIVA')?.textContent || '0').replace(',', '.')) || 0;
-    const totale = parseFloat((r.querySelector('DOTOTDOC')?.textContent || '0').replace(',', '.')) || 0;
-    const ritenuta = parseFloat((r.querySelector('DOIMPRIT')?.textContent || '0').replace(',', '.')) || 0;
-    const key = (numDoc || '') + '|' + (r.querySelector('DODATDOC')?.textContent?.trim() || '');
-    const scadenza = scadMap[key] || null;
-    const tipo = tipsog === 'CLI' ? 'attiva' : 'passiva';
-    const nomeSogg = anagrafica[codSog] || codSog || '—';
-    if (!numDoc) return;
-    fatture.push({
-      id: uid(), fonte: 'tic', tipo, tipdoc: tipdoc || 'FA',
-      numeroFattura: numDoc, dataFattura: datDoc, scadenza,
-      [tipo === 'passiva' ? 'fornitore' : 'cliente']: nomeSogg,
-      codFornitore: codSog || '', imponibile, iva, totale, ritenuta,
-      stato: 'importata', assegnazione: null, cantiereId: null,
-      categoria: '', createdAt: Date.now()
+  try {
+    const doc = new DOMParser().parseFromString(xml, 'text/xml');
+    doc.querySelectorAll('ROW').forEach(function(r){
+      const tipdoc = txtEl(r,'DOTIPDOC') || 'FA';
+      const tipsog = txtEl(r,'DOTIPSOG') || '';
+      const codSog = txtEl(r,'DOCODSOG') || '';
+      const numDoc = txtEl(r,'DONUMDOCACQ') || txtEl(r,'DONUMDOC') || '';
+      const datDoc = parseDateTIC(txtEl(r,'DODATDOC') || '');
+      const imponibile = parseFloatIT(txtEl(r,'DOIMPIVA') || '0');
+      const iva = parseFloatIT(txtEl(r,'DOTOTIVA') || '0');
+      const totale = parseFloatIT(txtEl(r,'DOTOTDOC') || '0');
+      const ritenuta = parseFloatIT(txtEl(r,'DOIMPRIT') || '0');
+      const nomeContatto = anag[codSog] || codSog || 'Sconosciuto';
+      const tipo = tipsog === 'CLI' ? 'attiva' : 'passiva';
+      const id = 'tic_' + (numDoc || uid()) + '_' + (datDoc || uid());
+      fatture.push({
+        id: id, fonte: 'tic', tipo: tipo, tipdoc: tipdoc,
+        numeroFattura: numDoc, dataFattura: datDoc,
+        fornitore: tipo === 'passiva' ? nomeContatto : '',
+        cliente: tipo === 'attiva' ? nomeContatto : '',
+        codFornitore: codSog,
+        imponibile: imponibile, iva: iva, totale: totale, ritenuta: ritenuta,
+        aliquotaIva: imponibile > 0 ? Math.round(iva / imponibile * 100) : 0,
+        stato: 'importata', assegnazione: null, cantiereId: null, categoria: null,
+        createdAt: Date.now()
+      });
     });
-  });
+  } catch(e){ console.warn('parseDocumenti error:', e); }
   return fatture;
 }
-function ticData(str) {
-  if (!str) return null;
-  // Formato TIC: YYYYMMDD o GG/MM/AAAA
-  if (/^\d{8}$/.test(str)) return str.slice(0, 4) + '-' + str.slice(4, 6) + '-' + str.slice(6, 8);
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) { const p = str.split('/'); return p[2] + '-' + p[1] + '-' + p[0]; }
-  return str;
-}
-function aggiornaTICStatus() {
-  if (S.fatture.length > 0) {
-    const last = S.fatture.reduce((a, b) => (a.createdAt || 0) > (b.createdAt || 0) ? a : b, {});
-    const data = last.createdAt ? new Date(last.createdAt).toLocaleDateString('it-IT') : '';
-    document.getElementById('ticStatus').textContent = `✅ ${S.fatture.length} fatture caricate${data ? ' · ultimo import ' + data : ''}`;
-  }
+
+function txtEl(el, tag){ const n = el.querySelector(tag); return n ? n.textContent.trim() : ''; }
+function parseFloatIT(s){ return parseFloat((s||'0').replace(',','.')); }
+function parseDateTIC(s){
+  if(!s) return '';
+  const m = s.match(/(\d{4})(\d{2})(\d{2})/);
+  return m ? m[1]+'-'+m[2]+'-'+m[3] : s;
 }
 
-// ─── PARSER CSV BTS ───
-async function handleDropCsv(ev) {
-  ev.preventDefault();
-  ev.currentTarget.classList.remove('dragover');
-  const file = ev.dataTransfer.files[0];
-  if (file) handleCsvBTS(file);
-}
-async function handleCsvBTS(file) {
-  if (!file) return;
-  document.getElementById('btsStatus').textContent = '⏳ Lettura CSV…';
+async function importCsv(input){
+  const file = input.files[0];
+  if(!file) return;
+  showToast('⏳ Lettura CSV in corso…', 60000);
   try {
-    const testo = await leggiFileConEncoding(file);
-    const movimenti = parseCsvBTS(testo);
-    let nuovi = 0;
-    for (const m of movimenti) {
-      const exists = S.movimenti.find(x => x.data === m.data && Math.abs(x.importo - m.importo) < 0.01 && x.descrizione === m.descrizione);
-      if (!exists) { S.movimenti.push(m); nuovi++; }
-    }
-    // Calcola saldo dalla prima riga (se presente nella descrizione o usiamo l'ultimo movimento)
-    if (movimenti.length > 0) {
-      const sorted = [...movimenti].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
-      // Saldo cumulativo
-      S.saldoBancaData = sorted[0].data;
-    }
-    // Tenta riconciliazione automatica
-    riconciliaAuto();
-    await saveContabile();
-    document.getElementById('btsStatus').textContent = `✅ ${nuovi} nuovi movimenti importati`;
-    renderAll();
+    const text = await new Promise(function(res, rej){
+      const r = new FileReader();
+      r.onload = function(e){ res(e.target.result); };
+      r.onerror = function(){ rej(new Error('Lettura file fallita')); };
+      r.readAsText(file, 'latin1');
+    });
+    const movimenti = parseCsvBts(text);
+    if(!movimenti.length){ showToast('⚠️ Nessun movimento trovato nel CSV'); return; }
+    const existing = _contabile.movimenti || [];
+    const existingIds = new Set(existing.map(m => m.id));
+    const nuovi = movimenti.filter(m => !existingIds.has(m.id));
+    const merged = existing.concat(nuovi);
+    _contabile.movimenti = merged;
+    await window._fbSaveContabile({ fatture: _contabile.fatture || [], movimenti: merged });
+    showToast('✅ ' + nuovi.length + ' movimenti importati');
+    switchTab('banca');
   } catch(e) {
-    console.error('CSV BTS error:', e);
-    document.getElementById('btsStatus').textContent = '❌ Errore: ' + e.message;
+    console.error('importCsv error:', e);
+    showToast('❌ Errore import CSV: ' + e.message);
   }
+  input.value = '';
 }
-function leggiFileConEncoding(file) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = e => res(e.target.result);
-    r.onerror = () => rej(new Error('Errore lettura file'));
-    r.readAsText(file, 'latin1');
-  });
-}
-function parseCsvBTS(testo) {
-  const righe = testo.split('\n');
-  // Trova la riga header (contiene DATA;VALUTA;IMPORTO)
-  let headerIdx = righe.findIndex(r => r.includes('DATA') && r.includes('IMPORTO'));
-  if (headerIdx < 0) headerIdx = 17; // fallback
-  const header = righe[headerIdx].split(';').map(h => h.trim().replace(/"/g, ''));
-  const idxData = header.findIndex(h => h === 'DATA');
-  const idxImp = header.findIndex(h => h === 'IMPORTO');
-  const idxDesc = header.findIndex(h => h.includes('DESCRIZIONE') || h.includes('CAUSALE'));
+
+function parseCsvBts(text){
+  const lines = text.split(/\r?\n/);
   const movimenti = [];
-  for (let i = headerIdx + 1; i < righe.length; i++) {
-    const cols = righe[i].split(';').map(c => c.trim().replace(/"/g, ''));
-    if (cols.length < 3) continue;
-    const dataRaw = cols[idxData >= 0 ? idxData : 0];
-    const impRaw = cols[idxImp >= 0 ? idxImp : 2];
-    const desc = cols[idxDesc >= 0 ? idxDesc : cols.length - 1] || '';
-    if (!dataRaw || !impRaw) continue;
-    const data = parseDataBTS(dataRaw);
-    const importo = parseImportoBTS(impRaw);
-    if (!data || isNaN(importo)) continue;
-    // Cerca n. fattura nella descrizione
-    const matchFatt = desc.match(/FATTURA\s+(?:NUM\.?\s*)?([A-Z0-9\/\-]+)/i);
-    const fattRif = matchFatt ? matchFatt[1].trim() : null;
-    movimenti.push({ id: uid(), data, importo, descrizione: desc, fattRif, fatturaId: null });
+  let headerFound = false;
+  let colData = -1, colImporto = -1, colCausale = -1, colDesc = -1;
+  for(let i = 0; i < lines.length; i++){
+    const line = lines[i];
+    if(!headerFound){
+      if(line.indexOf('DATA') !== -1 && line.indexOf('IMPORTO') !== -1){
+        const cols = line.split(';').map(function(c){ return c.trim().toUpperCase(); });
+        colData = cols.indexOf('DATA');
+        colImporto = cols.indexOf('IMPORTO');
+        colCausale = cols.findIndex(function(c){ return c.indexOf('CAUSALE') !== -1; });
+        colDesc = cols.findIndex(function(c){ return c.indexOf('DESCR') !== -1; });
+        headerFound = true;
+      }
+      continue;
+    }
+    if(!line.trim()) continue;
+    const parts = line.split(';');
+    if(parts.length < 3) continue;
+    const rawData = colData >= 0 ? (parts[colData]||'').trim() : '';
+    const rawImporto = colImporto >= 0 ? (parts[colImporto]||'').trim() : '';
+    const causale = colCausale >= 0 ? (parts[colCausale]||'').trim() : '';
+    const descrizione = colDesc >= 0 ? (parts[colDesc]||'').trim() : '';
+    if(!rawData || !rawImporto) continue;
+    const data = parseDateBts(rawData);
+    const importo = parseFloat(rawImporto.replace(/\./g,'').replace(',','.'));
+    if(isNaN(importo)) continue;
+    movimenti.push({ id: 'bts_'+data+'_'+importo.toFixed(2)+'_'+i, data: data, importo: importo, causale: causale, descrizione: descrizione, fonte: 'bts' });
   }
   return movimenti;
 }
-function parseDataBTS(str) {
-  if (!str) return null;
-  const p = str.split(/[\/\-\.]/);
-  if (p.length === 3) {
-    if (p[0].length === 4) return str; // già YYYY-MM-DD
-    return p[2] + '-' + p[1].padStart(2,'0') + '-' + p[0].padStart(2,'0');
-  }
-  return null;
-}
-function parseImportoBTS(str) {
-  if (!str) return NaN;
-  return parseFloat(str.replace(/\./g, '').replace(',', '.'));
-}
-function riconciliaAuto() {
-  for (const m of S.movimenti) {
-    if (m.fatturaId) continue;
-    if (!m.fattRif) continue;
-    const fatt = S.fatture.find(f => f.numeroFattura === m.fattRif && Math.abs((f.totale || 0) - Math.abs(m.importo)) < 1);
-    if (fatt) {
-      m.fatturaId = fatt.id;
-      fatt.stato = 'riconciliata';
-      fatt.bancaData = m.data;
-      fatt.bancaImporto = m.importo;
-    }
-  }
-}
-function aggiornaBTSStatus() {
-  if (S.movimenti.length > 0) {
-    document.getElementById('btsStatus').textContent = `✅ ${S.movimenti.length} movimenti caricati`;
-  }
+
+function parseDateBts(s){
+  const m = s.match(/(\d{2})[\.\-\/](\d{2})[\.\-\/](\d{4})/);
+  return m ? m[3]+'-'+m[2]+'-'+m[1] : s;
 }
 
-// ─── ASSEGNAZIONE FATTURA ───
-function apriAssegna(id) {
-  const f = S.fatture.find(x => x.id === id);
-  if (!f) return;
-  S.fatturaSelezionata = id;
-  document.getElementById('mAssegnaInfo').innerHTML =
-    `<strong>${f.fornitore || f.cliente || '—'}</strong><br>
-     <span style="font-size:12px;color:var(--soft)">${f.numeroFattura} · ${fmtData(f.dataFattura)} · ${fmtEur(f.totale)}</span>`;
+function apriAssegna(fatturaId){
+  _assegnaFatturaId = fatturaId;
+  const f = (_contabile.fatture||[]).find(function(x){ return x.id === fatturaId; });
+  if(!f) return;
+  const nomeContatto = f.fornitore || f.cliente || '—';
+  document.getElementById('assegnaInfo').innerHTML = '<strong>' + nomeContatto + '</strong><br>Fattura ' + (f.numeroFattura||'—') + ' · ' + (f.dataFattura||'') + '<br><span style="font-size:15px;font-weight:700;color:' + (f.tipo==='passiva'?'var(--red)':'var(--g2)') + '">' + fmtDec(f.totale) + '</span>';
+  document.getElementById('assegnaTipo').value = f.assegnazione || '';
   document.getElementById('assegnaCategoria').value = f.categoria || '';
-  document.getElementById('assegnaNota').value = f.nota || '';
-  document.getElementById('assegnaTipo').value = f.assegnazione || 'cantiere';
-  const sel = document.getElementById('assegnaCantiere');
-  sel.innerHTML = S.cantieri.map(c => `<option value="${c.id}" ${c.id === f.cantiereId ? 'selected' : ''}>${c.nome || c.id}</option>`).join('');
-  toggleAssegnaTipo();
+  const selC = document.getElementById('assegnaCantiere');
+  selC.innerHTML = '<option value="">— seleziona cantiere —</option>' + _cantieri.filter(function(c){ return c.nome; }).map(function(c){ return '<option value="' + c.id + '"' + (f.cantiereId===c.id?' selected':'') + '>' + c.nome + '</option>'; }).join('');
+  toggleAssegnaFields();
   openModal('mAssegna');
 }
-function toggleAssegnaTipo() {
+
+function toggleAssegnaFields(){
   const tipo = document.getElementById('assegnaTipo').value;
   document.getElementById('assegnaCantiereWrap').style.display = tipo === 'cantiere' ? 'block' : 'none';
 }
-async function salvaAssegnazione() {
-  const f = S.fatture.find(x => x.id === S.fatturaSelezionata);
-  if (!f) return;
+
+async function salvaAssegnazione(){
   const tipo = document.getElementById('assegnaTipo').value;
-  f.assegnazione = tipo;
-  f.categoria = document.getElementById('assegnaCategoria').value.trim();
-  f.nota = document.getElementById('assegnaNota').value.trim();
-  f.cantiereId = tipo === 'cantiere' ? document.getElementById('assegnaCantiere').value : null;
-  if (f.stato === 'importata') f.stato = 'assegnata';
-  closeModal('mAssegna');
-  await saveContabile();
-  renderAll();
+  const cantiereId = document.getElementById('assegnaCantiere').value;
+  const categoria = document.getElementById('assegnaCategoria').value;
+  if(!tipo){ showToast('Seleziona dove assegnare la fattura'); return; }
+  if(tipo === 'cantiere' && !cantiereId){ showToast('Seleziona un cantiere'); return; }
+  const fatture = (_contabile.fatture||[]).map(function(f){
+    if(f.id !== _assegnaFatturaId) return f;
+    return Object.assign({}, f, { assegnazione: tipo, cantiereId: tipo==='cantiere' ? cantiereId : null, categoria: categoria, stato: 'assegnata' });
+  });
+  _contabile.fatture = fatture;
+  await window._fbSaveContabile({ fatture: fatture, movimenti: _contabile.movimenti||[] });
+  document.getElementById('mAssegna').classList.remove('show');
+  showToast('✅ Fattura assegnata');
+  renderTab(_activeTab);
 }
 
-// ─── COSTI GENERALI ───
-function calcCgLordo() {
-  const imp = parseFloat(document.getElementById('cg-imponibile').value) || 0;
-  const iva = parseFloat(document.getElementById('cg-iva').value) || 0;
-  document.getElementById('cg-lordo').value = (imp * (1 + iva / 100)).toFixed(2);
-}
-async function saveCostoGenerale() {
-  const desc = document.getElementById('cg-desc').value.trim();
-  const imponibile = parseFloat(document.getElementById('cg-imponibile').value) || 0;
-  const iva = parseInt(document.getElementById('cg-iva').value) || 0;
-  const lordo = parseFloat(document.getElementById('cg-lordo').value) || 0;
-  const data = document.getElementById('cg-data').value;
-  const categoria = document.getElementById('cg-cat').value;
-  if (!desc || !imponibile) { toast('Compila descrizione e imponibile'); return; }
-  S.costiGenerali.push({ id: uid(), desc, imponibile, iva, lordo, data, categoria, createdAt: Date.now() });
-  closeModal('mCostoGen');
-  await saveContabile();
-  renderAll();
-}
-async function eliminaCostoGen(id) {
-  if (!confirm('Eliminare questo costo?')) return;
-  S.costiGenerali = S.costiGenerali.filter(g => g.id !== id);
-  await saveContabile();
-  renderAll();
-}
-
-// ─── INIT ───
-if (!window._fbEnabled && document.readyState !== 'loading') initApp();
+window.addEventListener('DOMContentLoaded', function(){
+  const saved = localStorage.getItem('tbg_user');
+  if(saved && USERS.indexOf(saved) !== -1){
+    doLogin(saved);
+  }
+});
 </script>
 </body>
 </html>
