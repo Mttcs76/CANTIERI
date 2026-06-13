@@ -541,9 +541,9 @@ async function importZip(input){
   try {
     const zip = await JSZip.loadAsync(file);
     const docXml = await readZipEntry(zip, 'su_docume_m.xml');
-    const contXml = await readZipEntry(zip, 'ba_contact.xml');
+    const keysogXml = await readZipEntry(zip, 'ba_keysog.xml');
     if(!docXml){ showToast('❌ File su_docume_m.xml non trovato nello ZIP'); return; }
-    const anag = parseContatti(contXml || '');
+    const anag = parseContatti(keysogXml || '');
     const fatture = parseDocumenti(docXml, anag);
     const existing = _contabile.fatture || [];
     const existingIds = new Set(existing.map(f => f.id));
@@ -561,7 +561,14 @@ async function importZip(input){
 }
 
 async function readZipEntry(zip, name){
-  const entry = Object.values(zip.files).find(function(f){ return !f.dir && f.name.indexOf(name) !== -1; });
+  // Cerca il file in qualsiasi sottocartella, ignora file __MACOSX e file punto
+  const entry = Object.values(zip.files).find(function(f){
+    if(f.dir) return false;
+    if(f.name.indexOf('__MACOSX') !== -1) return false;
+    const basename = f.name.split('/').pop();
+    if(basename.indexOf('._') === 0) return false;
+    return basename === name;
+  });
   if(!entry) return null;
   return entry.async('string');
 }
@@ -569,13 +576,18 @@ async function readZipEntry(zip, name){
 function parseContatti(xml){
   const map = {};
   try {
+    // ba_keysog.xml: <Record><Keys KSCODSOG="0000000000874150" .../><Fields KSDESCRI="NEW DELHI SNC" .../></Record>
+    // KSCODSOG corrisponde esattamente a DOCODSOG in su_docume_m
     const doc = new DOMParser().parseFromString(xml, 'text/xml');
-    doc.querySelectorAll('ROW').forEach(function(r){
-      const cod = txtEl(r,'COCODSOG');
-      const nome = txtEl(r,'CORAGSO1') || txtEl(r,'COCGNOME') || '';
-      if(cod) map[cod] = nome;
+    doc.querySelectorAll('Record').forEach(function(r){
+      const keys = r.querySelector('Keys');
+      const fields = r.querySelector('Fields');
+      if(!keys || !fields) return;
+      const cod = keys.getAttribute('KSCODSOG') || '';
+      const nome = fields.getAttribute('KSDESCRI') || '';
+      if(cod && nome) map[cod] = nome;
     });
-  } catch(e){}
+  } catch(e){ console.warn('parseContatti error:', e); }
   return map;
 }
 
@@ -583,19 +595,23 @@ function parseDocumenti(xml, anag){
   const fatture = [];
   try {
     const doc = new DOMParser().parseFromString(xml, 'text/xml');
-    doc.querySelectorAll('ROW').forEach(function(r){
-      const tipdoc = txtEl(r,'DOTIPDOC') || 'FA';
-      const tipsog = txtEl(r,'DOTIPSOG') || '';
-      const codSog = txtEl(r,'DOCODSOG') || '';
-      const numDoc = txtEl(r,'DONUMDOCACQ') || txtEl(r,'DONUMDOC') || '';
-      const datDoc = parseDateTIC(txtEl(r,'DODATDOC') || '');
-      const imponibile = parseFloatIT(txtEl(r,'DOIMPIVA') || '0');
-      const iva = parseFloatIT(txtEl(r,'DOTOTIVA') || '0');
-      const totale = parseFloatIT(txtEl(r,'DOTOTDOC') || '0');
-      const ritenuta = parseFloatIT(txtEl(r,'DOIMPRIT') || '0');
+    // Struttura: <Record><Keys DOTIPSCA="D" DOSERIAL="..." /><Fields DOTIPDOC="FA" .../></Record>
+    doc.querySelectorAll('Record').forEach(function(r){
+      const fields = r.querySelector('Fields');
+      if(!fields) return;
+      const tipdoc = fields.getAttribute('DOTIPDOC') || 'FA';
+      const tipsog = fields.getAttribute('DOTIPSOG') || '';
+      const codSog = fields.getAttribute('DOCODSOG') || '';
+      const numDoc = fields.getAttribute('DONUMDOCACQ') || fields.getAttribute('DONUMDOC') || '';
+      const datDoc = fields.getAttribute('DODATDOC') || '';
+      const imponibile = parseFloatIT(fields.getAttribute('DOIMPIVA') || '0');
+      const iva = parseFloatIT(fields.getAttribute('DOTOTIVA') || '0');
+      const totale = parseFloatIT(fields.getAttribute('DOTOTDOC') || '0');
+      const ritenuta = parseFloatIT(fields.getAttribute('DOIMPRIT') || '0');
       const nomeContatto = anag[codSog] || codSog || 'Sconosciuto';
       const tipo = tipsog === 'CLI' ? 'attiva' : 'passiva';
-      const id = 'tic_' + (numDoc || uid()) + '_' + (datDoc || uid());
+      const serial = (r.querySelector('Keys') || {getAttribute:function(){return '';}}).getAttribute('DOSERIAL') || uid();
+      const id = 'tic_' + serial + '_' + (numDoc || uid());
       fatture.push({
         id: id, fonte: 'tic', tipo: tipo, tipdoc: tipdoc,
         numeroFattura: numDoc, dataFattura: datDoc,
@@ -612,13 +628,7 @@ function parseDocumenti(xml, anag){
   return fatture;
 }
 
-function txtEl(el, tag){ const n = el.querySelector(tag); return n ? n.textContent.trim() : ''; }
 function parseFloatIT(s){ return parseFloat((s||'0').replace(',','.')); }
-function parseDateTIC(s){
-  if(!s) return '';
-  const m = s.match(/(\d{4})(\d{2})(\d{2})/);
-  return m ? m[1]+'-'+m[2]+'-'+m[3] : s;
-}
 
 async function importCsv(input){
   const file = input.files[0];
