@@ -15,7 +15,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <!-- Firebase App + Firestore -->
 <script type="module">import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, setDoc, onSnapshot, getDoc, collection, addDoc, getDocs, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, setDoc, onSnapshot, getDoc, collection, addDoc, getDocs, query, orderBy, limit, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 const firebaseConfig = {
   apiKey: "AIzaSyDvXu1k4kPWBDnmBZxDs6McM9fqntMMphw",
   authDomain: "tb-cantieri.firebaseapp.com",
@@ -24,52 +24,64 @@ const firebaseConfig = {
   messagingSenderId: "91212110377",
   appId: "1:91212110377:web:cbb842678fb0d311a79a38"
 };
-let fbApp = null, fbDb = null, fbEnabled = false;
+let fbDb = null;
 try {
-  if (!firebaseConfig.apiKey.includes('LA_TUA')) {
-    fbApp = initializeApp(firebaseConfig);
-    fbDb = getFirestore(fbApp);
-    fbEnabled = true;
-    window._fbDb = fbDb;
-    window._fbEnabled = true;
-    console.log('Firebase connesso ✅');
-  } else {
-    window._fbEnabled = false;
-  }
+  const fbApp = initializeApp(firebaseConfig);
+  fbDb = getFirestore(fbApp);
+  window._fbDb = fbDb;
+  window._fbEnabled = true;
+  console.log('Firebase connesso ✅');
 } catch(e) {
   window._fbEnabled = false;
   console.warn('Firebase non attivo:', e.message);
 }
+const COL = 'tbcantieri_v2';
+const GLOBALI = '__globali';
+
 window._fbSave = async (data) => {
   if (!fbDb) return;
   try {
-    await setDoc(doc(fbDb, 'tbcantieri', 'shared'), {
-      cantieri: data.cantieri,
+    await setDoc(doc(fbDb, COL, GLOBALI), {
       operaiGlobali: data.operaiGlobali || [],
       azienda: data.azienda || null,
       presenze: data.presenze || {},
-      updated: Date.now()
-    });
+      _updatedAt: Date.now(),
+      _updatedBy: data._updatedBy || window._currentUser || '?'
+    }, { merge: true });
+    const cantieri = data.cantieri || [];
+    await Promise.all(cantieri.map(c => setDoc(doc(fbDb, COL, c.id), {
+      ...c,
+      _updatedAt: Date.now(),
+      _updatedBy: data._updatedBy || window._currentUser || '?'
+    }, { merge: true })));
   } catch(e) { console.warn('Firebase save error:', e); }
 };
 window._fbLoad = async () => {
   if (!fbDb) return null;
   try {
-    const snap = await getDoc(doc(fbDb, 'tbcantieri', 'shared'));
-    return snap.exists() ? snap.data() : null;
+    const [globSnap, cantieriSnap] = await Promise.all([
+      getDoc(doc(fbDb, COL, GLOBALI)),
+      getDocs(collection(fbDb, COL))
+    ]);
+    const globali = globSnap.exists() ? globSnap.data() : {};
+    const cantieri = [];
+    cantieriSnap.forEach(d => {
+      if (d.id !== GLOBALI && d.id !== '__contabile') cantieri.push({ id: d.id, ...d.data() });
+    });
+    return { ...globali, cantieri };
   } catch(e) { console.warn('Firebase load error:', e); return null; }
 };
 window._fbListen = (callback) => {
   if (!fbDb) return;
-  onSnapshot(doc(fbDb, 'tbcantieri', 'shared'), (snap) => {
-    if (snap.exists()) callback(snap.data());
+  onSnapshot(doc(fbDb, COL, GLOBALI), async () => {
+    const data = await window._fbLoad();
+    if (data) callback(data);
   });
 };
 window._fbSaveBackup = async (data, label) => {
   if (!fbDb) return false;
   try {
-    const backupsRef = collection(fbDb, 'tbcantieri_backups');
-    await addDoc(backupsRef, {
+    await addDoc(collection(fbDb, 'tbcantieri_backups'), {
       cantieri: data.cantieri,
       operaiGlobali: data.operaiGlobali || [],
       exportedBy: data.exportedBy || 'Auto',
@@ -86,7 +98,7 @@ window._fbLoadBackups = async () => {
     const q = query(collection(fbDb, 'tbcantieri_backups'), orderBy('createdAt', 'desc'), limit(10));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch(e) { console.warn('Firebase backup load error:', e); return []; }
+  } catch(e) { return []; }
 };
 window._fbLoadBackup = async (id) => {
   if (!fbDb) return null;
@@ -94,6 +106,10 @@ window._fbLoadBackup = async (id) => {
     const snap = await getDoc(doc(fbDb, 'tbcantieri_backups', id));
     return snap.exists() ? snap.data() : null;
   } catch(e) { return null; }
+};
+window._fbDeleteCantiere = async (id) => {
+  if (!fbDb) return;
+  try { await deleteDoc(doc(fbDb, COL, id)); } catch(e) { console.warn('Delete error:', e); }
 };</script>
 
 <style>
@@ -162,6 +178,7 @@ window._fbLoadBackup = async (id) => {
     <div id="fbDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.3)"></div>
     <span id="fbLabel">locale</span>
   </div>
+  <button id="btnModificaCantiere" onclick="apriImpostazioniCantiere()" style="display:none;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:var(--r-sm);padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;margin-left:4px">✏️ Modifica</button>
   <button class="tb-user" id="userBtn" onclick="openUserMenu()" title="Menu utente">?</button>
 </div>
 
@@ -1272,6 +1289,7 @@ function openCantiere(id) {
   $('backBtn').classList.add('show');
   $('fab').classList.add('show');
   $('bottomNav').style.display = 'flex';
+  if($('btnModificaCantiere')) $('btnModificaCantiere').style.display = 'block';
   const c = getCantiere();
   $('tbSub').textContent = c ? (c.nome||'—').slice(0,30) : '';
   updateCounts();
@@ -1279,6 +1297,7 @@ function openCantiere(id) {
 }
 
 function goBack() {
+  if($('btnModificaCantiere')) $('btnModificaCantiere').style.display = 'none';
   const scrAz = $('scrAzienda');
   if(scrAz && scrAz.style.display !== 'none') {
     scrAz.style.display = 'none';
