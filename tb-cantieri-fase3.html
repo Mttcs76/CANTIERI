@@ -1002,7 +1002,10 @@ async function initFirebase() {
 
 function renderCurrentScreen() {
   if (S.cantiereId) { updateCounts(); renderTab(S.tab); }
-  else { renderCantieri(); aggiornaKPIImpresa(); }
+  else {
+    renderCantieri();
+    _loadContabile().then(ct => { _contabile = ct; aggiornaKPIImpresa(); });
+  }
 }
 
 // ════════════ UTILS ════════════
@@ -2421,32 +2424,35 @@ function renderCosti(c) {
   const totRicavo = calcolaConsuntivo(c);
   const totMdo = calcolaManodopera(c);
 
-  const fatture = (c.speseMateriali||[]);
+  // Legge fatture da __contabile (TB Gestione), non da speseMateriali
+  const ct = _contabile || {};
+  const fatture = (ct.fatture||[]).filter(f => f.cantiereId===c.id && f.tipo==='passiva');
+  const vociCantiere = (ct.voci||[]).filter(v => v.cantiereId===c.id);
 
-  const totFatture = fatture.reduce((s,x)=>s+(+x.importo||0),0);
-  const totCosti = totMdo + totFatture;
+  const totFatture = fatture.reduce((s,f)=>s+(f.imponibile||f.totale||0),0);
+  const totVoci = vociCantiere.reduce((s,v)=>s+(v.importo||0),0);
+  const totCosti = totMdo + totFatture + totVoci;
   const margine = totRicavo - totCosti;
   const margPct = totRicavo>0 ? Math.round(margine/totRicavo*100) : 0;
   const semaforo = margPct>=targetM?'#22c55e':margPct>=targetM/2?'#f59e0b':'#dc2626';
 
+  // Manodopera per operaio
   const operaiMap = {};
   (c.operai||[]).forEach(op => { operaiMap[op.id]=op; });
   const mdoPerOp = {};
   (c.rapportini||[]).forEach(r => { (r.oreOperai||[]).forEach(x => { if(!mdoPerOp[x.opId]) mdoPerOp[x.opId]=0; mdoPerOp[x.opId]+=(+x.ore||0); }); });
   const mdoRows = Object.entries(mdoPerOp).map(([opId,ore]) => {
-    const op=operaiMap[opId]; if(!op) return '';
+    const op=operaiMap[opId]||(S.operaiGlobali||[]).find(o=>o.id===opId); if(!op) return '';
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--s1)">
       <div><div style="font-size:13px;font-weight:600">${esc(op.nome)}</div><div style="font-size:10px;color:var(--soft)">${esc(op.qualifica||'')} · €${op.costo}/h · ${fE(ore)}h</div></div>
       <div style="font-size:13px;font-weight:700;color:var(--red)">−${fE(ore*(+op.costo||0))}</div>
     </div>`;
   }).join('');
 
-  const tutteVoci = [
-    ...fatture.map(f=>({desc:f.desc||'—', cat:f.cat||'Altro', importo:+(f.importo||0), data:f.data||'', id:f.id, fonte:'fattura'}))
-  ];
-
+  // Fatture per categoria
   const perCat = {};
-  tutteVoci.forEach(v => { const k=v.cat||'Altro'; if(!perCat[k]) perCat[k]=0; perCat[k]+=v.importo; });
+  fatture.forEach(f => { const k=f.categoria||'Altro'; if(!perCat[k]) perCat[k]=0; perCat[k]+=(f.imponibile||f.totale||0); });
+  vociCantiere.forEach(v => { const k=v.categoria||'Altro'; if(!perCat[k]) perCat[k]=0; perCat[k]+=(v.importo||0); });
   const catRows = Object.entries(perCat).sort((a,b)=>b[1]-a[1]).map(([cat,imp]) =>
     `<div style="display:flex;justify-content:space-between;padding:6px 14px;border-bottom:1px solid var(--s1);font-size:12px">
       <span style="color:var(--text)">${esc(cat)}</span>
@@ -2454,18 +2460,26 @@ function renderCosti(c) {
     </div>`
   ).join('');
 
-  const fattureRows = [...tutteVoci].sort((a,b)=>b.data.localeCompare(a.data)).map(v =>
+  // Lista fatture dettaglio
+  const tutteVoci = [
+    ...fatture.map(f=>({desc:(f.fornitore||f.note||'—'), cat:f.categoria||'Altro', importo:(f.imponibile||f.totale||0), data:f.dataFattura||'', stato:f.stato||''})),
+    ...vociCantiere.map(v=>({desc:v.descrizione||'—', cat:v.categoria||'Altro', importo:v.importo||0, data:v.data||'', stato:''}))
+  ];
+  const statoColor = {pagata:'var(--g3)',assegnata:'var(--amber)',annullata:'var(--soft)'};
+  const fattureRows = [...tutteVoci].sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(v =>
     `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--s1)">
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v.desc)}</div>
-        <div style="font-size:10px;color:var(--soft)">${esc(v.cat||'')} · ${esc(v.data||'')} · <span style="color:${v.fonte==='banca'?'#0e7490':'#6a9478'}">${v.fonte==='banca'?'🏦 banca':'🧾 fattura'}</span></div>
+        <div style="font-size:10px;color:var(--soft)">${esc(v.cat)} · ${esc(v.data)}${v.stato?` · <span style="color:${statoColor[v.stato]||'var(--soft)'}">${v.stato}</span>`:''}</div>
       </div>
       <div style="font-size:13px;font-weight:700;color:var(--red);flex-shrink:0">−${fE(v.importo)}</div>
-      ${v.fonte==='fattura'?`<button onclick="eliminaSpesaMat('${v.id}')" style="background:none;border:none;color:var(--s4);cursor:pointer;font-size:14px;padding:2px 4px;flex-shrink:0">✕</button>`:''}
     </div>`
   ).join('');
 
+  const noSync = !_contabile ? `<div style="margin:0 10px 8px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--r-sm);padding:10px 14px;font-size:12px;color:var(--amber)">⚠️ Dati non sincronizzati — apri la sezione Impresa per aggiornare.</div>` : '';
+
   return `<div>
+    ${noSync}
     <!-- KPI -->
     <div style="margin:12px 10px 8px;background:var(--g1);border-radius:var(--r);padding:16px;color:#fff">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -2491,7 +2505,7 @@ function renderCosti(c) {
       </div>
       <div style="font-size:10px;color:rgba(255,255,255,.55);display:flex;gap:12px;flex-wrap:wrap">
         <span>👷 Mdo: ${fE(totMdo)}</span>
-        <span>🧾 Fatture: ${fE(totFatture)}</span>
+        <span>🧾 Fatture: ${fE(totFatture+totVoci)}</span>
         <span>📋 Target: ${targetM}%</span>
       </div>
     </div>
@@ -2510,18 +2524,17 @@ function renderCosti(c) {
     <div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);overflow:hidden">
       <div style="padding:10px 14px;background:var(--s1);display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--s2)">
         <span style="font-size:12px;font-weight:700;color:var(--text)">🧾 Fatture per categoria</span>
-        <span style="font-size:12px;font-weight:700;color:var(--red)">−${fE(totFatture)}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--red)">−${fE(totFatture+totVoci)}</span>
       </div>
       ${catRows}
     </div>` : ''}
 
     <!-- LISTA FATTURE -->
     <div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);overflow:hidden">
-      <div style="padding:10px 14px;background:var(--s1);display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--s2)">
-        <span style="font-size:12px;font-weight:700;color:var(--text)">🧾 Tutte le voci (${tutteVoci.length})</span>
-        <button onclick="openModal('mSpesaMateriali')" style="background:var(--g1);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">+ Aggiungi</button>
+      <div style="padding:10px 14px;background:var(--s1);border-bottom:1px solid var(--s2)">
+        <span style="font-size:12px;font-weight:700;color:var(--text)">🧾 Dettaglio voci (${tutteVoci.length}) — da TB Gestione</span>
       </div>
-      ${fattureRows||`<div style="padding:16px;font-size:12px;color:var(--soft);text-align:center">Nessuna fattura. Usa tb-import.html per importare.</div>`}
+      ${fattureRows||`<div style="padding:16px;font-size:12px;color:var(--soft);text-align:center">Nessuna fattura assegnata a questo cantiere.</div>`}
     </div>
   </div>`;
 }
