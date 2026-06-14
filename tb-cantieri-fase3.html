@@ -1273,7 +1273,7 @@ function openCantiere(id) {
   $('fab').classList.add('show');
   $('bottomNav').style.display = 'flex';
   const c = getCantiere();
-  $('tbSub').textContent = c ? c.nome.slice(0,30) : '';
+  $('tbSub').textContent = c ? (c.nome||'—').slice(0,30) : '';
   updateCounts();
   switchTab('computo');
 }
@@ -1519,7 +1519,7 @@ function renderCantieri() {
     return;
   }
   el.innerHTML = S.cantieri.map(c=>{
-    const init = c.nome.split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('');
+    const init = (c.nome||'?').split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('');
     const voci = (c.capitoli||[]).reduce((a,cap)=>a+(cap.voci||[]).length,0);
     const totPrev = calcolaPreventivo(c);
     const totEff = calcolaConsuntivo(c);
@@ -1991,7 +1991,7 @@ function saveImpostazioniCantiere() {
   c.pctCostiGenerali = parseFloat(v('ic-pctcg'))||c.pctCostiGenerali||18;
   c.targetMargine = parseFloat(v('ic-target'))||c.targetMargine||20;
   save(); closeModal('mImpostazioniCantiere');
-  $('tbSub').textContent = c.nome.slice(0,30);
+  $('tbSub').textContent = (c.nome||'—').slice(0,30);
   renderTab(S.tab);
   toast('✅ Impostazioni salvate!');
 }
