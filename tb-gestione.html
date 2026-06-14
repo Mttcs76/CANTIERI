@@ -749,9 +749,10 @@ function renderBanca(){
   html += '<div class="kpi-box"><div class="kpi-label">F24</div><div class="kpi-val red">' + nF24 + '</div></div>';
   html += '</div>';
   if(nDaClass > 0) html += '<div style="margin:4px 12px 4px;background:var(--red-bg);border:1px solid var(--red-border);border-radius:var(--r-sm);padding:10px 14px;font-size:12px;color:var(--red);font-weight:700">⚠️ ' + nDaClass + ' movimenti da classificare</div>';
-  html += '<div style="padding:4px 12px 8px;display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-  html += '<button onclick="apriCompensoSocio()" style="background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:var(--r-sm);padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">👤 + Compenso socio</button>';
-  html += '<button onclick="azzeraMovimenti()" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:var(--r-sm);padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">🗑️ Azzera e reimporta</button>';
+  html += '<div style="padding:4px 12px 8px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">';
+  html += '<button onclick="apriCompensoSocio()" style="background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:var(--r-sm);padding:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">👤 Compenso socio</button>';
+  html += '<button onclick="rieseguiRiconciliazione()" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">🔄 Riconcilia</button>';
+  html += '<button onclick="azzeraMovimenti()" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:var(--r-sm);padding:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">🗑️ Azzera</button>';
   html += '</div>';
   const daAssegnare = movimenti.filter(m => !m.riconciliato && !m.centroAssegnato && m.tipo !== 'incasso' && m.importo < 0);
   if(daAssegnare.length > 0) {
@@ -1043,28 +1044,91 @@ async function importCsv(input){
 }
 
 function riconciliaAutomatica(movimenti, fatture){
-  // Costruisce indice fatture per numero
+  // Indice per numero fattura
   const fattureByNum = {};
   fatture.forEach(function(f){
     if(f.numeroFattura) fattureByNum[f.numeroFattura.toUpperCase()] = f;
   });
+
+  // Indice per fornitore (parole chiave) + importo
+  // Costruisce mappa: "PAROLA_CHIAVE" -> [fattura, ...]
+  const fattureByFornitore = {};
+  fatture.forEach(function(f){
+    if(f.tipo !== 'passiva' || !f.fornitore) return;
+    // Estrae parole significative dal nome fornitore (>3 caratteri)
+    const words = f.fornitore.toUpperCase().split(/\s+/).filter(function(w){ return w.length > 3; });
+    words.forEach(function(w){
+      if(!fattureByFornitore[w]) fattureByFornitore[w] = [];
+      fattureByFornitore[w].push(f);
+    });
+  });
+
   let nRicon = 0;
+  const fattureUsate = new Set(); // evita doppia riconciliazione
+
   const movimentiAggiornati = movimenti.map(function(m){
     if(m.riconciliato) return m;
-    if(!m.numeroFatturaRif) return m;
-    const f = fattureByNum[m.numeroFatturaRif];
-    if(!f) return m;
-    // Verifica importo compatibile (tolleranza 1€ per arrotondamenti e ritenute)
-    if(Math.abs(Math.abs(m.importo) - f.totale) > 1) return m;
-    nRicon++;
-    return Object.assign({}, m, { riconciliato: true, fatturaId: f.id });
+
+    // PASS 1: per numero fattura (già esistente)
+    if(m.numeroFatturaRif) {
+      const f = fattureByNum[m.numeroFatturaRif];
+      if(f && !fattureUsate.has(f.id) && Math.abs(Math.abs(m.importo) - f.totale) <= 2) {
+        fattureUsate.add(f.id);
+        nRicon++;
+        return Object.assign({}, m, { riconciliato: true, fatturaId: f.id, centroAssegnato: 'nessuno' });
+      }
+    }
+
+    // PASS 2: per nome fornitore nella descrizione + importo compatibile
+    // Cerca se la descrizione del movimento contiene parole chiave di un fornitore
+    const desc = (m.descrizione + ' ' + m.causale).toUpperCase();
+    const candidati = [];
+    Object.keys(fattureByFornitore).forEach(function(w){
+      if(desc.indexOf(w) !== -1) {
+        fattureByFornitore[w].forEach(function(f){
+          if(!fattureUsate.has(f.id) && candidati.indexOf(f) === -1) candidati.push(f);
+        });
+      }
+    });
+    // Filtra per importo compatibile (tolleranza 2€ per arrotondamenti)
+    const match = candidati.filter(function(f){
+      return Math.abs(Math.abs(m.importo) - f.totale) <= 2;
+    });
+    if(match.length === 1) {
+      // Match univoco — riconcilia automaticamente
+      fattureUsate.add(match[0].id);
+      nRicon++;
+      return Object.assign({}, m, { riconciliato: true, fatturaId: match[0].id, centroAssegnato: 'nessuno', tipo: 'bonifico' });
+    }
+    if(match.length > 1) {
+      // Match ambiguo — segna come "bonifico fornitore" ma non riconcilia
+      return Object.assign({}, m, { tipo: 'bonifico', _candidatiFatture: match.map(function(f){ return f.id; }) });
+    }
+
+    return m;
   });
-  const fattureRiconIds = new Set(movimentiAggiornati.filter(function(m){ return m.riconciliato && m.fatturaId; }).map(function(m){ return m.fatturaId; }));
+
+  const fattureRiconIds = new Set(
+    movimentiAggiornati.filter(function(m){ return m.riconciliato && m.fatturaId; }).map(function(m){ return m.fatturaId; })
+  );
   const fattureAggiornate = fatture.map(function(f){
     if(fattureRiconIds.has(f.id) && f.stato !== 'riconciliata') return Object.assign({}, f, { stato: 'riconciliata' });
     return f;
   });
   return { movimentiAggiornati: movimentiAggiornati, fattureAggiornate: fattureAggiornate, nRicon: nRicon };
+}
+
+// Bottone per rieseguire riconciliazione sui movimenti già importati
+async function rieseguiRiconciliazione(){
+  showToast('⏳ Riconciliazione in corso…', 10000);
+  const { movimentiAggiornati, fattureAggiornate, nRicon } = riconciliaAutomatica(
+    _contabile.movimenti || [], _contabile.fatture || []
+  );
+  _contabile.movimenti = movimentiAggiornati;
+  _contabile.fatture = fattureAggiornate;
+  await window._fbSaveContabile({ fatture: fattureAggiornate, movimenti: movimentiAggiornati, voci: _contabile.voci||[] });
+  showToast('✅ ' + nRicon + ' movimenti riconciliati');
+  renderBanca();
 }
 
 function classificaMovimento(causale, descrizione, importo){
