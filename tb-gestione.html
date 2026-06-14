@@ -1022,6 +1022,49 @@ async function azzeraDatiExcel(){
 
 
 
+// ─── ASSEGNA SINGOLA FATTURA ───
+function toggleAssegnaFields(){
+  const tipo = document.getElementById('assegnaTipo').value;
+  document.getElementById('assegnaCantiereWrap').style.display = tipo==='cantiere' ? 'block' : 'none';
+}
+
+function apriAssegna(fatturaId){
+  _assegnaFatturaId = fatturaId;
+  const f = (_contabile.fatture||[]).find(function(x){ return x.id === fatturaId; });
+  if(!f) return;
+  document.getElementById('assegnaInfo').innerHTML =
+    '<strong>' + (f.fornitore||f.cliente||'—') + '</strong><br>' +
+    '<span style="color:var(--soft)">' + (f.numeroFattura||'') + ' · ' + fmtDec(f.totale||0) + '</span>';
+  document.getElementById('assegnaTipo').value = f.assegnazione || '';
+  document.getElementById('assegnaCategoria').value = f.categoria || '';
+  const selC = document.getElementById('assegnaCantiere');
+  selC.innerHTML = '<option value="">— seleziona cantiere —</option>' +
+    _cantieri.filter(function(c){ return c.nome; }).map(function(c){
+      return '<option value="' + c.id + '"' + (f.cantiereId===c.id?' selected':'') + '>' + c.nome + '</option>';
+    }).join('');
+  toggleAssegnaFields();
+  document.getElementById('btnSalvaAssegna').textContent = 'SALVA ASSEGNAZIONE';
+  document.getElementById('btnSalvaAssegna').onclick = salvaAssegnazione;
+  openModal('mAssegna');
+}
+
+async function salvaAssegnazione(){
+  const tipo = document.getElementById('assegnaTipo').value;
+  const cantiereId = document.getElementById('assegnaCantiere').value;
+  const categoria = document.getElementById('assegnaCategoria').value;
+  if(!tipo){ showToast('Seleziona dove assegnare'); return; }
+  if(tipo==='cantiere' && !cantiereId){ showToast('Seleziona un cantiere'); return; }
+  const fatture = (_contabile.fatture||[]).map(function(f){
+    if(f.id !== _assegnaFatturaId) return f;
+    return Object.assign({}, f, { assegnazione:tipo, cantiereId:tipo==='cantiere'?cantiereId:null, categoria:categoria });
+  });
+  _contabile.fatture = fatture;
+  await window._fbSaveContabile({ fatture:fatture, movimenti:_contabile.movimenti||[], voci:_contabile.voci||[], saldoBanca:_contabile.saldoBanca||0 });
+  document.getElementById('mAssegna').classList.remove('show');
+  showToast('✅ Fattura assegnata');
+  renderTab(_activeTab);
+}
+
 // ─── ASSEGNA TUTTE SIMILI ───
 let _assegnaTutteFornitore = null;
 let _assegnaTutteFatturaId = null;
