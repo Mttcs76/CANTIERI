@@ -464,11 +464,17 @@ function renderFlusso(){
   const oggi = new Date().toISOString().slice(0,10);
   const tra7 = new Date(Date.now()+7*86400000).toISOString().slice(0,10);
   const scadenze = fatture.filter(f => f.scadenza && f.stato!=='pagata' && f.stato!=='riconciliata').sort((a,b) => a.scadenza.localeCompare(b.scadenza)).slice(0,6);
-  const margini = _cantieri.filter(c => c.nome && c.importo > 0).map(c => {
+  const margini = _cantieri.filter(c => c.nome).map(c => {
     const costi = fatture.filter(f => f.cantiereId===c.id && f.tipo==='passiva').reduce((s,f) => s+costoNetto(f), 0);
-    const margine = ((c.importo - costi) / c.importo * 100);
+    const margine = c.importo > 0 ? ((c.importo - costi) / c.importo * 100) : null;
     return { ...c, costiReali: costi, margine };
-  }).sort((a,b) => a.margine - b.margine);
+  }).sort((a,b) => {
+    // Prima quelli con contratto (ordinati per margine crescente), poi senza
+    if(a.margine !== null && b.margine !== null) return a.margine - b.margine;
+    if(a.margine !== null) return -1;
+    if(b.margine !== null) return 1;
+    return (a.nome||'').localeCompare(b.nome||'');
+  });
 
   let html = '<div class="kpi-grid">';
   html += '<div class="kpi-box"><div class="kpi-label">Saldo banca</div><div class="kpi-val">' + fmt(saldoBanca) + '</div></div>';
@@ -495,14 +501,25 @@ function renderFlusso(){
 
   html += '<div class="section-card"><div class="section-head">🏗️ Margini cantieri</div>';
   if(margini.length === 0) {
-    html += '<div class="empty"><div class="empty-ic">🏗️</div><div class="empty-txt">Nessun cantiere con importo contratto</div></div>';
+    html += '<div class="empty"><div class="empty-ic">🏗️</div><div class="empty-txt">Nessun cantiere trovato</div></div>';
   } else {
     margini.forEach(function(c) {
       const target = c.targetMargine || 20;
-      const chipCls = c.margine < target ? 'chip-red' : c.margine < target+5 ? 'chip-amber' : 'chip-green';
-      const barCls = c.margine < target ? 'danger' : c.margine < target+5 ? 'warn' : '';
-      const barW = Math.min(100, Math.max(0, c.margine));
-      html += '<div style="padding:12px 14px;border-bottom:1px solid var(--s1)"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div><div style="font-weight:700;font-size:13px">' + c.nome + '</div><div style="font-size:11px;color:var(--soft)">contratto ' + fmt(c.importo) + ' · costi ' + fmt(c.costiReali) + '</div></div><span class="chip ' + chipCls + '">' + c.margine.toFixed(0) + '%</span></div><div class="bar-wrap"><div class="bar-fill ' + barCls + '" style="width:' + barW + '%"></div></div></div>';
+      const hasMargine = c.margine !== null;
+      const chipCls = !hasMargine ? 'chip-gray' : c.margine < target ? 'chip-red' : c.margine < target+5 ? 'chip-amber' : 'chip-green';
+      const barCls = !hasMargine ? '' : c.margine < target ? 'danger' : c.margine < target+5 ? 'warn' : '';
+      const barW = hasMargine ? Math.min(100, Math.max(0, c.margine)) : 0;
+      const margineStr = hasMargine ? c.margine.toFixed(0)+'%' : '—';
+      const subTxt = hasMargine
+        ? 'contratto ' + fmt(c.importo) + ' · costi ' + fmt(c.costiReali)
+        : 'contratto non impostato · costi ' + fmt(c.costiReali);
+      html += '<div style="padding:12px 14px;border-bottom:1px solid var(--s1)">';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:' + (hasMargine?'6':'2') + 'px">';
+      html += '<div><div style="font-weight:700;font-size:13px">' + c.nome + '</div>';
+      html += '<div style="font-size:11px;color:var(--soft)">' + subTxt + '</div></div>';
+      html += '<span class="chip ' + chipCls + '">' + margineStr + '</span></div>';
+      if(hasMargine) html += '<div class="bar-wrap"><div class="bar-fill ' + barCls + '" style="width:' + barW + '%"></div></div>';
+      html += '</div>';
     });
   }
   html += '</div>';
@@ -568,38 +585,30 @@ function buildFatturaRow(f, idx){
 
   let row = '<div class="fattura-row"' + (isNC ? ' style="opacity:.65;background:var(--s1)"' : '') + '>';
 
-  // Riga 1: nome + totale lordo
+  // Riga 1: nome + totale
   row += '<div class="fattura-top">';
-  row += '<div style="display:flex;align-items:center;gap:6px;min-width:0">';
-  if(idx !== undefined) row += '<span style="font-size:10px;color:var(--soft);flex-shrink:0">#' + (idx+1) + '</span>';
+  row += '<div style="display:flex;align-items:center;gap:5px;min-width:0;flex:1">';
   row += '<div class="fattura-nome" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (f.fornitore||f.cliente||'—') + '</div>';
-  if(isNC) row += '<span style="font-size:10px;background:var(--red-bg);color:var(--red);border-radius:4px;padding:1px 5px;flex-shrink:0">NC</span>';
-  if(f.fonte==='manuale') row += '<span style="font-size:9px;background:var(--amber-bg);color:var(--amber);border-radius:4px;padding:1px 5px;flex-shrink:0">manuale</span>';
+  if(isNC) row += '<span style="font-size:9px;background:var(--red-bg);color:var(--red);border-radius:3px;padding:1px 4px;flex-shrink:0">NC</span>';
+  if(f.fonte==='manuale') row += '<span style="font-size:9px;background:var(--amber-bg);color:var(--amber);border-radius:3px;padding:1px 4px;flex-shrink:0">man.</span>';
   row += '</div>';
   row += '<div class="fattura-importo ' + f.tipo + '" style="flex-shrink:0' + (isNC?';text-decoration:line-through':'') + '">' + fmtDec(tot) + '</div>';
   row += '</div>';
 
-  // Riga 2: num doc · data · n.fattura · IVA%
-  row += '<div style="font-size:11px;color:var(--soft);padding:3px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">';
-  if(f.numeroFattura) row += '<span style="font-weight:600;color:var(--text)">Fatt. ' + f.numeroFattura + '</span>';
-  if(df) row += '<span>' + df + '</span>';
-  if(aliq !== null) row += '<span class="chip chip-gray" style="font-size:9px">IVA ' + aliq + '%</span>';
+  // Riga 2: Fatt. N · data · imp · IVA xx% · €iva (tutto inline)
+  row += '<div style="font-size:11px;color:var(--soft);padding:2px 0 4px;line-height:1.5">';
+  const parts2 = [];
+  if(f.numeroFattura) parts2.push('<span style="font-weight:600;color:var(--text)">Fatt. ' + f.numeroFattura + '</span>');
+  if(df) parts2.push(df);
+  if(imp > 0) parts2.push('Imp. ' + fmtDec(imp));
+  if(aliq !== null) parts2.push('IVA ' + aliq + '%');
+  if(iva > 0) parts2.push(fmtDec(iva));
+  if(f.ritenuta && f.ritenuta > 0) parts2.push('<span style="color:var(--amber)">Rit. ' + fmtDec(f.ritenuta) + '</span>');
+  row += parts2.join(' · ');
   row += '</div>';
 
-  // Riga 3: imponibile · IVA · totale
-  if(imp > 0 || iva > 0) {
-    row += '<div style="display:flex;gap:0;margin:3px 0 4px;border:1px solid var(--s2);border-radius:6px;overflow:hidden;font-size:11px">';
-    row += '<div style="flex:1;padding:5px 8px;background:var(--s1);border-right:1px solid var(--s2)"><div style="color:var(--soft);font-size:9px;font-weight:700;letter-spacing:.4px;text-transform:uppercase">Imponibile</div><div style="font-weight:700;color:var(--text)">' + fmtDec(imp) + '</div></div>';
-    row += '<div style="flex:1;padding:5px 8px;background:var(--s1);border-right:1px solid var(--s2)"><div style="color:var(--soft);font-size:9px;font-weight:700;letter-spacing:.4px;text-transform:uppercase">IVA</div><div style="font-weight:600;color:var(--soft)">' + fmtDec(iva) + '</div></div>';
-    row += '<div style="flex:1;padding:5px 8px;background:var(--off)"><div style="color:var(--soft);font-size:9px;font-weight:700;letter-spacing:.4px;text-transform:uppercase">Totale</div><div style="font-weight:700;color:var(--g1)">' + fmtDec(tot) + '</div></div>';
-    row += '</div>';
-  }
-  if(f.ritenuta && f.ritenuta > 0) {
-    row += '<div style="font-size:11px;color:var(--amber);margin-bottom:3px">⚠️ Ritenuta d\'acconto: ' + fmtDec(f.ritenuta) + '</div>';
-  }
-
-  // Riga 4: assegnazione + stato
-  row += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:2px 0">';
+  // Riga 3: assegnazione + stato + suggerimento
+  row += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:2px 0 4px">';
   if(assegnata) {
     row += '<span style="font-size:12px;font-weight:700;color:var(--g2)">' + (f.assegnazione==='cantiere' ? '🏗️ '+cantNome : '📋 Generale') + '</span>';
     if(f.categoria) row += '<span style="font-size:11px;color:var(--soft)">· ' + f.categoria + '</span>';
@@ -608,7 +617,7 @@ function buildFatturaRow(f, idx){
   if(suggerimento) row += '<span class="chip chip-amber">🤖 ' + suggerimento.label + '</span>';
   row += '</div>';
 
-  // Riga 5: azioni
+  // Riga 4: azioni
   row += '<div class="fattura-actions">';
   row += '<button class="btn-assign' + (assegnata?' done':'') + '" onclick="apriAssegna(\'' + f.id + '\')">' + (assegnata ? '✅ Riassegna' : 'Assegna →') + '</button>';
   if(suggerimento && !assegnata) {
@@ -620,7 +629,6 @@ function buildFatturaRow(f, idx){
   }
   if(f.fonte === 'manuale') row += '<button onclick="apriModificaVoce(\'fattura\',\'' + f.id + '\')" style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">✏️ Modifica</button>';
   row += '</div>';
-
   row += '</div>';
   return row;
 }
@@ -683,7 +691,7 @@ function renderCantieri(){
   const fatture = _contabile.fatture || [];
   let html = '<div style="padding:14px 12px 6px;font-family:\'Barlow Condensed\',sans-serif;font-size:18px;font-weight:700;color:var(--g1);letter-spacing:.5px">RIEPILOGO CANTIERI</div>';
 
-  const cant = _cantieri.filter(c => c.nome);
+  const cant = _cantieri.filter(c => c.nome).sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
   if(cant.length === 0) {
     html += '<div class="empty"><div class="empty-ic">🏗️</div><div class="empty-txt">Nessun cantiere trovato su Firebase</div></div>';
   } else {
