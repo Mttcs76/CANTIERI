@@ -178,8 +178,8 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
       <button class="user-btn" onclick="doLogin('Matteo')">
         <div class="user-avatar">M</div><span>Matteo</span>
       </button>
-      <button class="user-btn" onclick="doLogin('Assistente')">
-        <div class="user-avatar" style="background:var(--g4)">A</div><span>Assistente</span>
+      <button class="user-btn" onclick="doLogin('Commercialista')">
+        <div class="user-avatar" style="background:var(--g4)">A</div><span>Commercialista</span>
       </button>
     </div>
   </div>
@@ -312,7 +312,7 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
 <input type="file" id="inputCsv" accept=".csv" style="display:none" onchange="importCsv(this)">
 
 <script>
-const USERS = ['Matteo','Assistente'];
+const USERS = ['Matteo','Commercialista'];
 let _currentUser = null;
 let _cantieri = [];
 let _contabile = { fatture: [], movimenti: [] };
