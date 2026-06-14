@@ -30,6 +30,8 @@ try {
   fbDb = getFirestore(fbApp);
   window._fbDb = fbDb;
   window._fbEnabled = true;
+  window._fbGetDoc = getDoc;
+  window._fbDoc = doc;
   console.log('Firebase connesso ✅');
 } catch(e) {
   window._fbEnabled = false;
@@ -2878,11 +2880,11 @@ document.addEventListener('DOMContentLoaded', () => {
 // ════════════════════════════════════════════
 let _contabile = null;
 async function _loadContabile() {
-  if(!fbDb) return null;
+  if(!fbDb || !window._fbGetDoc) return null;
   try {
-    const snap = await getDoc(doc(fbDb, COL, '__contabile'));
+    const snap = await window._fbGetDoc(window._fbDoc(fbDb, COL, '__contabile'));
     return snap.exists() ? snap.data() : null;
-  } catch(e) { return null; }
+  } catch(e) { console.warn('_loadContabile error:', e); return null; }
 }
 function openAzienda() {
   closeUserMenu&&closeUserMenu();
