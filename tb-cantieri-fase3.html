@@ -972,7 +972,7 @@ async function initFirebase() {
         azienda: S.azienda, uid: S.uid, updated: Date.now()
       }));
       renderCantieri();
-      aggiornaKPIImpresa();
+      setTimeout(aggiornaKPIImpresa, 200);
       toast('☁️ Dati sincronizzati da Firebase');
     } else if (S.cantieri.length > 0) {
       await window._fbSave({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda });
@@ -2880,9 +2880,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // ════════════════════════════════════════════
 let _contabile = null;
 async function _loadContabile() {
-  if(!fbDb || !window._fbGetDoc) return null;
+  const db = window._fbDb;
+  const gd = window._fbGetDoc;
+  const d = window._fbDoc;
+  if(!db || !gd || !d) return null;
   try {
-    const snap = await window._fbGetDoc(window._fbDoc(fbDb, COL, '__contabile'));
+    const snap = await gd(d(db, 'tbcantieri_v2', '__contabile'));
     return snap.exists() ? snap.data() : null;
   } catch(e) { console.warn('_loadContabile error:', e); return null; }
 }
