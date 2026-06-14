@@ -516,15 +516,19 @@ async function initApp(){
       window._fbLoadContabile ? window._fbLoadContabile() : Promise.resolve({ fatture:[], movimenti:[] })
     ]);
     _cantieri = cantieri || [];
-    _contabile = contabile || { fatture: [], movimenti: [] };
+    _contabile = contabile || { fatture: [], movimenti: [], voci: [], saldoBanca: 0 };
     if(!_contabile.fatture) _contabile.fatture = [];
     if(!_contabile.movimenti) _contabile.movimenti = [];
+    if(!_contabile.voci) _contabile.voci = [];
+    if(_contabile.saldoBanca === undefined) _contabile.saldoBanca = 0;
     setFbDot('ok');
     if(window._fbListenContabile) {
       window._fbListenContabile(data => {
-        _contabile = data || { fatture:[], movimenti:[] };
+        _contabile = data || { fatture:[], movimenti:[], voci:[], saldoBanca:0 };
         if(!_contabile.fatture) _contabile.fatture = [];
         if(!_contabile.movimenti) _contabile.movimenti = [];
+        if(!_contabile.voci) _contabile.voci = [];
+        if(_contabile.saldoBanca === undefined) _contabile.saldoBanca = 0;
         renderTab(_activeTab);
       });
     }
@@ -651,10 +655,9 @@ function costoNetto(f){ return f.imponibile && f.imponibile > 0 ? f.imponibile :
 
 function renderFlusso(){
   const fatture = _contabile.fatture || [];
-  const movimenti = _contabile.movimenti || [];
+  const saldoBanca = _contabile.saldoBanca || 0;
   const daIncassare = fatture.filter(f => f.tipo==='attiva' && f.stato!=='pagata' && f.stato!=='riconciliata').reduce((s,f) => s+(f.totale||0), 0);
-  const daPagare = fatture.filter(f => f.tipo==='passiva' && f.stato!=='pagata' && f.stato!=='riconciliata').reduce((s,f) => s+(f.totale||0), 0);
-  const saldoBanca = movimenti.reduce((s,m) => s+(m.importo||0), 0);
+  const daPagare = fatture.filter(f => f.tipo==='passiva' && f.stato!=='pagata' && f.stato!=='riconciliata' && f.stato!=='annullata' && f.stato!=='annullata NC').reduce((s,f) => s+(f.totale||0), 0);
   const proiettato = saldoBanca + daIncassare - daPagare;
   const oggi = new Date().toISOString().slice(0,10);
   const tra7 = new Date(Date.now()+7*86400000).toISOString().slice(0,10);
@@ -833,7 +836,7 @@ function renderBanca(){
     .slice().sort(function(a,b){ return (b.data||'').localeCompare(a.data||''); });
   const fattureExcel = (_contabile.fatture||[]).filter(function(f){ return f.fonte==='excel'; })
     .slice().sort(function(a,b){ return (b.dataFattura||'').localeCompare(a.dataFattura||''); });
-  const saldo = (_contabile.movimentiBanca||[]).reduce(function(s,m){ return s+(m.importo||0); }, 0);
+  const saldo = _contabile.saldoBanca || 0;
   const totFisco = voci.filter(function(v){ return v.tipoVoce==='fisco'; }).reduce(function(s,v){ return s+(v.importo||0); }, 0);
   const totPos = voci.filter(function(v){ return v.tipoVoce==='costo_pos'; }).reduce(function(s,v){ return s+(v.importo||0); }, 0);
   const totCompensi = voci.filter(function(v){ return v.tipoVoce==='compenso'; }).reduce(function(s,v){ return s+(v.importo||0); }, 0);
@@ -932,6 +935,7 @@ async function importExcel(input){
     const headers = rows[headerIdx];
     const col = function(name){ return headers.indexOf(name); };
     const voci = [], fatture = [];
+    let nuovoSaldoBanca = _contabile.saldoBanca || 0;
     for(let i = headerIdx + 1; i < rows.length; i++){
       const row = rows[i];
       if(!row || !row[col('tipo')]) continue;
@@ -943,6 +947,10 @@ async function importExcel(input){
       const data = parseDataExcel(row[col('data')] ? String(row[col('data')]).trim() : '');
       const numero = row[col('numero')] ? String(row[col('numero')]).trim() : '';
       const id = 'xls_' + i + '_' + tipo + '_' + importo;
+      if(tipo === 'saldo_banca') {
+        nuovoSaldoBanca = importo;
+        continue;
+      }
       const cant = _cantieri.find(function(c){
         if(!c.nome) return false;
         const n = c.nome.toUpperCase();
@@ -954,13 +962,17 @@ async function importExcel(input){
                n.indexOf('PALAZZO') !== -1 && ce.indexOf('PALAZZO') !== -1;
       });
       if(tipo === 'fattura_passiva' || tipo === 'fattura_attiva') {
+        const statoFattura = categoria === 'da pagare' ? 'assegnata' :
+                             categoria === 'annullata NC' ? 'annullata' :
+                             categoria === 'pagata' ? 'pagata' :
+                             categoria === 'riconciliata' ? 'riconciliata' : 'assegnata';
         fatture.push({ id:id, fonte:'excel', tipo:tipo==='fattura_attiva'?'attiva':'passiva', tipdoc:'FA',
           numeroFattura:numero, dataFattura:data,
           fornitore:tipo==='fattura_passiva'?desc.split(' - Fatt.')[0]:'',
           cliente:tipo==='fattura_attiva'?desc.split(' - Fatt.')[0]:'',
           totale:importo, imponibile:importo, iva:0, aliquotaIva:0,
           assegnazione:centro==='generale'||centro==='fisco'?'generale':'cantiere',
-          cantiereId:cant?cant.id:null, categoria:categoria, stato:'assegnata',
+          cantiereId:cant?cant.id:null, categoria:'', stato:statoFattura,
           note:desc, createdAt:Date.now() });
       } else {
         const tipoVoce = tipo==='fisco'?'fisco':tipo==='compenso'?'compenso':'costo_pos';
@@ -975,9 +987,10 @@ async function importExcel(input){
     const nuoveFatture = fattureFiltrate.concat(fatture);
     _contabile.voci = nuoveVoci;
     _contabile.fatture = nuoveFatture;
+    _contabile.saldoBanca = nuovoSaldoBanca;
     _contabile.ultimoImportPeriodo = file.name.replace(/\.xlsx?$/,'').replace('TB_Riconciliazione_','').replace(/_DEFINITIVO.*/,'');
-    await window._fbSaveContabile({ fatture:nuoveFatture, movimenti:_contabile.movimenti||[], voci:nuoveVoci, ultimoImportPeriodo:_contabile.ultimoImportPeriodo });
-    showToast('✅ ' + fatture.length + ' fatture · ' + voci.length + ' voci importate');
+    await window._fbSaveContabile({ fatture:nuoveFatture, movimenti:_contabile.movimenti||[], voci:nuoveVoci, saldoBanca:nuovoSaldoBanca, ultimoImportPeriodo:_contabile.ultimoImportPeriodo });
+    showToast('✅ ' + fatture.length + ' fatture · ' + voci.length + ' voci · saldo ' + fmtDec(nuovoSaldoBanca));
     renderBanca();
   } catch(e) {
     console.error('importExcel error:', e);
@@ -1000,8 +1013,9 @@ async function azzeraDatiExcel(){
   const fattureFiltrate = (_contabile.fatture||[]).filter(function(f){ return f.fonte!=='excel'; });
   _contabile.voci = vociFiltrate;
   _contabile.fatture = fattureFiltrate;
+  _contabile.saldoBanca = 0;
   _contabile.ultimoImportPeriodo = null;
-  await window._fbSaveContabile({ fatture:fattureFiltrate, movimenti:_contabile.movimenti||[], voci:vociFiltrate });
+  await window._fbSaveContabile({ fatture:fattureFiltrate, movimenti:_contabile.movimenti||[], voci:vociFiltrate, saldoBanca:0 });
   showToast('✅ Dati Excel rimossi');
   renderBanca();
 }
