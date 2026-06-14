@@ -962,7 +962,7 @@ async function importExcel(input){
                n.indexOf('PALAZZO') !== -1 && ce.indexOf('PALAZZO') !== -1;
       });
       if(tipo === 'fattura_passiva' || tipo === 'fattura_attiva') {
-        const statoFattura = categoria === 'da pagare' ? 'assegnata' :
+        const statoFattura = tipo==='fattura_attiva' ? 'riconciliata' : categoria === 'da pagare' ? 'assegnata' :
                              categoria === 'annullata NC' ? 'annullata' :
                              categoria === 'pagata' ? 'pagata' :
                              categoria === 'riconciliata' ? 'riconciliata' : 'assegnata';
