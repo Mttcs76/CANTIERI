@@ -246,6 +246,106 @@ body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);dis
   </div>
 </div>
 
+<!-- MODAL ASSEGNA MOVIMENTO BTS -->
+<div class="overlay" id="mAssegnaMovimento" onclick="closeOv(event,'mAssegnaMovimento')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">ASSEGNA MOVIMENTO</div>
+    <div class="modal-body">
+      <div id="amov-info" style="background:var(--s1);border-radius:var(--r-sm);padding:12px;font-size:12px;line-height:1.6"></div>
+      <div>
+        <label class="f-label">Tipo movimento *</label>
+        <select class="f-sel" id="amov-tipo" onchange="onTipoMovChange()">
+          <option value="pos">💳 Spesa POS / diretta</option>
+          <option value="f24">🏛️ F24 / Imposta</option>
+          <option value="stipendio">👤 Compenso / Stipendio</option>
+          <option value="banca">🏦 Commissione / onere bancario</option>
+          <option value="bonifico">💸 Bonifico fornitore (già in fattura)</option>
+          <option value="incasso">📥 Incasso cliente</option>
+          <option value="altro">📋 Altro</option>
+        </select>
+      </div>
+      <div id="amov-row-centro">
+        <label class="f-label">Centro di costo</label>
+        <select class="f-sel" id="amov-centro" onchange="onCentroMovChange()">
+          <option value="generale">📋 Costi generali</option>
+          <option value="cantiere">🏗️ Cantiere specifico</option>
+          <option value="nessuno">— Non assegnare (già in fattura)</option>
+        </select>
+      </div>
+      <div id="amov-row-cantiere" style="display:none">
+        <label class="f-label">Cantiere</label>
+        <select class="f-sel" id="amov-cantiere"></select>
+      </div>
+      <div>
+        <label class="f-label">Categoria</label>
+        <select class="f-sel" id="amov-categoria">
+          <option value="">— seleziona —</option>
+          <option>Materiali</option>
+          <option>Subappalto</option>
+          <option>Vitto cantiere</option>
+          <option>Trasporti</option>
+          <option>Discarica</option>
+          <option>Sicurezza</option>
+          <option>Carburante</option>
+          <option>Professionisti</option>
+          <option>Assicurazioni</option>
+          <option>Associazioni</option>
+          <option>F24/Imposte</option>
+          <option>Commissioni banca</option>
+          <option>Compenso socio</option>
+          <option>Stipendio operaio</option>
+          <option>Utenze</option>
+          <option>Servizi</option>
+          <option>Altro</option>
+        </select>
+      </div>
+      <div>
+        <label class="f-label">Note</label>
+        <input class="f-in" id="amov-note" placeholder="Riferimento, motivazione...">
+      </div>
+      <input type="hidden" id="amov-id">
+      <button class="btn-prim" onclick="salvaAssegnazioneMovimento()">SALVA</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COMPENSO SOCIO MENSILE -->
+<div class="overlay" id="mCompensoSocio" onclick="closeOv(event,'mCompensoSocio')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">COMPENSO SOCIO MENSILE</div>
+    <div class="modal-body">
+      <div class="f-grid">
+        <div>
+          <label class="f-label">Socio *</label>
+          <select class="f-sel" id="cs-socio">
+            <option value="Cassio">Cassio</option>
+            <option value="Elia">Elia</option>
+            <option value="Matteo">Matteo</option>
+          </select>
+        </div>
+        <div>
+          <label class="f-label">Mese *</label>
+          <input class="f-in" type="month" id="cs-mese">
+        </div>
+      </div>
+      <div>
+        <label class="f-label">Importo netto (€) *</label>
+        <input class="f-in" type="number" id="cs-importo" step="0.01" placeholder="3023.07">
+        <div style="font-size:10px;color:var(--soft);margin-top:3px">Importo del bonifico ricevuto</div>
+      </div>
+      <div id="cs-cantieri-wrap">
+        <label class="f-label">Ripartizione per cantiere</label>
+        <div id="cs-cantieri-list" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div style="font-size:10px;color:var(--soft);margin-top:6px">La somma delle % deve fare 100. Il resto va a Costi generali.</div>
+        <div id="cs-pct-totale" style="font-size:12px;font-weight:700;margin-top:6px;color:var(--g1)">Totale: 0%</div>
+      </div>
+      <button class="btn-prim" onclick="salvaCompensoSocio()">SALVA COMPENSO</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="mVoceManuale" onclick="closeOv(event,'mVoceManuale')">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -636,51 +736,28 @@ function buildFatturaRow(f, idx){
 function renderBanca(){
   const voci = (_contabile.voci||[]).filter(function(v){ return v.fonte==='excel'; })
     .slice().sort(function(a,b){ return (b.data||'').localeCompare(a.data||''); });
-  const fatture = (_contabile.fatture||[]).filter(function(f){ return f.fonte==='excel'; })
+  const fattureExcel = (_contabile.fatture||[]).filter(function(f){ return f.fonte==='excel'; })
     .slice().sort(function(a,b){ return (b.dataFattura||'').localeCompare(a.dataFattura||''); });
-  const movBanca = (_contabile.movimentiBanca||[]).slice().sort(function(a,b){ return (b.data||'').localeCompare(a.data||''); });
-  const saldo = movBanca.reduce(function(s,m){ return s+(m.importo||0); }, 0);
+  const saldo = (_contabile.movimentiBanca||[]).reduce(function(s,m){ return s+(m.importo||0); }, 0);
   const totFisco = voci.filter(function(v){ return v.tipoVoce==='fisco'; }).reduce(function(s,v){ return s+(v.importo||0); }, 0);
   const totPos = voci.filter(function(v){ return v.tipoVoce==='costo_pos'; }).reduce(function(s,v){ return s+(v.importo||0); }, 0);
   const totCompensi = voci.filter(function(v){ return v.tipoVoce==='compenso'; }).reduce(function(s,v){ return s+(v.importo||0); }, 0);
   const periodo = _contabile.ultimoImportPeriodo || '—';
-
   let html = '<div style="padding:10px 12px 4px;font-size:11px;color:var(--soft);font-weight:600">Ultimo import: ' + periodo + '</div>';
   html += '<div style="padding:0 12px 10px"><button onclick="triggerImportExcel()" style="width:100%;background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">📊 Importa Excel riconciliazione</button></div>';
   html += '<input type="file" id="inputExcel" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">';
-
   html += '<div class="kpi-grid">';
-  html += '<div class="kpi-box"><div class="kpi-label">Saldo banca periodo</div><div class="kpi-val ' + (saldo>=0?'green':'red') + '">' + fmtDec(saldo) + '</div></div>';
+  html += '<div class="kpi-box"><div class="kpi-label">Saldo banca</div><div class="kpi-val ' + (saldo>=0?'green':'red') + '">' + fmtDec(saldo) + '</div></div>';
   html += '<div class="kpi-box"><div class="kpi-label">F24 / Fisco</div><div class="kpi-val red">' + fmt(totFisco) + '</div></div>';
-  html += '<div class="kpi-box"><div class="kpi-label">Costi diretti POS</div><div class="kpi-val amber">' + fmt(totPos) + '</div></div>';
+  html += '<div class="kpi-box"><div class="kpi-label">Costi POS</div><div class="kpi-val amber">' + fmt(totPos) + '</div></div>';
   html += '<div class="kpi-box"><div class="kpi-label">Compensi soci</div><div class="kpi-val">' + fmt(totCompensi) + '</div></div>';
   html += '</div>';
-
-  // Movimenti bancari
-  if(movBanca.length > 0) {
-    html += '<div class="section-card"><div class="section-head" style="cursor:pointer" onclick="toggleSezione(\'secMovBanca\')"><span>🏦 Movimenti bancari</span><span class="chip chip-gray">' + movBanca.length + '</span></div>';
-    html += '<div id="secMovBanca" style="display:none">';
-    movBanca.forEach(function(m){
-      const df = m.data ? m.data.split('-').reverse().join('/') : '';
-      const segno = m.importo >= 0 ? '+' : '';
-      const col = m.importo >= 0 ? 'var(--g2)' : 'var(--red)';
-      html += '<div style="padding:9px 14px;border-bottom:1px solid var(--s1);display:flex;align-items:flex-start;gap:8px">';
-      html += '<div style="flex:1;min-width:0"><div style="font-size:12px;color:var(--text);line-height:1.4;word-break:break-word">' + (m.descrizione||'—') + '</div>';
-      html += '<div style="font-size:10px;color:var(--soft);margin-top:2px">' + df + (m.categoria?' · '+m.categoria:'') + '</div></div>';
-      html += '<div style="font-weight:700;font-size:13px;color:' + col + ';flex-shrink:0">' + segno + fmtDec(m.importo) + '</div></div>';
-    });
-    html += '</div></div>';
-  }
-
-  // Fatture da Excel (ADE/extra TIC)
-  if(fatture.length > 0) {
-    html += '<div class="section-card"><div class="section-head" style="cursor:pointer" onclick="toggleSezione(\'secFattExcel\')"><span>🧾 Fatture da riconciliazione</span><span class="chip chip-amber">' + fatture.length + '</span></div>';
+  if(fattureExcel.length > 0) {
+    html += '<div class="section-card"><div class="section-head" style="cursor:pointer" onclick="toggleSezione(\'secFattExcel\')"><span>🧾 Fatture da riconciliazione</span><span class="chip chip-amber">' + fattureExcel.length + '</span></div>';
     html += '<div id="secFattExcel" style="display:none">';
-    fatture.forEach(function(f, i){ html += buildFatturaRow(f, i); });
+    fattureExcel.forEach(function(f, i){ html += buildFatturaRow(f, i); });
     html += '</div></div>';
   }
-
-  // Costi POS
   const posVoci = voci.filter(function(v){ return v.tipoVoce==='costo_pos'; });
   if(posVoci.length > 0) {
     html += '<div class="section-card"><div class="section-head" style="cursor:pointer" onclick="toggleSezione(\'secPos\')"><span>💳 Costi POS / diretti</span><span class="chip chip-amber">' + posVoci.length + '</span></div>';
@@ -688,8 +765,6 @@ function renderBanca(){
     posVoci.forEach(function(v){ html += buildVoceRow(v); });
     html += '</div></div>';
   }
-
-  // Fisco
   const fiscoVoci = voci.filter(function(v){ return v.tipoVoce==='fisco'; });
   if(fiscoVoci.length > 0) {
     html += '<div class="section-card"><div class="section-head" style="cursor:pointer" onclick="toggleSezione(\'secFisco\')"><span>🏛️ Fisco / F24 / Banca</span><span class="chip chip-red">' + fiscoVoci.length + '</span></div>';
@@ -697,8 +772,6 @@ function renderBanca(){
     fiscoVoci.forEach(function(v){ html += buildVoceRow(v); });
     html += '</div></div>';
   }
-
-  // Compensi soci
   const compensiVoci = voci.filter(function(v){ return v.tipoVoce==='compenso'; });
   if(compensiVoci.length > 0) {
     html += '<div class="section-card"><div class="section-head" style="cursor:pointer" onclick="toggleSezione(\'secCompensi\')"><span>👤 Compensi soci</span><span class="chip chip-blue">' + compensiVoci.length + '</span></div>';
@@ -706,11 +779,10 @@ function renderBanca(){
     compensiVoci.forEach(function(v){ html += buildVoceRow(v); });
     html += '</div></div>';
   }
-
-  if(voci.length === 0 && movBanca.length === 0) {
+  if(voci.length === 0 && fattureExcel.length === 0) {
     html += '<div class="empty"><div class="empty-ic">📊</div><div class="empty-txt">Nessun dato importato<br>Importa il file Excel riconciliazione mensile</div></div>';
   }
-
+  html += '<div style="padding:8px 12px"><button onclick="azzeraDatiExcel()" style="width:100%;background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:var(--r-sm);padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">🗑️ Azzera dati Excel</button></div>';
   document.getElementById('mainContent').innerHTML = html;
 }
 
@@ -719,7 +791,26 @@ function toggleSezione(id){
   if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
+function buildVoceRow(v){
+  const df = v.data ? v.data.split('-').reverse().join('/') : '';
+  const tipoLabel = { costo_pos:'💳 POS', fisco:'🏛️ Fisco', compenso:'👤 Compenso', altro:'📋 Altro' }[v.tipoVoce] || '📋';
+  const cantNome = v.assegnazione==='cantiere' ? ((_cantieri.find(function(c){ return c.id===v.cantiereId; })||{}).nome||'?') : '';
+  let row = '<div class="fattura-row">';
+  row += '<div class="fattura-top"><div class="fattura-nome">' + (v.descrizione||'—') + '</div><div class="fattura-importo passiva">' + fmtDec(v.importo) + '</div></div>';
+  row += '<div style="font-size:11px;color:var(--soft);padding:2px 0 4px;display:flex;gap:8px;flex-wrap:wrap">';
+  row += '<span>' + df + '</span><span class="chip chip-amber" style="font-size:9px">' + tipoLabel + '</span>';
+  if(v.categoria) row += '<span>' + v.categoria + '</span>';
+  if(v.assegnazione==='cantiere') row += '<span style="color:var(--g2);font-weight:700">🏗️ ' + cantNome + '</span>';
+  if(v.assegnazione==='generale') row += '<span style="color:var(--soft);font-weight:700">📋 Generale</span>';
+  row += '</div>';
+  if(v.fonte==='excel') row += '<div class="fattura-actions"><button onclick="apriModificaVoce(\'voce\',\'' + v.id + '\')" style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">✏️</button></div>';
+  row += '</div>';
+  return row;
+}
+
 function triggerImportExcel(){ document.getElementById('inputExcel').click(); }
+function triggerImportZip(){ document.getElementById('inputZip').click(); }
+function triggerImportCsv(){ document.getElementById('inputCsv').click(); }
 
 async function importExcel(input){
   const file = input.files[0];
@@ -734,94 +825,64 @@ async function importExcel(input){
     });
     if(typeof XLSX === 'undefined'){ showToast('❌ Libreria Excel non caricata'); return; }
     const wb = XLSX.read(data, { type: 'array' });
-
-    // Leggi foglio IMPORT
-    const importSheet = wb.Sheets[wb.SheetNames.find(function(n){ return n.indexOf('IMPORT') !== -1; })];
-    if(!importSheet){ showToast('❌ Foglio IMPORT non trovato'); return; }
+    const importSheetName = wb.SheetNames.find(function(n){ return n.indexOf('IMPORT') !== -1; });
+    if(!importSheetName){ showToast('❌ Foglio IMPORT non trovato'); return; }
+    const importSheet = wb.Sheets[importSheetName];
     const rows = XLSX.utils.sheet_to_json(importSheet, { header: 1, defval: null });
-
-    // Trova header row
     let headerIdx = -1;
     for(let i = 0; i < rows.length; i++){
       if(rows[i] && rows[i].indexOf('tipo') !== -1){ headerIdx = i; break; }
     }
     if(headerIdx < 0){ showToast('❌ Header non trovato nel foglio IMPORT'); return; }
     const headers = rows[headerIdx];
-    const colTipo = headers.indexOf('tipo');
-    const colDesc = headers.indexOf('descrizione');
-    const colImp = headers.indexOf('importo');
-    const colCentro = headers.indexOf('centro');
-    const colCat = headers.indexOf('categoria');
-    const colData = headers.indexOf('data');
-    const colNum = headers.indexOf('numero');
-    const colFonte = headers.indexOf('fonte');
-
-    const voci = [];
-    const fatture = [];
+    const col = function(name){ return headers.indexOf(name); };
+    const voci = [], fatture = [];
     for(let i = headerIdx + 1; i < rows.length; i++){
       const row = rows[i];
-      if(!row || !row[colTipo]) continue;
-      const tipo = String(row[colTipo]||'').trim();
-      const desc = String(row[colDesc]||'').trim();
-      const importo = parseFloat(row[colImp])||0;
-      const centro = String(row[colCentro]||'generale').trim().toLowerCase();
-      const categoria = String(row[colCat]||'').trim();
-      const dataRaw = row[colData] ? String(row[colData]).trim() : '';
-      const data = parseDataExcel(dataRaw);
-      const numero = row[colNum] ? String(row[colNum]).trim() : '';
-      const fonte = String(row[colFonte]||'excel').trim();
-      const id = 'xls_' + tipo + '_' + i + '_' + importo;
-
+      if(!row || !row[col('tipo')]) continue;
+      const tipo = String(row[col('tipo')]||'').trim();
+      const desc = String(row[col('descrizione')]||'').trim();
+      const importo = parseFloat(row[col('importo')])||0;
+      const centro = String(row[col('centro')]||'generale').trim().toLowerCase();
+      const categoria = String(row[col('categoria')]||'').trim();
+      const data = parseDataExcel(row[col('data')] ? String(row[col('data')]).trim() : '');
+      const numero = row[col('numero')] ? String(row[col('numero')]).trim() : '';
+      const id = 'xls_' + i + '_' + tipo + '_' + importo;
+      const cant = _cantieri.find(function(c){
+        if(!c.nome) return false;
+        const n = c.nome.toUpperCase();
+        const ce = centro.toUpperCase();
+        return n.indexOf(ce) !== -1 || ce.indexOf(n.split(' ').pop()) !== -1 ||
+               n.indexOf('FONTANASANTA') !== -1 && ce.indexOf('FONTANASANTA') !== -1 ||
+               n.indexOf('BORGHETTO') !== -1 && ce.indexOf('BORGHETTO') !== -1 ||
+               n.indexOf('SARNONICO') !== -1 && ce.indexOf('SARNONICO') !== -1 ||
+               n.indexOf('PALAZZO') !== -1 && ce.indexOf('PALAZZO') !== -1;
+      });
       if(tipo === 'fattura_passiva' || tipo === 'fattura_attiva') {
-        // Trova cantiereId dal nome centro
-        const cant = _cantieri.find(function(c){
-          return c.nome && c.nome.toUpperCase().indexOf(centro.toUpperCase()) !== -1 ||
-                 centro.indexOf((c.nome||'').split(' ').pop().toLowerCase()) !== -1;
-        });
-        fatture.push({
-          id: id, fonte: 'excel', tipo: tipo === 'fattura_attiva' ? 'attiva' : 'passiva',
-          tipdoc: 'FA', numeroFattura: numero, dataFattura: data,
-          fornitore: tipo === 'fattura_passiva' ? desc.split(' - Fatt.')[0] : '',
-          cliente: tipo === 'fattura_attiva' ? desc.split(' - Fatt.')[0] : '',
-          totale: importo, imponibile: importo, iva: 0, aliquotaIva: 0,
-          assegnazione: centro === 'generale' ? 'generale' : 'cantiere',
-          cantiereId: cant ? cant.id : null,
-          categoria: categoria, stato: 'assegnata', note: desc, createdAt: Date.now()
-        });
+        fatture.push({ id:id, fonte:'excel', tipo:tipo==='fattura_attiva'?'attiva':'passiva', tipdoc:'FA',
+          numeroFattura:numero, dataFattura:data,
+          fornitore:tipo==='fattura_passiva'?desc.split(' - Fatt.')[0]:'',
+          cliente:tipo==='fattura_attiva'?desc.split(' - Fatt.')[0]:'',
+          totale:importo, imponibile:importo, iva:0, aliquotaIva:0,
+          assegnazione:centro==='generale'||centro==='fisco'?'generale':'cantiere',
+          cantiereId:cant?cant.id:null, categoria:categoria, stato:'assegnata',
+          note:desc, createdAt:Date.now() });
       } else {
-        const cant = _cantieri.find(function(c){
-          return c.nome && (c.nome.toUpperCase().indexOf(centro.toUpperCase()) !== -1 ||
-                 centro.indexOf((c.nome||'').split(' ').pop().toLowerCase()) !== -1);
-        });
-        voci.push({
-          id: id, tipoVoce: tipo === 'fisco' ? 'fisco' : tipo === 'compenso' ? 'compenso' : 'costo_pos',
-          descrizione: desc, data: data, importo: importo,
-          assegnazione: (centro === 'generale' || centro === 'fisco') ? 'generale' : 'cantiere',
-          cantiereId: cant ? cant.id : null,
-          categoria: categoria, note: '', fonte: 'excel', createdAt: Date.now()
-        });
+        const tipoVoce = tipo==='fisco'?'fisco':tipo==='compenso'?'compenso':'costo_pos';
+        voci.push({ id:id, tipoVoce:tipoVoce, descrizione:desc, data:data, importo:importo,
+          assegnazione:centro==='generale'||centro==='fisco'?'generale':'cantiere',
+          cantiereId:cant?cant.id:null, categoria:categoria, note:'', fonte:'excel', createdAt:Date.now() });
       }
     }
-
-    // Leggi movimenti bancari dal foglio riepilogo se presente
-    const movBanca = [];
-    const riepilogoSheet = wb.Sheets[wb.SheetNames.find(function(n){ return n.indexOf('iepilogo') !== -1 || n.indexOf('IEPILOGO') !== -1; })];
-    // Estrai periodo dal nome file
-    const periodo = file.name.replace(/\.xlsx?$/,'').replace('TB_Riconciliazione_','').replace(/_DEFINITIVO.*/,'');
-
-    // Rimuovi voci e fatture Excel precedenti, mantieni quelle manuali e TIC
-    const vociFiltrate = (_contabile.voci||[]).filter(function(v){ return v.fonte !== 'excel'; });
-    const fattureFiltrate = (_contabile.fatture||[]).filter(function(f){ return f.fonte !== 'excel'; });
+    const vociFiltrate = (_contabile.voci||[]).filter(function(v){ return v.fonte!=='excel'; });
+    const fattureFiltrate = (_contabile.fatture||[]).filter(function(f){ return f.fonte!=='excel'; });
     const nuoveVoci = vociFiltrate.concat(voci);
     const nuoveFatture = fattureFiltrate.concat(fatture);
-
     _contabile.voci = nuoveVoci;
     _contabile.fatture = nuoveFatture;
-    _contabile.movimentiBanca = movBanca;
-    _contabile.ultimoImportPeriodo = periodo;
-
-    await window._fbSaveContabile({ fatture: nuoveFatture, movimenti: _contabile.movimenti||[], voci: nuoveVoci, ultimoImportPeriodo: periodo });
-    showToast('✅ ' + fatture.length + ' fatture · ' + voci.length + ' voci importate da ' + periodo);
+    _contabile.ultimoImportPeriodo = file.name.replace(/\.xlsx?$/,'').replace('TB_Riconciliazione_','').replace(/_DEFINITIVO.*/,'');
+    await window._fbSaveContabile({ fatture:nuoveFatture, movimenti:_contabile.movimenti||[], voci:nuoveVoci, ultimoImportPeriodo:_contabile.ultimoImportPeriodo });
+    showToast('✅ ' + fatture.length + ' fatture · ' + voci.length + ' voci importate');
     renderBanca();
   } catch(e) {
     console.error('importExcel error:', e);
@@ -832,27 +893,24 @@ async function importExcel(input){
 
 function parseDataExcel(s){
   if(!s) return '';
-  // Formato DD/MM/YYYY
-  const m1 = s.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  const m1 = s.match(/(\d{2})[\/](\d{2})[\/](\d{4})/);
   if(m1) return m1[3]+'-'+m1[2]+'-'+m1[1];
-  // Formato YYYY-MM-DD
-  const m2 = s.match(/(\d{4})-(\d{2})-(\d{2})/);
-  if(m2) return s;
+  if(s.match(/\d{4}-\d{2}-\d{2}/)) return s;
   return s;
 }
 
-async function azzeraMovimenti(){
-  if(!confirm('Azzerare tutti i dati importati dall\'Excel?\nLe fatture TIC e le voci manuali restano.')) return;
-  const vociFiltrate = (_contabile.voci||[]).filter(function(v){ return v.fonte !== 'excel'; });
-  const fattureFiltrate = (_contabile.fatture||[]).filter(function(f){ return f.fonte !== 'excel'; });
+async function azzeraDatiExcel(){
+  if(!confirm('Rimuovere tutti i dati importati dall\'Excel?\nLe fatture TIC e le voci manuali restano.')) return;
+  const vociFiltrate = (_contabile.voci||[]).filter(function(v){ return v.fonte!=='excel'; });
+  const fattureFiltrate = (_contabile.fatture||[]).filter(function(f){ return f.fonte!=='excel'; });
   _contabile.voci = vociFiltrate;
   _contabile.fatture = fattureFiltrate;
-  _contabile.movimentiBanca = [];
   _contabile.ultimoImportPeriodo = null;
-  await window._fbSaveContabile({ fatture: fattureFiltrate, movimenti: _contabile.movimenti||[], voci: vociFiltrate });
+  await window._fbSaveContabile({ fatture:fattureFiltrate, movimenti:_contabile.movimenti||[], voci:vociFiltrate });
   showToast('✅ Dati Excel rimossi');
   renderBanca();
 }
+
 
 
 // ─── ASSEGNA TUTTE SIMILI ───
