@@ -15,7 +15,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <!-- Firebase App + Firestore -->
 <script type="module">import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, setDoc, onSnapshot, getDoc, collection, addDoc, getDocs, query, orderBy, limit, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, setDoc, onSnapshot, getDoc, collection, addDoc, getDocs, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 const firebaseConfig = {
   apiKey: "AIzaSyDvXu1k4kPWBDnmBZxDs6McM9fqntMMphw",
   authDomain: "tb-cantieri.firebaseapp.com",
@@ -24,117 +24,60 @@ const firebaseConfig = {
   messagingSenderId: "91212110377",
   appId: "1:91212110377:web:cbb842678fb0d311a79a38"
 };
-let fbApp = null, fbDb = null;
+let fbApp = null, fbDb = null, fbEnabled = false;
 try {
   if (!firebaseConfig.apiKey.includes('LA_TUA')) {
     fbApp = initializeApp(firebaseConfig);
     fbDb = getFirestore(fbApp);
+    fbEnabled = true;
     window._fbDb = fbDb;
     window._fbEnabled = true;
     console.log('Firebase connesso ✅');
-  } else { window._fbEnabled = false; }
-} catch(e) { window._fbEnabled = false; console.warn('Firebase non attivo:', e.message); }
-
-// ─── SEZIONI che vengono salvate/mergeate indipendentemente per cantiere ───
-const SEZIONI_CANTIERE = ['capitoli','rapportini','operai','foto','documenti','speseGenerali','speseMateriali','ordini','giornale'];
-
-// Salva TUTTE le sezioni di un singolo cantiere + i metadati
-window._fbSaveCantiere = async (c, updatedBy) => {
-  if (!fbDb || !c || !c.id) return;
-  const now = Date.now();
-  const cantiereRef = doc(fbDb, 'tbcantieri_v2', c.id);
-  // Meta: dati anagrafici cantiere (nome, indirizzo, importo, ecc.)
-  const meta = { nome: c.nome, indirizzo: c.indirizzo||'', resp: c.resp||'', data: c.data||'',
-    importo: c.importo||0, note: c.note||'', stato: c.stato||'', pctCostiGenerali: c.pctCostiGenerali||18,
-    targetMargine: c.targetMargine||20, created: c.created||now,
-    metaUpdatedAt: now, metaUpdatedBy: updatedBy||'—' };
-  try {
-    await setDoc(cantiereRef, meta, { merge: true });
-  } catch(e) { console.warn('fbSaveCantiere meta error:', e); }
-};
-
-// Salva UNA SOLA sezione di un cantiere (es. 'rapportini', 'capitoli', ecc.)
-window._fbSaveSezione = async (cantiereId, sezione, dati, updatedBy) => {
-  if (!fbDb || !cantiereId || !sezione) return;
-  const now = Date.now();
-  const ref = doc(fbDb, 'tbcantieri_v2', cantiereId);
-  try {
-    await setDoc(ref, {
-      [sezione]: dati,
-      [sezione + '_updatedAt']: now,
-      [sezione + '_updatedBy']: updatedBy || '—'
-    }, { merge: true });
-  } catch(e) { console.warn('fbSaveSezione error:', sezione, e); }
-};
-
-// Salva operai globali e presenze (condivisi tra tutti)
-window._fbSaveGlobali = async (operaiGlobali, presenze, azienda, updatedBy) => {
+  } else {
+    window._fbEnabled = false;
+  }
+} catch(e) {
+  window._fbEnabled = false;
+  console.warn('Firebase non attivo:', e.message);
+}
+window._fbSave = async (data) => {
   if (!fbDb) return;
   try {
-    await setDoc(doc(fbDb, 'tbcantieri_v2', '__globali'), {
-      operaiGlobali: operaiGlobali || [],
-      presenze: presenze || {},
-      azienda: azienda || null,
-      globaliUpdatedAt: Date.now(),
-      globaliUpdatedBy: updatedBy || '—'
-    }, { merge: true });
-  } catch(e) { console.warn('fbSaveGlobali error:', e); }
+    await setDoc(doc(fbDb, 'tbcantieri', 'shared'), {
+      cantieri: data.cantieri,
+      operaiGlobali: data.operaiGlobali || [],
+      azienda: data.azienda || null,
+      presenze: data.presenze || {},
+      updated: Date.now()
+    });
+  } catch(e) { console.warn('Firebase save error:', e); }
 };
-
-// Carica tutti i cantieri + globali
-window._fbLoadAll = async () => {
+window._fbLoad = async () => {
   if (!fbDb) return null;
   try {
-    const snap = await getDocs(collection(fbDb, 'tbcantieri_v2'));
-    const cantieri = [];
-    let globali = null;
-    snap.forEach(d => {
-      if (d.id === '__globali') { globali = d.data(); }
-      else { cantieri.push({ id: d.id, ...d.data() }); }
-    });
-    return { cantieri, globali };
-  } catch(e) { console.warn('fbLoadAll error:', e); return null; }
+    const snap = await getDoc(doc(fbDb, 'tbcantieri', 'shared'));
+    return snap.exists() ? snap.data() : null;
+  } catch(e) { console.warn('Firebase load error:', e); return null; }
 };
-
-// Listener realtime — notifica quando cambia qualsiasi documento della collection
-window._fbListenAll = (callback) => {
+window._fbListen = (callback) => {
   if (!fbDb) return;
-  onSnapshot(collection(fbDb, 'tbcantieri_v2'), (snap) => {
-    const cantieri = [];
-    let globali = null;
-    snap.forEach(d => {
-      if (d.id === '__globali') { globali = d.data(); }
-      else { cantieri.push({ id: d.id, ...d.data() }); }
-    });
-    callback({ cantieri, globali });
+  onSnapshot(doc(fbDb, 'tbcantieri', 'shared'), (snap) => {
+    if (snap.exists()) callback(snap.data());
   });
 };
-
-// ─── COMPATIBILITÀ con il vecchio _fbSave (usato da backup e codice legacy) ───
-window._fbSave = async (data) => {
-  if (!fbDb || !data) return;
-  const updatedBy = (data.uid) || '—';
-  // Salva ogni cantiere separatamente
-  for (const c of (data.cantieri || [])) {
-    await window._fbSaveCantiere(c, updatedBy);
-    for (const sez of SEZIONI_CANTIERE) {
-      if (c[sez] !== undefined) {
-        await window._fbSaveSezione(c.id, sez, c[sez], updatedBy);
-      }
-    }
-  }
-  await window._fbSaveGlobali(data.operaiGlobali, data.presenze, data.azienda, updatedBy);
-};
-
-// ─── BACKUP ───
 window._fbSaveBackup = async (data, label) => {
   if (!fbDb) return false;
   try {
-    await addDoc(collection(fbDb, 'tbcantieri_backups'), {
-      cantieri: data.cantieri, operaiGlobali: data.operaiGlobali || [],
-      exportedBy: data.exportedBy || 'Auto', label: label || 'Auto', createdAt: Date.now()
+    const backupsRef = collection(fbDb, 'tbcantieri_backups');
+    await addDoc(backupsRef, {
+      cantieri: data.cantieri,
+      operaiGlobali: data.operaiGlobali || [],
+      exportedBy: data.exportedBy || 'Auto',
+      label: label || 'Auto',
+      createdAt: Date.now()
     });
-    console.log('Backup Firebase salvato ✅'); return true;
+    console.log('Backup Firebase salvato ✅');
+    return true;
   } catch(e) { console.warn('Firebase backup error:', e); return false; }
 };
 window._fbLoadBackups = async () => {
@@ -143,7 +86,7 @@ window._fbLoadBackups = async () => {
     const q = query(collection(fbDb, 'tbcantieri_backups'), orderBy('createdAt', 'desc'), limit(10));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch(e) { return []; }
+  } catch(e) { console.warn('Firebase backup load error:', e); return []; }
 };
 window._fbLoadBackup = async (id) => {
   if (!fbDb) return null;
@@ -154,7 +97,7 @@ window._fbLoadBackup = async (id) => {
 };</script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Bebas+Neue&family=Nunito:wght@400;500;600;700;800&display=swap');:root{--g0:#0d2b1a;--g1:#1a4a2e;--g2:#2d6a4f;--g3:#40916c;--g4:#52b788;--g5:#95d5b2;--g6:#d8f3dc;--white:#fff;--off:#f7faf8;--s1:#f0f5f2;--s2:#e2ede6;--s3:#b8d4c0;--s4:#6a9478;--text:#1a2e22;--soft:#4d6b58;--amber:#d97706;--amber-bg:#fffbeb;--amber-border:#fde68a;--red:#dc2626;--red-bg:#fef2f2;--red-border:#fecaca;--blue:#1d4ed8;--blue-bg:#eff6ff;--blue-border:#bfdbfe;--shadow:0 2px 12px rgba(26,74,46,.10);--shadow-md:0 4px 24px rgba(26,74,46,.14);--r:12px;--r-sm:8px;}*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}html,body{height:100%;overflow:hidden}body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);display:flex;flex-direction:column}.topbar{background:var(--g1);color:#fff;height:66px;display:flex;align-items:center;gap:11px;padding:0 14px;flex-shrink:0;position:relative;z-index:60;box-shadow:0 2px 10px rgba(0,0,0,.2)}.tb-logo{width:54px;height:54px;background:transparent;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:0}.tb-logo img{width:54px;height:54px;object-fit:cover;border-radius:50%;display:block}.tb-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;letter-spacing:2px;color:#fff}.tb-sub{font-size:11px;color:rgba(255,255,255,.55);font-weight:400}.tb-back{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:var(--r-sm);padding:5px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif;display:none;align-items:center;gap:4px;margin-right:4px}.tb-back.show{display:flex}.tb-user{margin-left:auto;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:50%;width:34px;height:34px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;justify-content:center;flex-shrink:0}.app-body{flex:1;overflow:hidden;display:flex;flex-direction:column;max-width:800px;margin:0 auto;width:100%;position:relative}.screen{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:72px}.screen::-webkit-scrollbar{width:4px}.screen::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px}.tabs{display:flex;background:#fff;border-bottom:1px solid var(--s2);position:sticky;top:0;z-index:40;overflow-x:auto;scrollbar-width:none;flex-shrink:0}.tabs::-webkit-scrollbar{display:none}.tab{flex:none;padding:12px 14px;border:none;background:none;font-size:12px;font-weight:500;color:var(--s4);cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-1px;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:5px;transition:color .15s}.tab.active{color:var(--g1);border-bottom-color:var(--g1)}.tab-cnt{background:var(--g6);color:var(--g2);border-radius:99px;padding:1px 6px;font-size:10px;font-weight:600}.tab.active .tab-cnt{background:var(--g1);color:#fff}.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:#fff;border-top:1px solid var(--s2);display:flex;padding:6px 0 calc(env(safe-area-inset-bottom,0px) + 6px);z-index:60;box-shadow:0 -2px 12px rgba(26,74,46,.07)}.nav-btn{flex:1;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:3px 0;color:var(--s4);font-family:'Nunito',sans-serif;transition:color .15s}.nav-btn.active{color:var(--g1)}.nav-ic{font-size:20px;line-height:1}.nav-lb{font-size:10px;font-weight:500;letter-spacing:.2px}.fab{position:fixed;bottom:76px;right:50%;transform:translateX(calc(50% - min(400px,50vw) + 18px));width:52px;height:52px;border-radius:50%;background:var(--g1);color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 18px rgba(26,74,46,.35);display:none;align-items:center;justify-content:center;z-index:55;transition:transform .15s,background .15s}.fab:active{transform:translateX(calc(50% - min(400px,50vw) + 18px)) scale(.93)}.fab.show{display:flex}.sec-head{padding:16px 14px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}.sec-title{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--g1);letter-spacing:.8px}.c-card{margin:0 10px 10px;background:#fff;border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--s2);overflow:hidden;cursor:pointer;transition:transform .15s}.c-card:active{transform:scale(.985)}.c-card-head{background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 100%);padding:14px 16px;display:flex;gap:12px;align-items:center}.c-initials{width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,.18);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid rgba(255,255,255,.25)}.c-name{font-weight:800;font-size:14px;color:#fff;line-height:1.2}.c-loc{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px}.c-stats{display:grid;grid-template-columns:repeat(4,1fr)}.c-stat{padding:10px 6px;text-align:center;border-right:1px solid var(--s1)}.c-stat:last-child{border-right:none}.c-stat-n{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--g2)}.c-stat-l{font-size:9px;color:var(--soft);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:1px}.item-card{background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.item-head{padding:10px 14px;background:var(--s1);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.item-title{font-weight:600;font-size:14px;color:var(--text)}.item-meta{font-size:11px;color:var(--soft);margin-top:1px}.item-body{padding:11px 14px}.item-text{font-size:13px;color:var(--text);line-height:1.5}.item-note{font-size:12px;color:var(--soft);border-left:3px solid var(--g4);padding-left:9px;margin-top:7px}.item-footer{font-size:10px;color:var(--s4);margin-top:8px}.chip{display:inline-flex;align-items:center;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:500;white-space:nowrap}.chip-green{background:var(--g6);color:var(--g1)}.chip-amber{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}.chip-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}.chip-blue{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}.chip-gray{background:var(--s1);color:var(--soft);border:1px solid var(--s2)}.computo-wrap{margin:0 10px 10px;background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.cap-header{padding:10px 14px;background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between}.cap-total{font-size:13px;font-weight:600;color:var(--g5)}.voce-row{display:grid;grid-template-columns:1fr 36px 52px 64px 72px;gap:4px;padding:8px 14px;border-bottom:1px solid var(--s1);align-items:center}.voce-row:last-child{border-bottom:none}.voce-row:hover{background:var(--s1)}.voce-desc{font-size:12px;font-weight:500;color:var(--text)}.voce-um{font-size:10px;color:var(--soft);text-align:center}.voce-qty{font-size:12px;font-weight:500;color:var(--text);text-align:right;min-width:48px}.voce-pu{font-size:11px;color:var(--soft);text-align:right;min-width:60px}.voce-price{font-size:12px;font-weight:600;color:var(--g2);text-align:right;min-width:72px}.voce-input{width:60px;background:var(--s1);border:1px solid var(--s3);border-radius:5px;padding:3px 6px;font-size:12px;font-weight:500;color:var(--g1);text-align:right;font-family:'Nunito',sans-serif;outline:none}.voce-input:focus{border-color:var(--g3)}.voce-delta-pos{font-size:11px;font-weight:500;color:var(--red);min-width:56px;text-align:right}.voce-delta-neg{font-size:11px;font-weight:500;color:var(--g3);min-width:56px;text-align:right}.table-header{display:grid;grid-template-columns:1fr 36px 52px 64px 72px;gap:4px;padding:6px 14px;background:var(--s1);border-bottom:1px solid var(--s2)}.th-label{font-size:9px;font-weight:600;color:var(--soft);text-transform:uppercase;letter-spacing:.5px}.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 10px 0}.kpi-box{background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);padding:10px 12px;text-align:center;box-shadow:var(--shadow)}.kpi-n{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--g1)}.kpi-l{font-size:9px;color:var(--soft);font-weight:500;letter-spacing:.5px;text-transform:uppercase;margin-top:1px}.kpi-box.danger .kpi-n{color:var(--red)}.kpi-box.success .kpi-n{color:var(--g3)}.import-zone{margin:12px 10px;border:2px dashed var(--s3);border-radius:var(--r);padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}.import-zone:hover,.import-zone.dragover{border-color:var(--g3);background:var(--g6)}.import-icon{font-size:40px;margin-bottom:10px}.import-title{font-weight:600;font-size:15px;color:var(--g1);margin-bottom:4px}.import-sub{font-size:12px;color:var(--soft);line-height:1.5}.import-btn{background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:12px;display:inline-block}.foto-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 10px 10px}.foto-thumb{aspect-ratio:1;background:var(--s1);border-radius:var(--r-sm);overflow:hidden;position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:28px;border:1px solid var(--s2)}.foto-thumb img{width:100%;height:100%;object-fit:cover}.foto-tag-badge{position:absolute;bottom:4px;left:4px;background:rgba(26,74,46,.82);color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:2px 5px}.foto-date{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.5);color:#fff;font-size:9px;border-radius:3px;padding:1px 5px}.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s}.overlay.show{opacity:1;pointer-events:all}.modal{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:800px;max-height:92vh;overflow-y:auto;transform:translateY(100%);transition:transform .28s cubic-bezier(.32,1.02,.6,1)}.overlay.show .modal{transform:translateY(0)}.modal-handle{width:36px;height:4px;background:var(--s2);border-radius:99px;margin:12px auto 0}.modal-title{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--g1);padding:10px 18px 14px;letter-spacing:.8px;border-bottom:1px solid var(--s2)}.modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:13px}.f-label{font-size:11px;color:var(--soft);font-weight:600;letter-spacing:.7px;text-transform:uppercase;margin-bottom:4px;display:block}.f-in,.f-sel,.f-ta{width:100%;background:var(--s1);border:1.5px solid var(--s2);border-radius:var(--r-sm);color:var(--text);padding:10px 12px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;transition:border-color .15s}.f-in:focus,.f-sel:focus,.f-ta:focus{border-color:var(--g3)}.f-ta{resize:vertical}.f-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.f-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}.btn-prim{width:100%;background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:6px;transition:background .15s}.btn-prim:active{background:var(--g2)}.upload-zone{border:2px dashed var(--s3);border-radius:var(--r-sm);padding:20px;text-align:center;cursor:pointer;transition:border-color .2s}.upload-zone:active{border-color:var(--g3)}.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;opacity:0;pointer-events:none;transition:opacity .2s}.lightbox.show{opacity:1;pointer-events:all}.lightbox img{max-width:95vw;max-height:72vh;border-radius:8px;object-fit:contain}.lb-close{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.15);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer}.lb-info{color:rgba(255,255,255,.65);font-size:12px;text-align:center}.empty{text-align:center;padding:40px 20px}.empty-ic{font-size:44px;margin-bottom:12px}.empty-txt{font-size:13px;color:var(--soft);font-weight:600;line-height:1.5}#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--g0);color:#fff;padding:9px 18px;border-radius:99px;font-size:12px;font-weight:700;z-index:400;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}.install-bar{background:var(--g1);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;flex-shrink:0}.install-bar button{background:#fff;color:var(--g1);border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif}.ios-hint{background:var(--g6);padding:10px 14px;font-size:12px;color:var(--g1);border-bottom:1px solid var(--s2);flex-shrink:0}.doc-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border-radius:var(--r-sm);margin:0 10px 7px;border:1px solid var(--s2);box-shadow:var(--shadow)}.doc-ic{font-size:24px;flex-shrink:0}.doc-info{flex:1;min-width:0}.doc-name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.doc-meta{font-size:11px;color:var(--soft);margin-top:1px}.doc-dl{background:var(--g6);border:none;color:var(--g1);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;flex-shrink:0}.operaio-row{background:#fff;border-radius:var(--r-sm);margin:0 10px 7px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.operaio-head{padding:10px 14px;background:var(--s1);display:flex;align-items:center;justify-content:space-between}.operaio-name{font-weight:800;font-size:14px;color:var(--text)}.operaio-role{font-size:11px;color:var(--soft)}.operaio-stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--s2)}.op-stat{padding:8px 10px;text-align:center;border-right:1px solid var(--s1)}.op-stat:last-child{border-right:none}.op-stat-n{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;color:var(--g2)}.op-stat-l{font-size:9px;color:var(--soft);font-weight:700;text-transform:uppercase;letter-spacing:.4px}.presenze-row{padding:8px 14px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--s1);flex-wrap:wrap}.presenza-dot{width:28px;height:28px;border-radius:50%;background:var(--s2);border:1.5px solid var(--s3);font-size:9px;font-weight:700;color:var(--soft);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0}.presenza-dot.present{background:var(--g4);border-color:var(--g3);color:#fff}.presenza-dot.absent{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}.pdf-page{position:fixed;left:-9999px;top:-9999px;width:794px;background:#fff;font-family:'Nunito',sans-serif;font-size:12px;color:#1a2e22;padding:32px}@media(min-width:600px){.f-grid-3{grid-template-columns:1fr 1fr 1fr}}@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Bebas+Neue&family=Nunito:wght@400;500;600;700;800&display=swap');:root{--g0:#0d2b1a;--g1:#1a4a2e;--g2:#2d6a4f;--g3:#40916c;--g4:#52b788;--g5:#95d5b2;--g6:#d8f3dc;--white:#fff;--off:#f7faf8;--s1:#f0f5f2;--s2:#e2ede6;--s3:#b8d4c0;--s4:#6a9478;--text:#1a2e22;--soft:#4d6b58;--amber:#d97706;--amber-bg:#fffbeb;--amber-border:#fde68a;--red:#dc2626;--red-bg:#fef2f2;--red-border:#fecaca;--blue:#1d4ed8;--blue-bg:#eff6ff;--blue-border:#bfdbfe;--shadow:0 2px 12px rgba(26,74,46,.10);--shadow-md:0 4px 24px rgba(26,74,46,.14);--r:12px;--r-sm:8px;}*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}html,body{height:100%;overflow:hidden}body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);display:flex;flex-direction:column}.topbar{background:var(--g1);color:#fff;height:66px;display:flex;align-items:center;gap:11px;padding:0 14px;flex-shrink:0;position:relative;z-index:60;box-shadow:0 2px 10px rgba(0,0,0,.2)}.tb-logo{width:54px;height:54px;background:transparent;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:0}.tb-logo img{width:54px;height:54px;object-fit:cover;border-radius:50%;display:block}.tb-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;letter-spacing:2px;color:#fff}.tb-sub{font-size:11px;color:rgba(255,255,255,.55);font-weight:400}.tb-back{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:var(--r-sm);padding:5px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif;display:none;align-items:center;gap:4px;margin-right:4px}.tb-back.show{display:flex}.tb-user{margin-left:auto;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:50%;width:34px;height:34px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;justify-content:center;flex-shrink:0}.app-body{flex:1;overflow:hidden;display:flex;flex-direction:column;max-width:800px;margin:0 auto;width:100%;position:relative}.screen{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:72px}.screen::-webkit-scrollbar{width:4px}.screen::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px}.tabs{display:flex;background:#fff;border-bottom:1px solid var(--s2);position:sticky;top:0;z-index:40;overflow-x:auto;scrollbar-width:none;flex-shrink:0}.tabs::-webkit-scrollbar{display:none}.tab{flex:none;padding:12px 14px;border:none;background:none;font-size:12px;font-weight:500;color:var(--s4);cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-1px;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:5px;transition:color .15s}.tab.active{color:var(--g1);border-bottom-color:var(--g1)}.tab-cnt{background:var(--g6);color:var(--g2);border-radius:99px;padding:1px 6px;font-size:10px;font-weight:600}.tab.active .tab-cnt{background:var(--g1);color:#fff}.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:#fff;border-top:1px solid var(--s2);display:flex;padding:6px 0 calc(env(safe-area-inset-bottom,0px) + 6px);z-index:60;box-shadow:0 -2px 12px rgba(26,74,46,.07)}.nav-btn{flex:1;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:3px 0;color:var(--s4);font-family:'Nunito',sans-serif;transition:color .15s}.nav-btn.active{color:var(--g1)}.nav-ic{font-size:20px;line-height:1}.nav-lb{font-size:10px;font-weight:500;letter-spacing:.2px}.fab{position:fixed;bottom:76px;right:50%;transform:translateX(calc(50% - min(400px,50vw) + 18px));width:52px;height:52px;border-radius:50%;background:var(--g1);color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 18px rgba(26,74,46,.35);display:none;align-items:center;justify-content:center;z-index:55;transition:transform .15s,background .15s}.fab:active{transform:translateX(calc(50% - min(400px,50vw) + 18px)) scale(.93)}.fab.show{display:flex}.sec-head{padding:16px 14px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}.sec-title{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--g1);letter-spacing:.8px}.c-card{margin:0 10px 10px;background:#fff;border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--s2);overflow:hidden;cursor:pointer;transition:transform .15s}.c-card:active{transform:scale(.985)}.c-card-head{background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 100%);padding:14px 16px;display:flex;gap:12px;align-items:center}.c-initials{width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,.18);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid rgba(255,255,255,.25)}.c-name{font-weight:800;font-size:14px;color:#fff;line-height:1.2}.c-loc{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px}.c-stats{display:grid;grid-template-columns:repeat(4,1fr)}.c-stat{padding:10px 6px;text-align:center;border-right:1px solid var(--s1)}.c-stat:last-child{border-right:none}.c-stat-n{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--g2)}.c-stat-l{font-size:9px;color:var(--soft);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:1px}.item-card{background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.item-head{padding:10px 14px;background:var(--s1);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.item-title{font-weight:600;font-size:14px;color:var(--text)}.item-meta{font-size:11px;color:var(--soft);margin-top:1px}.item-body{padding:11px 14px}.item-text{font-size:13px;color:var(--text);line-height:1.5}.item-note{font-size:12px;color:var(--soft);border-left:3px solid var(--g4);padding-left:9px;margin-top:7px}.item-footer{font-size:10px;color:var(--s4);margin-top:8px}.chip{display:inline-flex;align-items:center;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:500;white-space:nowrap}.chip-green{background:var(--g6);color:var(--g1)}.chip-amber{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}.chip-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}.chip-blue{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}.chip-gray{background:var(--s1);color:var(--soft);border:1px solid var(--s2)}.computo-wrap{margin:0 10px 10px;background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.cap-header{padding:10px 14px;background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between}.cap-total{font-size:13px;font-weight:600;color:var(--g5)}.voce-row{display:grid;grid-template-columns:1fr 36px 52px 64px 72px;gap:4px;padding:8px 14px;border-bottom:1px solid var(--s1);align-items:center}.voce-row:last-child{border-bottom:none}.voce-row:hover{background:var(--s1)}.voce-desc{font-size:12px;font-weight:500;color:var(--text)}.voce-um{font-size:10px;color:var(--soft);text-align:center}.voce-qty{font-size:12px;font-weight:500;color:var(--text);text-align:right;min-width:48px}.voce-pu{font-size:11px;color:var(--soft);text-align:right;min-width:60px}.voce-price{font-size:12px;font-weight:600;color:var(--g2);text-align:right;min-width:72px}.voce-input{width:60px;background:var(--s1);border:1px solid var(--s3);border-radius:5px;padding:3px 6px;font-size:12px;font-weight:500;color:var(--g1);text-align:right;font-family:'Nunito',sans-serif;outline:none}.voce-input:focus{border-color:var(--g3)}.voce-delta-pos{font-size:11px;font-weight:500;color:var(--red);min-width:56px;text-align:right}.voce-delta-neg{font-size:11px;font-weight:500;color:var(--g3);min-width:56px;text-align:right}.table-header{display:grid;grid-template-columns:1fr 36px 52px 64px 72px;gap:4px;padding:6px 14px;background:var(--s1);border-bottom:1px solid var(--s2)}.th-label{font-size:9px;font-weight:600;color:var(--soft);text-transform:uppercase;letter-spacing:.5px}.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 10px 0}.kpi-box{background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);padding:10px 12px;text-align:center;box-shadow:var(--shadow)}.kpi-n{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--g1)}.kpi-l{font-size:9px;color:var(--soft);font-weight:500;letter-spacing:.5px;text-transform:uppercase;margin-top:1px}.kpi-box.danger .kpi-n{color:var(--red)}.kpi-box.success .kpi-n{color:var(--g3)}.import-zone{margin:12px 10px;border:2px dashed var(--s3);border-radius:var(--r);padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}.import-zone:hover,.import-zone.dragover{border-color:var(--g3);background:var(--g6)}.import-icon{font-size:40px;margin-bottom:10px}.import-title{font-weight:600;font-size:15px;color:var(--g1);margin-bottom:4px}.import-sub{font-size:12px;color:var(--soft);line-height:1.5}.import-btn{background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:12px;display:inline-block}.foto-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 10px 10px}.foto-thumb{aspect-ratio:1;background:var(--s1);border-radius:var(--r-sm);overflow:hidden;position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:28px;border:1px solid var(--s2)}.foto-thumb img{width:100%;height:100%;object-fit:cover}.foto-tag-badge{position:absolute;bottom:4px;left:4px;background:rgba(26,74,46,.82);color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:2px 5px}.foto-date{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.5);color:#fff;font-size:9px;border-radius:3px;padding:1px 5px}.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s}.overlay.show{opacity:1;pointer-events:all}.modal{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:800px;max-height:92vh;overflow-y:auto;transform:translateY(100%);transition:transform .28s cubic-bezier(.32,1.02,.6,1)}.overlay.show .modal{transform:translateY(0)}.modal-handle{width:36px;height:4px;background:var(--s2);border-radius:99px;margin:12px auto 0}.modal-title{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--g1);padding:10px 18px 14px;letter-spacing:.8px;border-bottom:1px solid var(--s2)}.modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:13px}.f-label{font-size:11px;color:var(--soft);font-weight:600;letter-spacing:.7px;text-transform:uppercase;margin-bottom:4px;display:block}.f-in,.f-sel,.f-ta{width:100%;background:var(--s1);border:1.5px solid var(--s2);border-radius:var(--r-sm);color:var(--text);padding:10px 12px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;transition:border-color .15s}.f-in:focus,.f-sel:focus,.f-ta:focus{border-color:var(--g3)}.f-ta{resize:vertical}.f-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.f-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}.btn-prim{width:100%;background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:6px;transition:background .15s}.btn-prim:active{background:var(--g2)}.upload-zone{border:2px dashed var(--s3);border-radius:var(--r-sm);padding:20px;text-align:center;cursor:pointer;transition:border-color .2s}.upload-zone:active{border-color:var(--g3)}.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;opacity:0;pointer-events:none;transition:opacity .2s}.lightbox.show{opacity:1;pointer-events:all}.lightbox img{max-width:95vw;max-height:72vh;border-radius:8px;object-fit:contain}.lb-close{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.15);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer}.lb-info{color:rgba(255,255,255,.65);font-size:12px;text-align:center}.empty{text-align:center;padding:40px 20px}.empty-ic{font-size:44px;margin-bottom:12px}.empty-txt{font-size:13px;color:var(--soft);font-weight:600;line-height:1.5}#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--g0);color:#fff;padding:9px 18px;border-radius:99px;font-size:12px;font-weight:700;z-index:400;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}.install-bar{background:var(--g1);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;flex-shrink:0}.install-bar button{background:#fff;color:var(--g1);border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif}.ios-hint{background:var(--g6);padding:10px 14px;font-size:12px;color:var(--g1);border-bottom:1px solid var(--s2);flex-shrink:0}.doc-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border-radius:var(--r-sm);margin:0 10px 7px;border:1px solid var(--s2);box-shadow:var(--shadow)}.doc-ic{font-size:24px;flex-shrink:0}.doc-info{flex:1;min-width:0}.doc-name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.doc-meta{font-size:11px;color:var(--soft);margin-top:1px}.doc-dl{background:var(--g6);border:none;color:var(--g1);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;flex-shrink:0}.operaio-row{background:#fff;border-radius:var(--r-sm);margin:0 10px 7px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.operaio-head{padding:10px 14px;background:var(--s1);display:flex;align-items:center;justify-content:space-between}.operaio-name{font-weight:800;font-size:14px;color:var(--text)}.operaio-role{font-size:11px;color:var(--soft)}.operaio-stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--s2)}.op-stat{padding:8px 10px;text-align:center;border-right:1px solid var(--s1)}.op-stat:last-child{border-right:none}.op-stat-n{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;color:var(--g2)}.op-stat-l{font-size:9px;color:var(--soft);font-weight:700;text-transform:uppercase;letter-spacing:.4px}.presenze-row{padding:8px 14px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--s1);flex-wrap:wrap}.presenza-dot{width:28px;height:28px;border-radius:50%;background:var(--s2);border:1.5px solid var(--s3);font-size:9px;font-weight:700;color:var(--soft);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0}.presenza-dot.present{background:var(--g4);border-color:var(--g3);color:#fff}.presenza-dot.absent{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}.pdf-page{position:fixed;left:-9999px;top:-9999px;width:794px;background:#fff;font-family:'Nunito',sans-serif;font-size:12px;color:#1a2e22;padding:32px}@media(min-width:600px){.f-grid-3{grid-template-columns:1fr 1fr 1fr}}
 </style>
 </head>
 <body>
@@ -162,8 +105,8 @@ window._fbLoadBackup = async (id) => {
 <!-- ══ SCHERMATA LOGIN ══ -->
 <div id="screenLogin" style="position:fixed;inset:0;background:#1a4a2e;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px">
   <div style="width:80px;height:80px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:20px;overflow:hidden">
-    <img src="data:image/webp;base64,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" id="loginLogo" style="width:80px;height:80px;object-fit:cover;border-radius:50%;display:block">
-    <svg id="loginLogoSvg" style="display:none" viewBox="0 0 100 100" width="72" height="72"><rect width="100" height="100" rx="50" fill="white"/><text x="50" y="54" text-anchor="middle" dominant-baseline="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="42" fill="#1a4a2e">TB</text><text x="50" y="82" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="9" fill="#1a4a2e" letter-spacing="2">TECNOBASE</text></svg>
+    <img src="data:image/webp;base64,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" id="loginLogo" style="width:80px;height:80px;object-fit:cover;border-radius:50%;display:block">
+    <svg id="loginLogoSvg" style="display:none" viewBox="0 0 100 100" width="72" height="72"><circle cx="50" cy="50" r="48" fill="white"/><circle cx="50" cy="50" r="44" fill="none" stroke="#1a4a2e" stroke-width="2.5"/><text x="50" y="48" text-anchor="middle" font-family="Arial Black" font-weight="900" font-size="30" fill="#1a4a2e">TB</text><text x="50" y="65" text-anchor="middle" font-family="Arial" font-weight="700" font-size="10" fill="#1a4a2e">TECNOBASE</text></svg>
   </div>
   <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:700;color:#fff;letter-spacing:2px;margin-bottom:4px">TB WORKS</div>
   <div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:32px">Tecnobase Restauri</div>
@@ -191,7 +134,7 @@ window._fbLoadBackup = async (id) => {
         <span style="font-size:12px;font-weight:500;color:rgba(255,255,255,.6);font-family:'Nunito',sans-serif">Elia</span>
       </button>
     </div>
-    <div id="loginError" style="display:none;color:#ff9b9b;font-size:12px;text-align:center;padding:4px">Seleziona il tuo nome prima di accedere.</div>
+    <div id="loginError" style="display:none;color:#ff9b9b;font-size:12px;text-align:center;padding:4px">Seleziona il tuo nome.</div>
     <button onclick="doLogin()" style="background:#fff;color:#1a4a2e;border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:4px">ACCEDI</button>
   </div>
 </div>
@@ -209,18 +152,16 @@ window._fbLoadBackup = async (id) => {
 <div class="topbar" id="topbar">
   <button class="tb-back" id="backBtn" onclick="goBack()">← Home</button>
   <div class="tb-logo">
-    <img src="data:image/webp;base64,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" alt="TB Works" style="width:54px;height:54px;object-fit:cover;border-radius:50%">
+    <img src="data:image/webp;base64,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" alt="TB Works" style="width:54px;height:54px;object-fit:cover;border-radius:50%">
   </div>
   <div>
     <div class="tb-title">TB WORKS</div>
     <div class="tb-sub" id="tbSub">Tecnobase Restauri</div>
   </div>
-  <button id="editCantiereBtn" onclick="apriImpostazioniCantiere()" title="Modifica dati cantiere" style="display:none;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;align-items:center;gap:4px;margin-right:4px">✏️ Modifica</button>
-  <button id="fbStatus" onclick="manualeSync()" title="Sincronizza adesso" style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:10px;color:rgba(255,255,255,.5);font-weight:500;background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.1)'" onmouseleave="this.style.background='none'">
-    <div id="fbDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.3);flex-shrink:0"></div>
+  <div id="fbStatus" style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:10px;color:rgba(255,255,255,.5);font-weight:500">
+    <div id="fbDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.3)"></div>
     <span id="fbLabel">locale</span>
-    <span id="fbSyncIcon" style="font-size:13px;opacity:.6;margin-left:1px">🔄</span>
-  </button>
+  </div>
   <button class="tb-user" id="userBtn" onclick="openUserMenu()" title="Menu utente">?</button>
 </div>
 
@@ -271,7 +212,7 @@ window._fbLoadBackup = async (id) => {
           <button onclick="event.stopPropagation();openModal('mNuovoCantiere')" style="background:var(--g1);color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;flex-shrink:0">+ Nuovo</button>
           <span id="arr-cantieri" style="color:var(--s4);font-size:12px;transition:transform .25s;margin-left:6px">▼</span>
         </div>
-        <div id="body-cantieri" style="max-height:0;overflow:hidden;transition:max-height .35s ease">
+        <div id="body-cantieri" style="max-height:0;overflow:hidden;transition:max-height .5s ease">
           <div style="border-top:1px solid var(--s1)"><div id="cantieriList"></div></div>
         </div>
       </div>
@@ -289,7 +230,7 @@ window._fbLoadBackup = async (id) => {
           <div style="border-top:1px solid var(--s1)">
             <div id="homeOperaiList" style="padding:4px 0"></div>
             <div style="padding:10px 14px;border-top:1px solid var(--s1)">
-              <button onclick="_resetFormOperaio();openModal('mOperaioGlobale')" style="width:100%;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">＋ Aggiungi operaio</button>
+              <button onclick="openModal('mOperaioGlobale')" style="width:100%;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">＋ Aggiungi operaio</button>
             </div>
           </div>
         </div>
@@ -380,7 +321,7 @@ window._fbLoadBackup = async (id) => {
       <div><label class="f-label">Nome cantiere *</label><input class="f-in" id="nc-nome" placeholder="es. Palazzo Rossi – Via Roma 12"></div>
       <div class="f-grid">
         <div><label class="f-label">Indirizzo</label><input class="f-in" id="nc-ind" placeholder="Via, Città"></div>
-        <div><label class="f-label">Direttore Lavori</label><input class="f-in" id="nc-resp" placeholder="Ing. Bianchi"></div>
+        <div><label class="f-label">Responsabile</label><input class="f-in" id="nc-resp" placeholder="Ing. Bianchi"></div>
         <div><label class="f-label">Data inizio</label><input class="f-in" type="date" id="nc-data"></div>
         <div><label class="f-label">Importo contratto (€)</label><input class="f-in" type="number" id="nc-importo" placeholder="0"></div>
         <div>
@@ -411,7 +352,7 @@ window._fbLoadBackup = async (id) => {
       </div>
       <div><label class="f-label">Nome cantiere</label><input class="f-in" id="ic-nome" placeholder="Nome cantiere"></div>
       <div class="f-grid">
-        <div><label class="f-label">Direttore Lavori</label><input class="f-in" id="ic-resp" placeholder="Ing. Bianchi"></div>
+        <div><label class="f-label">Responsabile</label><input class="f-in" id="ic-resp" placeholder="Ing. Bianchi"></div>
         <div><label class="f-label">Importo contratto (€)</label><input class="f-in" type="number" id="ic-importo" placeholder="0"></div>
         <div>
           <label class="f-label">% Costi generali stimata</label>
@@ -508,9 +449,8 @@ window._fbLoadBackup = async (id) => {
 <div class="overlay" id="mRapportino" onclick="closeOv(event,'mRapportino')">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title" id="rp-modal-title">NUOVO RAPPORTINO</div>
+    <div class="modal-title">NUOVO RAPPORTINO</div>
     <div class="modal-body">
-      <input type="hidden" id="rp-edit-id">
       <div class="f-grid">
         <div><label class="f-label">Data *</label><input class="f-in" type="date" id="rp-data"></div>
         <div><label class="f-label">Direttore Lavori</label><input class="f-in" id="rp-dir" placeholder="Nome"></div>
@@ -543,7 +483,6 @@ window._fbLoadBackup = async (id) => {
       <div><label class="f-label">Materiali utilizzati</label><textarea class="f-ta" id="rp-mat" rows="2" placeholder="es. Cemento 200 sacchi, tondino 2t..."></textarea></div>
       <div><label class="f-label">Note / Problemi</label><textarea class="f-ta" id="rp-note" rows="2" placeholder="Segnalazioni, ritardi, imprevisti..."></textarea></div>
       <button class="btn-prim" onclick="saveRapportino()">SALVA RAPPORTINO</button>
-      <button id="rp-btn-elimina" onclick="eliminaRapportino()" style="display:none;width:100%;margin-top:8px;background:#fff;color:#dc2626;border:1.5px solid #fecaca;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">🗑️ Elimina rapportino</button>
     </div>
   </div>
 </div>
@@ -563,7 +502,6 @@ window._fbLoadBackup = async (id) => {
       </div>
       <div><label class="f-label">Note</label><input class="f-in" id="og-note" placeholder="es. Patente, specializzazioni..."></div>
       <button class="btn-prim" onclick="saveOperaioGlobale()">SALVA OPERAIO</button>
-      <button id="og-btn-elimina" onclick="eliminaOperaioGlobale()" style="display:none;width:100%;margin-top:8px;background:#fff;color:#dc2626;border:1.5px solid #fecaca;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">🗑️ Elimina operaio</button>
     </div>
   </div>
 </div>
@@ -592,7 +530,7 @@ window._fbLoadBackup = async (id) => {
         Seleziona dall'anagrafica operai. Gli operai selezionati appariranno nei rapportini di questo cantiere.
       </div>
       <div id="op-globali-list" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto"></div>
-      <button class="btn-prim" style="background:var(--g3);margin-top:8px" onclick="closeOv(null,'mOperaio');_resetFormOperaio();openModal('mOperaioGlobale')">+ Nuovo operaio in anagrafica</button>
+      <button class="btn-prim" style="background:var(--g3);margin-top:8px" onclick="closeOv(null,'mOperaio');openModal('mOperaioGlobale')">+ Nuovo operaio in anagrafica</button>
     </div>
   </div>
 </div>
@@ -1029,88 +967,24 @@ function load() {
 function save() {
   localStorage.setItem(SK, JSON.stringify({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: Date.now() }));
   autoSnapshot();
-  if (window._fbEnabled && window._fbSaveGlobali) {
-    window._fbSaveGlobali(S.operaiGlobali, S.presenze||{}, S.azienda, S.uid||'—')
-      .then(()=>setFbStatus(true)).catch(()=>setFbStatus(false));
+  if (window._fbEnabled && window._fbSave) {
+    window._fbSave({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{} }).then(()=>{
+      setFbStatus(true);
+    }).catch(()=>setFbStatus(false));
   }
 }
 
-// Salva solo la sezione specifica di un cantiere su Firebase
-function saveSezione(cantiereId, sezione) {
-  const c = S.cantieri.find(x => x.id === cantiereId);
-  if (!c) return;
-  localStorage.setItem(SK, JSON.stringify({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: Date.now() }));
-  if (window._fbEnabled && window._fbSaveSezione && window._fbSaveCantiere) {
-    const updatedBy = S.uid || '—';
-    window._fbSaveCantiere(c, updatedBy).then(() =>
-      window._fbSaveSezione(cantiereId, sezione, c[sezione] || [], updatedBy)
-        .then(()=>setFbStatus(true)).catch(()=>setFbStatus(false))
-    );
-  }
-}
-
-function setFbStatus(online, syncing) {
-  const dot = $('fbDot'), label = $('fbLabel'), icon = $('fbSyncIcon');
+function setFbStatus(online) {
+  const dot = $('fbDot'), label = $('fbLabel');
   if (!dot || !label) return;
-  if (syncing) {
-    dot.style.background = '#f59e0b';
-    dot.style.boxShadow = '0 0 4px #f59e0b80';
-    label.textContent = 'sync...';
-    if (icon) icon.style.animation = 'spin 1s linear infinite';
-  } else if (online) {
+  if (online) {
     dot.style.background = '#52b788';
     dot.style.boxShadow = '0 0 4px #52b78880';
     label.textContent = 'sync';
-    if (icon) { icon.style.animation = ''; }
   } else {
     dot.style.background = 'rgba(255,255,255,.3)';
     dot.style.boxShadow = 'none';
     label.textContent = 'locale';
-    if (icon) { icon.style.animation = ''; }
-  }
-}
-
-// Sincronizzazione manuale forzata
-async function manualeSync() {
-  if (!window._fbEnabled || !window._fbLoadAll) {
-    toast('⚠️ Firebase non disponibile'); return;
-  }
-  setFbStatus(true, true); // giallo — "sync in corso"
-  try {
-    const remote = await window._fbLoadAll();
-    if (!remote) { setFbStatus(false); toast('⚠️ Nessun dato remoto'); return; }
-    
-    // Analizza cosa è stato modificato da altri
-    const aggiornamenti = [];
-    if (remote.cantieri) {
-      remote.cantieri.forEach(remC => {
-        const localC = S.cantieri.find(c => c.id === remC.id);
-        const sezioni = ['capitoli','rapportini','operai','foto','documenti','speseGenerali','speseMateriali','ordini','giornale'];
-        sezioni.forEach(sez => {
-          const remTs = remC[sez + '_updatedAt'] || 0;
-          const locTs = localC ? (localC[sez + '_updatedAt'] || 0) : 0;
-          if (remTs > locTs + 500) {
-            const chi = remC[sez + '_updatedBy'] || '?';
-            const nomeC = remC.nome ? remC.nome.slice(0,20) : remC.id.slice(0,8);
-            aggiornamenti.push(chi + ' → ' + sez + ' [' + nomeC + ']');
-          }
-        });
-      });
-    }
-
-    _applyRemoteData(remote);
-    renderCurrentScreen();
-    setFbStatus(true);
-    
-    if (aggiornamenti.length > 0) {
-      toast('☁️ ' + aggiornamenti.slice(0,2).join(', ') + (aggiornamenti.length > 2 ? ' +altri' : ''));
-    } else {
-      toast('✅ Già aggiornato');
-    }
-  } catch(e) {
-    console.warn('manualeSync error:', e);
-    setFbStatus(false);
-    toast('❌ Errore sync');
   }
 }
 
@@ -1127,78 +1001,47 @@ async function initFirebase() {
   setFbStatus(true);
 
   try {
-    const remote = await window._fbLoadAll();
-    if (remote) {
-      _applyRemoteData(remote);
+    const remoteData = await window._fbLoad();
+    if (remoteData && remoteData.cantieri && remoteData.cantieri.length > 0) {
+      S.cantieri = remoteData.cantieri;
+      if (remoteData.operaiGlobali && remoteData.operaiGlobali.length > 0)
+        S.operaiGlobali = remoteData.operaiGlobali;
+      if (remoteData.azienda) S.azienda = remoteData.azienda;
+      if (remoteData.presenze) S.presenze = remoteData.presenze;
+      if (remoteData.uid) S.uid = remoteData.uid;
+      localStorage.setItem(SK, JSON.stringify({
+        cantieri: S.cantieri, operaiGlobali: S.operaiGlobali,
+        azienda: S.azienda, uid: S.uid, updated: Date.now()
+      }));
       renderCantieri();
       aggiornaKPIImpresa();
-      toast('☁️ Dati sincronizzati');
+      toast('☁️ Dati sincronizzati da Firebase');
     } else if (S.cantieri.length > 0) {
-      // Prima volta: carica dati locali su Firebase
-      await window._fbSave({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid||'—' });
-      toast('☁️ Dati locali caricati su Firebase');
+      await window._fbSave({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda });
+      toast('☁️ Dati locali salvati su Firebase');
     }
   } catch(e) { console.warn('Firebase init error:', e); setFbStatus(false); }
 
-  // Listener realtime: aggiorna quando un altro utente modifica qualcosa
-  if (window._fbListenAll) {
-    window._fbListenAll((remote) => {
+  if (window._fbListen) {
+    window._fbListen((remoteData) => {
       if (_fbSyncing) return;
-      _applyRemoteData(remote);
-      renderCurrentScreen();
-      setFbStatus(true);
-    });
-  }
-}
-
-// Applica i dati remoti a S — merge per sezione, vince il più recente per ogni sezione
-function _applyRemoteData(remote) {
-  if (!remote) return;
-  const { cantieri: remoteCantieri, globali } = remote;
-
-  // ── Globali (operai, presenze, azienda) ──
-  if (globali) {
-    if (globali.operaiGlobali && globali.operaiGlobali.length > 0) {
-      S.operaiGlobali = globali.operaiGlobali;
-      const bodyPres = document.getElementById('body-presenze');
-      if (bodyPres && bodyPres.style.maxHeight && bodyPres.style.maxHeight !== '0px' && typeof renderPresenzeGiorno === 'function')
-        setTimeout(renderPresenzeGiorno, 100);
-    }
-    if (globali.presenze) S.presenze = globali.presenze;
-    if (globali.azienda) S.azienda = globali.azienda;
-  }
-
-  // ── Cantieri: merge per sezione ──
-  const SEZIONI = ['capitoli','rapportini','operai','foto','documenti','speseGenerali','speseMateriali','ordini','giornale'];
-  if (remoteCantieri && remoteCantieri.length > 0) {
-    remoteCantieri.forEach(remC => {
-      const localIdx = S.cantieri.findIndex(c => c.id === remC.id);
-      if (localIdx === -1) {
-        // Cantiere nuovo (creato da altro utente) — aggiungilo
-        S.cantieri.push(remC);
-      } else {
-        const localC = S.cantieri[localIdx];
-        // Meta cantiere: vince il più recente
-        if ((remC.metaUpdatedAt || 0) > (localC.metaUpdatedAt || 0)) {
-          const sezioniSalvate = {};
-          SEZIONI.forEach(s => { sezioniSalvate[s] = localC[s]; });
-          S.cantieri[localIdx] = { ...remC, ...sezioniSalvate };
-        }
-        // Per ogni sezione: vince il più recente
-        SEZIONI.forEach(sez => {
-          const remTs = remC[sez + '_updatedAt'] || 0;
-          const locTs = localC[sez + '_updatedAt'] || 0;
-          if (remTs > locTs && remC[sez] !== undefined) {
-            S.cantieri[localIdx][sez] = remC[sez];
-            S.cantieri[localIdx][sez + '_updatedAt'] = remTs;
-            S.cantieri[localIdx][sez + '_updatedBy'] = remC[sez + '_updatedBy'] || '—';
-          }
-        });
+      if (!remoteData || !remoteData.cantieri) return;
+      const remoteUpdated = remoteData.updated || 0;
+      const localUpdated = (() => { try { return JSON.parse(localStorage.getItem(SK)||'{}').updated||0; } catch(e){return 0;} })();
+      if (remoteUpdated > localUpdated + 500) {
+        S.cantieri = remoteData.cantieri;
+        if (remoteData.operaiGlobali) S.operaiGlobali = remoteData.operaiGlobali;
+        if (remoteData.azienda) S.azienda = remoteData.azienda;
+        if (remoteData.presenze) S.presenze = remoteData.presenze;
+        localStorage.setItem(SK, JSON.stringify({
+          cantieri: S.cantieri, operaiGlobali: S.operaiGlobali,
+          azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: remoteUpdated
+        }));
+        renderCurrentScreen();
+        setFbStatus(true);
       }
     });
   }
-
-  localStorage.setItem(SK, JSON.stringify({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: Date.now() }));
 }
 
 function renderCurrentScreen() {
@@ -1243,6 +1086,8 @@ let _selectedUser = null;
 function selectUser(nome) {
   _selectedUser = nome;
   localStorage.setItem('tbc_last_user', nome);
+  const pwField = $('loginPass');
+  if(pwField) { pwField.placeholder = 'Password per ' + nome; setTimeout(()=>pwField.focus(),100); }
   UTENTI.forEach(u => {
     const circle = document.getElementById('ucircle-' + u);
     const nameEl = document.querySelector(`#ubtn-${u} span:last-child`);
@@ -1259,6 +1104,8 @@ function selectUser(nome) {
       if (nameEl) nameEl.style.color = 'rgba(255,255,255,.6)';
     }
   });
+  const pw = document.getElementById('loginPass');
+  if (pw) setTimeout(() => pw.focus(), 100);
 }
 
 function getPassword() {
@@ -1274,6 +1121,7 @@ function doLogin() {
   if(err) err.style.display = 'none';
   S.auth = true;
   setUser(_selectedUser);
+  localStorage.setItem('tbc_last_user', _selectedUser);
   const screen = $('screenLogin');
   if(screen) { screen.style.opacity = '0'; screen.style.transition = 'opacity 0.3s'; setTimeout(()=>screen.style.display='none', 300); }
 }
@@ -1291,6 +1139,7 @@ function doLogout() {
     const nameEl = document.querySelector(`#ubtn-${u} span:last-child`);
     if (nameEl) nameEl.style.color = 'rgba(255,255,255,.6)';
   });
+  const pw = $('loginPass'); if(pw) pw.value = '';
   const screen = $('screenLogin');
   if(screen) { screen.style.opacity = '1'; screen.style.display = 'flex'; }
   closeUserMenu();
@@ -1309,6 +1158,11 @@ function cambiaPassword() {
   toast('🔑 Password aggiornata!');
 }
 
+function togglePassVis() {
+  const inp = $('loginPass'); if(!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  const btn = $('passVisBtn'); if(btn) btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
 
 function openUserMenu() {
   const m = $('userMenu');
@@ -1322,81 +1176,60 @@ document.addEventListener('click', e => {
   if(menu && btn && !btn.contains(e.target) && !menu.contains(e.target)) menu.style.display = 'none';
 });
 
+function editOperaioGlobale(opId) {
+  const op = (S.operaiGlobali||[]).find(o => o.id === opId);
+  if(!op) return;
+  const titleEl = $('og-modal-title'); if(titleEl) titleEl.textContent = 'MODIFICA OPERAIO';
+  const idEl = $('og-edit-id'); if(idEl) idEl.value = opId;
+  if($('og-nome')) $('og-nome').value = op.nome || '';
+  if($('og-qualifica')) $('og-qualifica').value = op.qualifica || '';
+  if($('og-costo')) $('og-costo').value = op.costo || '';
+  if($('og-oreday')) $('og-oreday').value = op.oreDay || 8;
+  if($('og-note')) $('og-note').value = op.note || '';
+  openModal('mOperaioGlobale');
+}
+
+function _resetModalOperaio() {
+  const titleEl = $('og-modal-title'); if(titleEl) titleEl.textContent = 'ANAGRAFICA OPERAIO';
+  const idEl = $('og-edit-id'); if(idEl) idEl.value = '';
+  ['og-nome','og-qualifica','og-costo','og-oreday','og-note'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
+}
+
 function saveOperaioGlobale() {
   const nome = v('og-nome').trim();
   if(!nome) { alert('Inserisci il nome'); return; }
   if(!S.operaiGlobali) S.operaiGlobali = [];
-  const editId = v('og-edit-id');
-
+  const editId = (($('og-edit-id')||{}).value||'').trim();
   if(editId) {
-    // MODIFICA operaio esistente
+    // MODIFICA
     const idx = S.operaiGlobali.findIndex(o => o.id === editId);
-    if(idx === -1) { toast('Operaio non trovato'); return; }
-    const dup = S.operaiGlobali.find(o => o.nome.toLowerCase() === nome.toLowerCase() && o.id !== editId);
-    if(dup) { alert('Un operaio con questo nome esiste già'); return; }
-    S.operaiGlobali[idx] = { ...S.operaiGlobali[idx], nome, qualifica: v('og-qualifica'),
-      costo: parseFloat(v('og-costo'))||0, oreDay: +v('og-oreday')||8, note: v('og-note') };
-    // Aggiorna anche nelle copie locali dei cantieri
+    if(idx === -1) { alert('Operaio non trovato'); return; }
+    if(S.operaiGlobali.find((o,i) => i !== idx && o.nome.toLowerCase() === nome.toLowerCase())) {
+      alert('Un operaio con questo nome esiste già in anagrafica'); return;
+    }
+    const updated = { ...S.operaiGlobali[idx], nome, qualifica: v('og-qualifica'), costo: parseFloat(v('og-costo'))||0, oreDay: +v('og-oreday')||8, note: v('og-note') };
+    S.operaiGlobali[idx] = updated;
+    // Aggiorna anche nelle copie nei cantieri
     S.cantieri.forEach(c => {
-      if(!c.operai) return;
-      const opIdx = c.operai.findIndex(o => o.id === editId);
-      if(opIdx !== -1) c.operai[opIdx] = { ...c.operai[opIdx], nome, qualifica: v('og-qualifica'),
-        costo: parseFloat(v('og-costo'))||0, oreDay: +v('og-oreday')||8 };
+      c.operai = (c.operai||[]).map(o => o.id === editId ? { ...o, nome: updated.nome, qualifica: updated.qualifica, costo: updated.costo, oreDay: updated.oreDay } : o);
     });
-    save();
-    if(window._fbSaveGlobali) window._fbSaveGlobali(S.operaiGlobali, S.presenze||{}, S.azienda, S.uid||'—');
-    closeModal('mOperaioGlobale');
-    _resetFormOperaio();
-    toast('✅ Operaio aggiornato!');
+    save(); closeModal('mOperaioGlobale'); _resetModalOperaio();
+    renderHomeOperai(); toast('✅ Operaio aggiornato!');
   } else {
-    // NUOVO operaio
+    // NUOVO
     if(S.operaiGlobali.find(o => o.nome.toLowerCase() === nome.toLowerCase())) {
       alert('Un operaio con questo nome esiste già in anagrafica'); return;
     }
-    S.operaiGlobali.push({ id: uid(), nome, qualifica: v('og-qualifica'),
-      costo: parseFloat(v('og-costo'))||0, oreDay: +v('og-oreday')||8,
-      note: v('og-note'), created: Date.now() });
-    save();
-    if(window._fbSaveGlobali) window._fbSaveGlobali(S.operaiGlobali, S.presenze||{}, S.azienda, S.uid||'—');
-    closeModal('mOperaioGlobale');
-    _resetFormOperaio();
+    S.operaiGlobali.push({
+      id: uid(), nome, qualifica: v('og-qualifica'),
+      costo: parseFloat(v('og-costo'))||0,
+      oreDay: +v('og-oreday')||8,
+      note: v('og-note'),
+      created: Date.now()
+    });
+    save(); closeModal('mOperaioGlobale'); _resetModalOperaio();
     toast('✅ Operaio aggiunto in anagrafica!');
   }
-}
-
-function _resetFormOperaio() {
-  ['og-nome','og-qualifica','og-costo','og-oreday','og-note','og-edit-id'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
-  const t = $('og-modal-title'); if(t) t.textContent = 'ANAGRAFICA OPERAIO';
-  const b = $('og-btn-elimina'); if(b) b.style.display = 'none';
-}
-
-function apriModificaOperaio(opId) {
-  const op = (S.operaiGlobali||[]).find(o => o.id === opId);
-  if(!op) return;
-  const t = $('og-modal-title'); if(t) t.textContent = 'MODIFICA OPERAIO';
-  $('og-edit-id').value = op.id;
-  $('og-nome').value = op.nome || '';
-  $('og-qualifica').value = op.qualifica || '';
-  $('og-costo').value = op.costo || '';
-  $('og-oreday').value = op.oreDay || 8;
-  $('og-note').value = op.note || '';
-  const b = $('og-btn-elimina'); if(b) b.style.display = 'block';
-  openModal('mOperaioGlobale');
-}
-
-function eliminaOperaioGlobale() {
-  const editId = v('og-edit-id');
-  if(!editId) return;
-  const op = (S.operaiGlobali||[]).find(o => o.id === editId);
-  if(!op) return;
-  if(!confirm('Eliminare ' + op.nome + ' dall\u0027anagrafica? Verr\u00e0 rimosso anche da tutti i cantieri.')) return;
-  S.operaiGlobali = S.operaiGlobali.filter(o => o.id !== editId);
-  S.cantieri.forEach(c => { if(c.operai) c.operai = c.operai.filter(o => o.id !== editId); });
-  save();
-  if(window._fbSaveGlobali) window._fbSaveGlobali(S.operaiGlobali, S.presenze||{}, S.azienda, S.uid||'—');
-  closeModal('mOperaioGlobale');
-  _resetFormOperaio();
-  toast('🗑️ Operaio eliminato');
 }
 
 function aggiungiOperaioACantiere(opId) {
@@ -1441,7 +1274,6 @@ function openCantiere(id) {
   $('bottomNav').style.display = 'flex';
   const c = getCantiere();
   $('tbSub').textContent = c ? c.nome.slice(0,30) : '';
-  const editBtn = $('editCantiereBtn'); if(editBtn) editBtn.style.display = 'flex';
   updateCounts();
   switchTab('computo');
 }
@@ -1463,7 +1295,6 @@ function goBack() {
   $('backBtn').classList.remove('show');
   $('fab').classList.remove('show');
   $('bottomNav').style.display = 'none';
-  const editBtnBack = $('editCantiereBtn'); if(editBtnBack) editBtnBack.style.display = 'none';
   $('tbSub').textContent = 'Tecnobase Restauri';
   renderCantieri();
 }
@@ -1654,8 +1485,9 @@ function renderHomeOperai() {
       <div style="width:32px;height:32px;border-radius:50%;background:var(--g6);color:var(--g1);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${esc(op.nome.charAt(0).toUpperCase())}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(op.nome)}</div>
-        <div style="font-size:11px;color:var(--soft)">${esc(op.qualifica||'—')} · €${op.costo}/h</div>
+        <div style="font-size:11px;color:var(--soft)">${esc(op.qualifica||'—')} · €${op.costo}/h · ${op.oreDay||8}h/g</div>
       </div>
+      <button onclick="editOperaioGlobale('${op.id}')" style="background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:'Nunito',sans-serif;margin-right:4px">✏️</button>
       <button onclick="eliminaOperaioGlobale('${op.id}')" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:'Nunito',sans-serif">✕</button>
     </div>`).join('');
 }
@@ -1673,7 +1505,7 @@ function toggleHomeSection(id) {
   const arr  = document.getElementById('arr-'+id);
   if(!body) return;
   const isOpen = body.style.maxHeight && body.style.maxHeight !== '0px';
-  body.style.maxHeight = isOpen ? '0px' : '1000px';
+  body.style.maxHeight = isOpen ? '0px' : '4000px';
   if(arr) arr.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
 function toggleHomeOperai_unused() { toggleHomeSection('operai'); }
@@ -1917,9 +1749,7 @@ function renderRapportini(c) {
             <div class="item-title">${esc(r.data)}</div>
             <div class="item-meta">${esc(r.dir||'—')} · ${esc(r.meteo||'')}</div>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-            <button onclick="apriModificaRapportino('${r.id}')" title="Modifica rapportino"
-              style="background:var(--g6);border:1px solid var(--s3);border-radius:8px;padding:5px 9px;font-size:12px;cursor:pointer;color:var(--g1);font-weight:600;font-family:'Nunito',sans-serif;flex-shrink:0">✏️</button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
             <span class="${stCol[r.stato]||'chip chip-gray'}">${esc(r.stato||'')}</span>
             ${totOreGiorno > 0 ? `<span class="chip chip-blue">${totOreGiorno}h · ${fmtEur(costoGiorno)}</span>` : ''}
           </div>
@@ -1991,13 +1821,9 @@ function renderOperai(c) {
             <div class="operaio-name">${esc(op.nome)}</div>
             <div class="operaio-role">${esc(op.qualifica||'—')} · €${op.costo}/h</div>
           </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <button onclick="apriModificaOperaio('${op.id}')" title="Modifica operaio"
-              style="background:var(--g6);border:1px solid var(--s3);border-radius:8px;padding:5px 9px;font-size:12px;cursor:pointer;color:var(--g1);font-weight:600;font-family:'Nunito',sans-serif">✏️</button>
-            <div style="text-align:right">
-              <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--g1)">${fmtEur(costoOp)}</div>
-              <div style="font-size:10px;color:var(--soft)">${fmtN(totOreOp)}h su ${ggLavorate} gg</div>
-            </div>
+          <div style="text-align:right">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--g1)">${fmtEur(costoOp)}</div>
+            <div style="font-size:10px;color:var(--soft)">${fmtN(totOreOp)}h su ${ggLavorate} gg</div>
           </div>
         </div>
         <div class="operaio-stats">
@@ -2077,7 +1903,7 @@ function salvaVoceGiornale() {
   c.giornale = c.giornale || [];
   c.giornale.push({ id:uid(), data:v('gn-data')||today(), cat:v('gn-cat')||'nota', testo, foto:_gnFotoDataUrl||null, utente:S.uid||'Utente', created:Date.now() });
   _gnFotoDataUrl = null;
-  save(); if(S.cantiereId) saveSezione(S.cantiereId, 'giornale'); closeModal('mNuovaVoceGiornale');
+  save(); closeModal('mNuovaVoceGiornale');
   const el=$('gn-testo'); if(el) el.value='';
   const inp=$('gn-fotoInput'); if(inp) inp.value='';
   const wrap=$('gn-fotoPreview'); if(wrap) wrap.style.display='none';
@@ -2141,7 +1967,7 @@ function apriLightboxGiornale(id) {
 
 // ════════════ SAVE ACTIONS ════════════
 function saveCantiere() {
-  const nome = v('nc-nome').trim().toUpperCase();
+  const nome = v('nc-nome').trim();
   if(!nome) { alert('Inserisci il nome del cantiere'); return; }
   S.cantieri.push({
     id: uid(), nome, indirizzo: v('nc-ind'), resp: v('nc-resp'),
@@ -2152,15 +1978,14 @@ function saveCantiere() {
     speseGenerali: [], speseMateriali: [], ordini: [],
     created: Date.now()
   });
-  const newC = S.cantieri[S.cantieri.length-1];
-  save(); if(window._fbEnabled && window._fbSaveCantiere) window._fbSaveCantiere(newC, S.uid||'—'); closeModal('mNuovoCantiere');
+  save(); closeModal('mNuovoCantiere');
   ['nc-nome','nc-ind','nc-resp','nc-data','nc-importo','nc-note'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
   renderCantieri(); toast('✅ Cantiere creato!');
 }
 
 function saveImpostazioniCantiere() {
   const c = getCantiere(); if(!c) return;
-  c.nome = (v('ic-nome').trim() || c.nome).toUpperCase();
+  c.nome = v('ic-nome').trim() || c.nome;
   c.resp = v('ic-resp');
   c.importo = parseFloat(v('ic-importo'))||c.importo||0;
   c.pctCostiGenerali = parseFloat(v('ic-pctcg'))||c.pctCostiGenerali||18;
@@ -2173,7 +1998,7 @@ function saveImpostazioniCantiere() {
 
 function apriImpostazioniCantiere() {
   const c = getCantiere(); if(!c) return;
-  $('ic-nome').value = (c.nome||'').toUpperCase();
+  $('ic-nome').value = c.nome||'';
   $('ic-resp').value = c.resp||'';
   $('ic-importo').value = c.importo||'';
   $('ic-pctcg').value = c.pctCostiGenerali||18;
@@ -2201,7 +2026,6 @@ function saveVoce() {
   cap.voci.push({ id: uid(), desc, um: v('nv-um'), qty, pu, created: Date.now() });
 
   save();
-  if(S.cantiereId) saveSezione(S.cantiereId, 'capitoli');
   closeModal('mNuovaVoce');
   ['nv-cap-nome','nv-desc','nv-um','nv-qty','nv-pu'].forEach(id => { const el=$(id); if(el) el.value=''; });
   const tot = $('nv-totale'); if(tot) tot.style.display = 'none';
@@ -2228,7 +2052,6 @@ function saveRapportino() {
   const lav = v('rp-lav').trim();
   if(!lav) { alert('Inserisci le lavorazioni'); return; }
   const c = getCantiere(); if(!c) return;
-  const editId = v('rp-edit-id');
 
   const oreOperai = (c.operai||[]).map(op => {
     const oreEl = document.getElementById('ore-op-'+op.id);
@@ -2239,94 +2062,31 @@ function saveRapportino() {
   }).filter(Boolean);
 
   c.rapportini = c.rapportini||[];
-
-  if(editId) {
-    // MODIFICA rapportino esistente
-    const idx = c.rapportini.findIndex(r => r.id === editId);
-    if(idx !== -1) {
-      c.rapportini[idx] = { ...c.rapportini[idx],
-        data: v('rp-data')||today(), dir: v('rp-dir'),
-        meteo: v('rp-meteo'), stato: v('rp-stato'),
-        oreOperai, lav, mat: v('rp-mat'), note: v('rp-note'),
-        modificato: Date.now(), modificatoDa: S.uid||'Utente'
-      };
-    }
-    toast('✅ Rapportino aggiornato');
-  } else {
-    // NUOVO rapportino
-    c.rapportino_seq = (c.rapportino_seq||0) + 1;
-    c.rapportini.push({
-      id: uid(), seq: c.rapportino_seq,
-      data: v('rp-data')||today(), dir: v('rp-dir'),
-      meteo: v('rp-meteo'), stato: v('rp-stato'),
-      oreOperai, lav, mat: v('rp-mat'), note: v('rp-note'),
-      utente: S.uid||'Utente', created: Date.now()
-    });
-    const totH = oreOperai.reduce((s,x)=>s+(+x.ore||0),0);
-    toast(`✅ Rapportino salvato${totH>0?' · '+fmtN(totH)+'h registrate':''}`);
-  }
-
+  c.rapportino_seq = (c.rapportino_seq||0) + 1;
+  c.rapportini.push({
+    id: uid(),
+    seq: c.rapportino_seq,
+    data: v('rp-data')||today(),
+    dir: v('rp-dir'),
+    meteo: v('rp-meteo'),
+    stato: v('rp-stato'),
+    oreOperai,          // ← ore per operaio
+    lav,
+    mat: v('rp-mat'),
+    note: v('rp-note'),
+    utente: S.uid||'Utente',
+    created: Date.now()
+  });
   save();
-  if(S.cantiereId) saveSezione(S.cantiereId, 'rapportini');
   closeModal('mRapportino');
-  _resetFormRapportino(c);
-  updateCounts(); renderTab(S.tab);
-}
-
-function _resetFormRapportino(c) {
-  ['rp-data','rp-dir','rp-lav','rp-mat','rp-note','rp-edit-id'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
-  const t = $('rp-modal-title'); if(t) t.textContent = 'NUOVO RAPPORTINO';
-  const b = $('rp-btn-elimina'); if(b) b.style.display = 'none';
-  if(c) (c.operai||[]).forEach(op => {
+  ['rp-data','rp-dir','rp-lav','rp-mat','rp-note'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
+  (c.operai||[]).forEach(op => {
     const el = document.getElementById('ore-op-'+op.id);
     if(el) el.value = '';
-    const lel = document.getElementById('lav-op-'+op.id);
-    if(lel) lel.value = '';
   });
-}
-
-function apriModificaRapportino(rappId) {
-  const c = getCantiere(); if(!c) return;
-  const r = (c.rapportini||[]).find(x => x.id === rappId);
-  if(!r) return;
-
-  const t = $('rp-modal-title'); if(t) t.textContent = 'MODIFICA RAPPORTINO';
-  $('rp-edit-id').value = r.id;
-  $('rp-data').value = r.data || '';
-  $('rp-dir').value = r.dir || '';
-  const meteoSel = $('rp-meteo'); if(meteoSel) meteoSel.value = r.meteo||meteoSel.options[0].value;
-  const statoSel = $('rp-stato'); if(statoSel) statoSel.value = r.stato||'In corso';
-  $('rp-lav').value = r.lav || '';
-  $('rp-mat').value = r.mat || '';
-  $('rp-note').value = r.note || '';
-  const b = $('rp-btn-elimina'); if(b) b.style.display = 'block';
-
-  openModal('mRapportino');
-
-  // Pre-popola le ore operai dopo che il modal è aperto e i campi sono stati renderizzati
-  setTimeout(() => {
-    (r.oreOperai||[]).forEach(x => {
-      const oreEl = document.getElementById('ore-op-'+x.opId);
-      const lavEl = document.getElementById('lav-op-'+x.opId);
-      if(oreEl) oreEl.value = x.ore;
-      if(lavEl) lavEl.value = x.lav||'';
-    });
-  }, 200);
-}
-
-function eliminaRapportino() {
-  const editId = v('rp-edit-id');
-  const c = getCantiere(); if(!c || !editId) return;
-  const r = (c.rapportini||[]).find(x => x.id === editId);
-  if(!r) return;
-  if(!confirm('Eliminare il rapportino del ' + r.data + '?')) return;
-  c.rapportini = c.rapportini.filter(x => x.id !== editId);
-  save();
-  if(S.cantiereId) saveSezione(S.cantiereId, 'rapportini');
-  closeModal('mRapportino');
-  _resetFormRapportino(c);
   updateCounts(); renderTab(S.tab);
-  toast('🗑️ Rapportino eliminato');
+  const totH = oreOperai.reduce((s,x)=>s+(+x.ore||0),0);
+  toast(`✅ Rapportino salvato${totH>0?' · '+fmtN(totH)+'h registrate':''}`);
 }
 
 function saveOperaio() {
@@ -2342,7 +2102,7 @@ function saveOre() {
   if(!op) return;
   op.ore = op.ore||[];
   op.ore.push({ id: uid(), data: v('ore-data')||today(), ore: ore||0, tipo: v('ore-tipo'), note: v('ore-note'), created: Date.now() });
-  save(); if(S.cantiereId) saveSezione(S.cantiereId, 'operai'); closeModal('mOre');
+  save(); closeModal('mOre');
   ['ore-data','ore-ore','ore-note'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
   renderTab(S.tab); toast('✅ Ore registrate!');
 }
@@ -2358,7 +2118,6 @@ function saveFoto() {
   });
   fotoDataUrl = null;
   save();
-  if(S.cantiereId) saveSezione(S.cantiereId, 'foto');
   closeModal('mFoto');
   const wrap = $('fotoPreviewWrap'); if (wrap) wrap.style.display = 'none';
   const inp = $('fotoInputMain'); if (inp) inp.value = '';
@@ -2373,7 +2132,7 @@ function saveDocumento() {
   c.documenti = c.documenti||[];
   c.documenti.push({ id: uid(), nome, tipo: v('dc-tipo'), data: v('dc-data')||today(), note: v('dc-note'), fileData: docFileData, dim: docFileData?fmtBytes(docFileData.length):null, utente: S.uid||'Utente', created: Date.now() });
   docFileData = null;
-  save(); if(S.cantiereId) saveSezione(S.cantiereId, 'documenti'); closeModal('mDocumento');
+  save(); closeModal('mDocumento');
   $('dcFileName').textContent = 'Allega file (opzionale)';
   ['dc-nome','dc-data','dc-note'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
   updateCounts(); renderTab(S.tab); toast('✅ Documento salvato!');
@@ -2651,7 +2410,7 @@ function exportCantierePDF(id) {
   doc.text('RIEPILOGO CANTIERE — '+c.nome.slice(0,50), 105, 21, {align:'center'});
   doc.setTextColor(0,0,0); y=36;
   doc.setFontSize(9); doc.setFont(undefined,'normal');
-  doc.text('Indirizzo: '+(c.indirizzo||'—')+'  |  Dir. Lavori: '+(c.resp||'—')+'  |  Data: '+(c.data||'—'), 14, y); y+=10;
+  doc.text('Indirizzo: '+(c.indirizzo||'—')+'  |  Responsabile: '+(c.resp||'—')+'  |  Data: '+(c.data||'—'), 14, y); y+=10;
   const totPrev=calcolaPreventivo(c), totEff=calcolaConsuntivo(c), totMdo=calcolaManodopera(c);
   const totSG=(c.speseGenerali||[]).reduce((s,x)=>s+(x.tipo==='pct'?totPrev*(+x.importo||0)/100:(+x.importo||0)),0);
   const totSM=(c.speseMateriali||[]).reduce((s,x)=>s+(+x.importo||0),0);
@@ -2681,7 +2440,7 @@ function saveSpesaGenerale() {
   const c=getCantiere();if(!c)return;
   c.speseGenerali=c.speseGenerali||[];
   c.speseGenerali.push({id:uid(),desc,cat:v('sg-cat'),tipo:v('sg-tipo'),importo,data:v('sg-data')||today(),note:v('sg-note'),utente:S.uid||'Utente',created:Date.now()});
-  save(); if(S.cantiereId) saveSezione(S.cantiereId, 'speseGenerali'); closeModal('mSpesaGenerale');
+  save();closeModal('mSpesaGenerale');
   ['sg-desc','sg-importo','sg-data','sg-note'].forEach(id=>{const el=$(id);if(el)el.value='';});
   renderTab(S.tab);toast('✅ Spesa generale salvata!');
 }
@@ -2693,7 +2452,7 @@ function saveSpesaMateriali() {
   const c=getCantiere();if(!c)return;
   c.speseMateriali=c.speseMateriali||[];
   c.speseMateriali.push({id:uid(),desc,capId:v('sm-cap'),cat:v('sm-cat'),importo,data:v('sm-data')||today(),note:v('sm-note'),utente:S.uid||'Utente',created:Date.now()});
-  save(); if(S.cantiereId) saveSezione(S.cantiereId, 'speseMateriali'); closeModal('mSpesaMateriali');
+  save();closeModal('mSpesaMateriali');
   ['sm-desc','sm-importo','sm-data','sm-note'].forEach(id=>{const el=$(id);if(el)el.value='';});
   renderTab(S.tab);toast('✅ Spesa materiali salvata!');
 }
@@ -2946,7 +2705,7 @@ function esportaBackupJSON() {
 function esportaBackupExcel() {
   if (!window.XLSX) { toast('Libreria Excel non disponibile'); return; }
   const wb = XLSX.utils.book_new();
-  const cantRows = [['ID','Nome','Indirizzo','Direttore Lavori','Data','Importo','% CG','Target Margine']];
+  const cantRows = [['ID','Nome','Indirizzo','Responsabile','Data','Importo','% CG','Target Margine']];
   S.cantieri.forEach(c => cantRows.push([c.id,c.nome,c.indirizzo||'',c.resp||'',c.data||'',c.importo||0,c.pctCostiGenerali||18,c.targetMargine||20]));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(cantRows), 'Cantieri');
   const rappRows = [['Cantiere','Data','Direttore','Meteo','Stato','Lavorazioni','Note']];
@@ -3066,16 +2825,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginSvg = $('loginLogoSvg');
   if(loginSvg) loginSvg.style.display = 'block';
 
+  const screen = $('screenLogin');
   const lastUser = localStorage.getItem('tbc_last_user');
   if(lastUser && UTENTI.includes(lastUser)) {
-    // Auto-login diretto per utente già conosciuto
+    // Auto-login diretto — nessuna schermata
     _selectedUser = lastUser;
     S.auth = true;
     setUser(lastUser);
-    const screen = $('screenLogin');
     if(screen) screen.style.display = 'none';
   } else {
-    const screen = $('screenLogin');
     if(screen) screen.style.display = 'flex';
   }
 
@@ -3129,11 +2887,14 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(checkWeeklyBackup, 4000);
 
   document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'visible' && window._fbEnabled && window._fbLoadAll) {
+    if (document.visibilityState === 'visible' && window._fbEnabled && window._fbLoad) {
       try {
-        const remote = await window._fbLoadAll();
-        if (remote) {
-          _applyRemoteData(remote);
+        const remoteData = await window._fbLoad();
+        if (remoteData) {
+          if (remoteData.cantieri && remoteData.cantieri.length > 0) S.cantieri = remoteData.cantieri;
+          if (remoteData.operaiGlobali) S.operaiGlobali = remoteData.operaiGlobali;
+          if (remoteData.azienda) S.azienda = remoteData.azienda;
+          if (remoteData.presenze) S.presenze = remoteData.presenze;
           renderCurrentScreen();
           aggiornaKPIImpresa();
         }
@@ -3470,12 +3231,12 @@ function renderOrdini(c){
 // ════════════════════════════════════════════
 
 const TIPI_PRESENZA = {
-  ordinario:   { label: 'Ordinario',     ic: '✅', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0', hasOre: true  },
-  festivo:     { label: 'Festivo',       ic: '🌟', color: '#0369a1', bg: '#eff6ff', border: '#bfdbfe', hasOre: true  },
-  ferie:       { label: 'Ferie',         ic: '🏖️', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', hasOre: false },
-  perm_retr:   { label: 'Perm. Retr.',   ic: '📋', color: '#d97706', bg: '#fffbeb', border: '#fde68a', hasOre: false },
-  perm_nretr:  { label: 'Perm. N/Retr.', ic: '📌', color: '#b45309', bg: '#fef3c7', border: '#fcd34d', hasOre: false },
-  cig:         { label: 'CIG',           ic: '🏛️', color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb', hasOre: false },
+  ordinario:   { label: 'Ordinario',    ic: '✅', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
+  straordinario:{ label: 'Straord.',   ic: '⏱️', color: '#0369a1', bg: '#eff6ff', border: '#bfdbfe' },
+  ferie:       { label: 'Ferie',        ic: '🏖️', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+  malattia:    { label: 'Malattia',     ic: '🏥', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+  permesso:    { label: 'Permesso',     ic: '📋', color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+  assente:     { label: 'Assente',      ic: '❌', color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
 };
 
 function getPresenzeGiorno(data) {
@@ -3484,16 +3245,14 @@ function getPresenzeGiorno(data) {
   return S.presenze[data];
 }
 
-function setPresenza(opId, data, tipo, ore, cantiere, note) {
+function setPresenza(opId, data, tipo, ore, note) {
   if (!S.presenze) S.presenze = {};
   if (!S.presenze[data]) S.presenze[data] = {};
-  const hasOre = TIPI_PRESENZA[tipo] ? TIPI_PRESENZA[tipo].hasOre : false;
-  S.presenze[data][opId] = {
-    tipo,
-    ore: hasOre ? (+ore||0) : 0,
-    cantiere: cantiere||'',
-    note: note||''
-  };
+  if (tipo === 'assente') {
+    S.presenze[data][opId] = { tipo, ore: 0, note: note||'' };
+  } else {
+    S.presenze[data][opId] = { tipo, ore: +ore||0, note: note||'' };
+  }
   save();
   renderPresenzeGiorno();
   aggiornaBadgePresenze(data);
@@ -3560,43 +3319,18 @@ function renderPresenzeGiorno() {
     return;
   }
 
-  // Dropdown cantieri per il selettore
-  const cantieriOpts = S.cantieri.map(c =>
-    `<option value="${c.id}">${esc(c.nome.slice(0,30))}</option>`
-  ).join('');
-
   list.innerHTML = operai.map(op => {
     const p = pres[op.id] || null;
     const tipo = p ? p.tipo : null;
     const ore = p ? p.ore : 0;
-    const cantiere = p ? (p.cantiere||'') : '';
-
     const tipiBtns = Object.entries(TIPI_PRESENZA).map(([k, t]) =>
       `<button onclick="presenzaSetTipo('${op.id}','${data}','${k}')"
-        style="padding:4px 7px;border-radius:6px;font-size:9px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;border:1.5px solid ${tipo===k ? t.color : t.border};background:${tipo===k ? t.bg : '#fff'};color:${tipo===k ? t.color : '#888'};white-space:nowrap">
+        style="padding:4px 6px;border-radius:6px;font-size:9px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;border:1.5px solid ${tipo===k ? t.color : t.border};background:${tipo===k ? t.bg : '#fff'};color:${tipo===k ? t.color : '#888'};white-space:nowrap">
         ${t.ic} ${t.label}
       </button>`
     ).join('');
 
-    // Cantiere dropdown — mostrato solo se tipo è presente
-    const cantiereSelect = tipo
-      ? `<div style="margin-top:6px">
-          <select onchange="presenzaSetCantiere('${op.id}','${data}',this.value)"
-            style="width:100%;border:1px solid var(--s2);border-radius:6px;padding:5px 8px;font-size:12px;font-family:'Nunito',sans-serif;color:var(--text);background:#fff">
-            <option value="">— Cantiere (opzionale) —</option>
-            ${cantieriOpts}
-          </select>
-        </div>`
-      : '';
-
-    // Imposta il valore del select dopo render
-    const cantiereScript = (tipo && cantiere)
-      ? `<script>setTimeout(()=>{const s=document.querySelector('[data-op="${op.id}"] select');if(s)s.value='${cantiere}';},0)<\/script>`
-      : '';
-
-    // Ore — solo per tipi che hanno ore
-    const hasOre = tipo && TIPI_PRESENZA[tipo] && TIPI_PRESENZA[tipo].hasOre;
-    const oreInput = hasOre
+    const oreInput = tipo && tipo !== 'assente' && tipo !== 'ferie' && tipo !== 'malattia'
       ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px">
           <span style="font-size:11px;color:var(--soft);font-weight:600">Ore:</span>
           <input type="number" min="0" max="24" step="0.5" value="${ore||op.oreDay||8}"
@@ -3607,39 +3341,20 @@ function renderPresenzeGiorno() {
       : '';
 
     const statoColor = tipo ? TIPI_PRESENZA[tipo].color : '#ccc';
-    const nomeCantiere = cantiere ? (S.cantieri.find(c=>c.id===cantiere)||{}).nome||'' : '';
-    const statoLabel = tipo
-      ? `${TIPI_PRESENZA[tipo].ic} ${TIPI_PRESENZA[tipo].hasOre ? ore+'h' : TIPI_PRESENZA[tipo].label}${nomeCantiere ? ' · '+nomeCantiere.slice(0,15) : ''}`
-      : '—';
+    const statoLabel = tipo ? `${TIPI_PRESENZA[tipo].ic} ${tipo === 'ordinario' ? ore+'h' : TIPI_PRESENZA[tipo].label}` : '—';
 
-    return `<div data-op="${op.id}" style="background:var(--s1);border-radius:10px;padding:10px 12px;margin-bottom:8px;border:1.5px solid ${tipo ? TIPI_PRESENZA[tipo].border : 'var(--s2)'}">
+    return `<div style="background:var(--s1);border-radius:10px;padding:10px 12px;margin-bottom:8px;border:1.5px solid ${tipo ? TIPI_PRESENZA[tipo].border : 'var(--s2)'}">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <div>
           <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(op.nome)}</div>
           <div style="font-size:10px;color:var(--soft)">${esc(op.qualifica||'')} · €${op.costo}/h</div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          ${tipo ? `<button onclick="cancellaPresenza('${op.id}','${data}')" title="Cancella presenza"
-            style="background:#fff;border:1px solid #fecaca;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;color:#dc2626;font-family:'Nunito',sans-serif">✕</button>` : ''}
-          <span style="font-size:11px;font-weight:700;color:${statoColor};text-align:right;max-width:120px">${statoLabel}</span>
-        </div>
+        <span style="font-size:11px;font-weight:700;color:${statoColor}">${statoLabel}</span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:4px">${tipiBtns}</div>
-      ${cantiereSelect}
       ${oreInput}
-      ${cantiereScript}
     </div>`;
   }).join('');
-
-  // Imposta i valori cantiere nei select dopo che il DOM è pronto
-  setTimeout(() => {
-    operai.forEach(op => {
-      const p = pres[op.id];
-      if (!p || !p.cantiere) return;
-      const card = document.querySelector(`[data-op="${op.id}"] select`);
-      if (card) card.value = p.cantiere;
-    });
-  }, 50);
 
   aggiornaBadgePresenze(data);
 }
@@ -3647,35 +3362,15 @@ function renderPresenzeGiorno() {
 function presenzaSetTipo(opId, data, tipo) {
   const op = (S.operaiGlobali||[]).find(o => o.id === opId);
   const oreDefault = op ? (op.oreDay || 8) : 8;
-  const prev = S.presenze && S.presenze[data] && S.presenze[data][opId] ? S.presenze[data][opId] : null;
-  const oreAttuali = prev ? prev.ore : oreDefault;
-  const cantiereAttuali = prev ? (prev.cantiere||'') : '';
-  const hasOre = TIPI_PRESENZA[tipo] ? TIPI_PRESENZA[tipo].hasOre : false;
-  setPresenza(opId, data, tipo, hasOre ? oreAttuali : 0, cantiereAttuali, '');
-}
-
-function presenzaSetCantiere(opId, data, cantiere) {
-  if (!S.presenze || !S.presenze[data] || !S.presenze[data][opId]) return;
-  S.presenze[data][opId].cantiere = cantiere;
-  save();
-}
-
-function cancellaPresenza(opId, data) {
-  if (!S.presenze || !S.presenze[data] || !S.presenze[data][opId]) return;
-  delete S.presenze[data][opId];
-  // Se il giorno è rimasto vuoto, rimuovi anche il giorno
-  if (Object.keys(S.presenze[data]).length === 0) delete S.presenze[data];
-  save();
-  renderPresenzeGiorno();
-  aggiornaBadgePresenze(data);
-  toast('Presenza rimossa');
+  const oreAttuali = S.presenze && S.presenze[data] && S.presenze[data][opId]
+    ? S.presenze[data][opId].ore : oreDefault;
+  setPresenza(opId, data, tipo, tipo === 'assente' || tipo === 'ferie' || tipo === 'malattia' ? 0 : oreAttuali, '');
 }
 
 function presenzaSetOre(opId, data, ore) {
   if (!S.presenze || !S.presenze[data] || !S.presenze[data][opId]) return;
   S.presenze[data][opId].ore = +ore || 0;
   save();
-  aggiornaBadgePresenze(data);
 }
 
 function initPresenzeUI() {
@@ -3684,20 +3379,29 @@ function initPresenzeUI() {
     inp.value = new Date().toISOString().slice(0,10);
   }
   renderPresenzeGiorno();
-  // Retry progressivi finché non arrivano gli operai da Firebase
+  // Se operai ancora vuoti, riprova con polling ogni 500ms fino a 8 tentativi
   if (!(S.operaiGlobali && S.operaiGlobali.length)) {
-    const retryTimes = [800, 2000, 4000, 7000, 12000];
-    retryTimes.forEach(ms => {
-      setTimeout(() => {
-        if (S.operaiGlobali && S.operaiGlobali.length) {
-          // Aggiorna solo se la sezione presenze è ancora aperta
-          const body = document.getElementById('body-presenze');
-          if (body && body.style.maxHeight && body.style.maxHeight !== '0px') {
-            renderPresenzeGiorno();
+    let attempts = 0;
+    const poll = setInterval(async () => {
+      attempts++;
+      // Prova a forzare reload da Firebase
+      if (attempts === 2 && window._fbEnabled && window._fbLoad) {
+        try {
+          const d = await window._fbLoad();
+          if (d && d.operaiGlobali && d.operaiGlobali.length) {
+            S.operaiGlobali = d.operaiGlobali;
+            if (d.presenze) S.presenze = d.presenze;
           }
-        }
-      }, ms);
-    });
+        } catch(e) {}
+      }
+      if (S.operaiGlobali && S.operaiGlobali.length) {
+        renderPresenzeGiorno();
+        clearInterval(poll);
+      } else if (attempts >= 8) {
+        renderPresenzeGiorno();
+        clearInterval(poll);
+      }
+    }, 500);
   }
 }
 
@@ -3709,48 +3413,57 @@ function exportPresenzeCSV() {
   if (!mese || !mese.match(/^\d{4}-\d{2}$/)) { toast('Formato mese non valido'); return; }
 
   const operai = S.operaiGlobali || [];
-  const rows = [['Nome','Qualifica','Data','Tipo presenza','Cantiere','Ore','Costo \u20ac']];
+  const rows = [['Matricola/Nome','Qualifica','Data','Tipo presenza','Ore','Note','Costo €']];
 
-  const giorni = Object.keys(S.presenze).filter(d => d.startsWith(mese)).sort();
+  const giorni = Object.keys(S.presenze)
+    .filter(d => d.startsWith(mese))
+    .sort();
+
   if (!giorni.length) { toast('Nessuna presenza nel mese ' + mese); return; }
 
   operai.forEach(op => {
     giorni.forEach(data => {
       const p = S.presenze[data] && S.presenze[data][op.id];
       if (!p) return;
-      const tp = TIPI_PRESENZA[p.tipo];
-      const hasOre = tp ? tp.hasOre : false;
-      const costo = hasOre ? ((+p.ore||0) * (+op.costo||0)).toFixed(2) : '0.00';
-      const nomeCantiere = p.cantiere ? ((S.cantieri.find(c=>c.id===p.cantiere)||{}).nome||p.cantiere) : '';
-      rows.push([op.nome, op.qualifica||'', data, tp ? tp.label : p.tipo, nomeCantiere, p.ore||0, costo]);
+      const costo = p.tipo !== 'assente' && p.tipo !== 'ferie' && p.tipo !== 'malattia'
+        ? ((+p.ore||0) * (+op.costo||0)).toFixed(2) : '0.00';
+      rows.push([
+        op.nome,
+        op.qualifica || '',
+        data,
+        TIPI_PRESENZA[p.tipo] ? TIPI_PRESENZA[p.tipo].label : p.tipo,
+        p.ore || 0,
+        p.note || '',
+        costo
+      ]);
     });
   });
 
   rows.push([]);
   rows.push(['RIEPILOGO MENSILE','','','','','','']);
-  rows.push(['Nome','Qualifica','Ore ordinarie','Ore festive','Gg ferie','Gg perm.retr.','Gg perm.n/retr.','Gg CIG','Costo totale \u20ac']);
+  rows.push(['Nome','Qualifica','Gg ordinarie','Ore ord.','Gg straord.','Ore straord.','Ferie','Malattia','Permessi','Assenze','Costo totale €']);
 
   operai.forEach(op => {
-    let oreOrd=0, oreFest=0, ggFerie=0, ggPermR=0, ggPermNR=0, ggCIG=0, costoTot=0;
+    let ggOrd=0, oreOrd=0, ggStr=0, oreStr=0, ggFerie=0, ggMal=0, ggPerm=0, ggAss=0, costoTot=0;
     giorni.forEach(data => {
       const p = S.presenze[data] && S.presenze[data][op.id];
       if (!p) return;
-      if (p.tipo==='ordinario')  { oreOrd  += +p.ore||0; costoTot += (+p.ore||0)*(+op.costo||0); }
-      if (p.tipo==='festivo')    { oreFest += +p.ore||0; costoTot += (+p.ore||0)*(+op.costo||0); }
-      if (p.tipo==='ferie')      { ggFerie++; }
-      if (p.tipo==='perm_retr')  { ggPermR++; }
-      if (p.tipo==='perm_nretr') { ggPermNR++; }
-      if (p.tipo==='cig')        { ggCIG++; }
+      if (p.tipo==='ordinario')    { ggOrd++;  oreOrd  += +p.ore||0; costoTot += (+p.ore||0)*(+op.costo||0); }
+      if (p.tipo==='straordinario'){ ggStr++;  oreStr  += +p.ore||0; costoTot += (+p.ore||0)*(+op.costo||0); }
+      if (p.tipo==='ferie')        { ggFerie++; }
+      if (p.tipo==='malattia')     { ggMal++; }
+      if (p.tipo==='permesso')     { ggPerm++; }
+      if (p.tipo==='assente')      { ggAss++; }
     });
-    rows.push([op.nome, op.qualifica||'', oreOrd, oreFest, ggFerie, ggPermR, ggPermNR, ggCIG, costoTot.toFixed(2)]);
+    rows.push([op.nome, op.qualifica||'', ggOrd, oreOrd, ggStr, oreStr, ggFerie, ggMal, ggPerm, ggAss, costoTot.toFixed(2)]);
   });
 
   const csv = rows.map(r => r.join(';')).join('\n');
   const a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+  a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
   a.download = 'Presenze_' + mese + '_Tecnobase.csv';
   a.click();
-  toast('\ud83d\udcca CSV presenze esportato per ufficio paghe!');
+  toast('📊 CSV presenze esportato per ufficio paghe!');
 }
 
 function exportPresenzePDF() {
@@ -3782,21 +3495,22 @@ function exportPresenzePDF() {
     doc.setFillColor(232,240,232);
     doc.rect(M, y-3, W-M*2, 7, 'F');
     doc.setFontSize(9); doc.setFont(undefined,'bold');
-    doc.text(op.nome + '  —  ' + (op.qualifica||'') + '  —  €' + op.costo + '/h', M+2, y+1);
+    doc.text(`${op.nome}  —  ${op.qualifica||''}  —  €${op.costo}/h`, M+2, y+1);
 
-    let oreOrd=0, oreFest=0, ggFerie=0, ggPermR=0, ggPermNR=0, ggCIG=0, costoTot=0;
+    let oreOrd=0, oreStr=0, ggFerie=0, ggMal=0, ggPerm=0, ggAss=0;
     giorni.forEach(data => {
       const p = S.presenze[data] && S.presenze[data][op.id];
       if (!p) return;
-      if (p.tipo==='ordinario')  { oreOrd  += +p.ore||0; costoTot += (+p.ore||0)*(+op.costo||0); }
-      if (p.tipo==='festivo')    { oreFest += +p.ore||0; costoTot += (+p.ore||0)*(+op.costo||0); }
-      if (p.tipo==='ferie')      { ggFerie++; }
-      if (p.tipo==='perm_retr')  { ggPermR++; }
-      if (p.tipo==='perm_nretr') { ggPermNR++; }
-      if (p.tipo==='cig')        { ggCIG++; }
+      if (p.tipo==='ordinario')     oreOrd += +p.ore||0;
+      if (p.tipo==='straordinario') oreStr += +p.ore||0;
+      if (p.tipo==='ferie')         ggFerie++;
+      if (p.tipo==='malattia')      ggMal++;
+      if (p.tipo==='permesso')      ggPerm++;
+      if (p.tipo==='assente')       ggAss++;
     });
+    const costoTot = (oreOrd + oreStr) * (+op.costo||0);
     doc.setFont(undefined,'normal'); doc.setFontSize(8);
-    doc.text('Ord: '+oreOrd+'h  Fest: '+oreFest+'h  Ferie: '+ggFerie+'gg  P.Retr: '+ggPermR+'gg  P.N/R: '+ggPermNR+'gg  CIG: '+ggCIG+'gg  Costo: €'+costoTot.toFixed(2), W-M-2, y+1, {align:'right'});
+    doc.text(`Ord: ${oreOrd}h  Straord: ${oreStr}h  Ferie: ${ggFerie}gg  Mal: ${ggMal}gg  Perm: ${ggPerm}gg  Ass: ${ggAss}gg  Costo: €${costoTot.toFixed(2)}`, W-M-2, y+1, {align:'right'});
     y += 9;
 
     const presGiorno = giorni.filter(d => S.presenze[d] && S.presenze[d][op.id]);
@@ -3805,11 +3519,10 @@ function exportPresenzePDF() {
         if (y > 190) { doc.addPage(); y = 18; }
         const p = S.presenze[data][op.id];
         const tp = TIPI_PRESENZA[p.tipo] || {label: p.tipo};
-        const nomeCantiere = p.cantiere ? ((S.cantieri.find(c=>c.id===p.cantiere)||{}).nome||'').slice(0,25) : '';
         doc.text(data, M+4, y);
         doc.text(tp.label, M+30, y);
         doc.text(p.ore > 0 ? p.ore+'h' : '—', M+70, y);
-        if (nomeCantiere) doc.text(nomeCantiere, M+85, y);
+        if (p.note) doc.text(p.note.slice(0,60), M+85, y);
         y += 4.5;
       });
     } else {
@@ -3822,8 +3535,9 @@ function exportPresenzePDF() {
   });
 
   doc.save('Presenze_' + mese + '_Tecnobase.pdf');
-  toast('\ud83d\udcc4 PDF presenze generato!');
+  toast('📄 PDF presenze generato!');
 }
+
 </script>
 </body>
 </html>
