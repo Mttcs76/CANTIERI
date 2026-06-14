@@ -566,9 +566,7 @@ function renderCantieri(){
     cant.forEach(function(c) {
       const costiDaFatture = fatture.filter(f => f.cantiereId===c.id && f.tipo==='passiva').reduce((s,f) => s+costoNetto(f), 0);
       const costiDaVoci = voci.filter(v => v.cantiereId===c.id).reduce((s,v) => s+(v.importo||0), 0);
-      const speseG = (c.speseGenerali||[]).reduce((s,x) => s+(x.importo||0), 0);
-      const speseM = (c.speseMateriali||[]).reduce((s,x) => s+(x.importo||0), 0);
-      const costiTot = costiDaFatture + costiDaVoci + speseG + speseM;
+      const costiTot = costiDaFatture + costiDaVoci;
       const costiIva = fatture.filter(f => f.cantiereId===c.id && f.tipo==='passiva').reduce((s,f) => s+(f.iva||0), 0);
       const costiLordi = fatture.filter(f => f.cantiereId===c.id && f.tipo==='passiva').reduce((s,f) => s+(f.totale||0), 0);
       const ricavi = c.importo || 0;
