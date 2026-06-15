@@ -2946,7 +2946,7 @@ function renderCruscottoGestione(ct) {
   const fatture = ct.fatture||[];
   const voci = ct.voci||[];
   const daPagare = fatture.filter(f=>f.tipo==='passiva'&&f.stato==='assegnata').reduce((s,f)=>s+(f.totale||0),0);
-  const ricaviCantieri = getRicaviCantieri();
+  const ricaviCantieri = S.cantieri.reduce((tot,c)=>(c.capitoli||[]).reduce((s,cap)=>(cap.voci||[]).reduce((a,v)=>{const q=v.qtyEff!=null?+v.qtyEff:(+v.qty||0);return a+q*(+v.pu||0);},s),tot),0);
   const cantRows = S.cantieri.filter(c=>c.nome).map(c=>{
     const costiF=fatture.filter(f=>f.cantiereId===c.id&&f.tipo==='passiva').reduce((s,f)=>s+(f.imponibile||f.totale||0),0);
     const costiV=voci.filter(v=>v.cantiereId===c.id).reduce((s,v)=>s+(v.importo||0),0);
