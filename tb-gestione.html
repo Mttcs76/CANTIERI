@@ -510,6 +510,12 @@ function setFbDot(state){
 
 async function initApp(){
   setFbDot('');
+  // Aspetta che il modulo Firebase sia pronto (max 3 secondi)
+  let attempts = 0;
+  while(!window._fbLoadCantieri && attempts < 30) {
+    await new Promise(r => setTimeout(r, 100));
+    attempts++;
+  }
   try {
     const [cantieri, contabile] = await Promise.all([
       window._fbLoadCantieri ? window._fbLoadCantieri() : Promise.resolve([]),
@@ -934,6 +940,7 @@ async function importExcel(input){
     const col = function(name){ return headers.indexOf(name); };
     const voci = [], fatture = [];
     let nuovoSaldoBanca = _contabile.saldoBanca || 0;
+    console.log('Import Excel — cantieri disponibili:', _cantieri.length, _cantieri.map(c=>(c.nome||'?')+'('+c.id+')').join(', '));
     for(let i = headerIdx + 1; i < rows.length; i++){
       const row = rows[i];
       if(!row || !row[col('tipo')]) continue;
