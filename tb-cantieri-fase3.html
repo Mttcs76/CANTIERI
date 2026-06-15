@@ -176,7 +176,7 @@ window._fbDeleteCantiere = async (id) => {
     <div class="tb-title">TB WORKS</div>
     <div class="tb-sub" id="tbSub">Tecnobase Restauri</div>
   </div>
-  <div id="fbStatus" style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:10px;color:rgba(255,255,255,.5);font-weight:500">
+  <div id="fbStatus" onclick="manualSync()" style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:10px;color:rgba(255,255,255,.5);font-weight:500;cursor:pointer;padding:4px 8px;border-radius:6px;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.1)'" onmouseleave="this.style.background='transparent'">
     <div id="fbDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.3)"></div>
     <span id="fbLabel">locale</span>
   </div>
@@ -930,6 +930,33 @@ function save() {
     window._fbSave({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{} }).then(()=>{
       setFbStatus(true);
     }).catch(()=>setFbStatus(false));
+  }
+}
+
+async function manualSync() {
+  if (!window._fbEnabled || !window._fbLoad) { toast('Firebase non attivo'); return; }
+  const dot = $('fbDot'), label = $('fbLabel');
+  if (dot) { dot.style.background = '#f59e0b'; dot.style.boxShadow = '0 0 4px #f59e0b80'; }
+  if (label) label.textContent = 'sync...';
+  try {
+    const remoteData = await window._fbLoad();
+    if (remoteData && remoteData.cantieri && remoteData.cantieri.length > 0) {
+      S.cantieri = remoteData.cantieri;
+      if (remoteData.operaiGlobali) S.operaiGlobali = remoteData.operaiGlobali;
+      if (remoteData.presenze) S.presenze = remoteData.presenze;
+      localStorage.setItem(SK, JSON.stringify({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: Date.now() }));
+      renderCurrentScreen();
+      setFbStatus(true);
+      toast('☁️ Sincronizzato da Firebase');
+    } else {
+      // Nessun dato remoto — salva locale su Firebase
+      await window._fbSave({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{} });
+      setFbStatus(true);
+      toast('☁️ Dati locali salvati su Firebase');
+    }
+  } catch(e) {
+    setFbStatus(false);
+    toast('❌ Errore sincronizzazione');
   }
 }
 
