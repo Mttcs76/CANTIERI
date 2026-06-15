@@ -947,6 +947,7 @@ async function manualSync() {
       localStorage.setItem(SK, JSON.stringify({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: Date.now() }));
       renderCurrentScreen();
       setFbStatus(true);
+      await salvaBackupSilenzioso('Sync — ' + new Date().toLocaleString('it-IT') + ' — ' + (S.uid||'?'));
       toast('☁️ Sincronizzato da Firebase');
     } else {
       // Nessun dato remoto — salva locale su Firebase
@@ -2678,23 +2679,26 @@ function autoSnapshot() {
 }
 
 async function checkWeeklyBackup() {
-  const lastWeekly = parseInt(localStorage.getItem('tbc_last_weekly') || '0');
+  const lastBackup = parseInt(localStorage.getItem('tbc_last_weekly') || '0');
   const now = Date.now();
-  const sevenDays = 7 * 24 * 60 * 60 * 1000;
-  if (now - lastWeekly > sevenDays && S.cantieri.length > 0) {
+  const oneDay = 24 * 60 * 60 * 1000;
+  if (now - lastBackup > oneDay && S.cantieri.length > 0) {
     localStorage.setItem('tbc_last_weekly', String(now));
     if (window._fbEnabled && window._fbSaveBackup) {
       const data = getBackupData();
       const ts = new Date().toLocaleString('it-IT');
-      await window._fbSaveBackup(data, `Settimanale — ${ts}`);
-      toast('☁️ Backup settimanale salvato su Firebase');
+      await window._fbSaveBackup(data, 'Auto — ' + ts + ' — ' + (S.uid||'?'));
+      console.log('Backup automatico giornaliero salvato');
     }
-    setTimeout(() => {
-      if (confirm('📦 Backup settimanale automatico\n\nI tuoi dati sono stati salvati su Firebase.\nVuoi scaricare anche una copia locale (JSON) da conservare in iCloud?')) {
-        esportaBackupJSON();
-      }
-    }, 1500);
   }
+}
+
+async function salvaBackupSilenzioso(label) {
+  if (!window._fbEnabled || !window._fbSaveBackup || S.cantieri.length === 0) return;
+  try {
+    const data = getBackupData();
+    await window._fbSaveBackup(data, label || ('Auto — ' + new Date().toLocaleString('it-IT')));
+  } catch(e) { console.warn('Backup silenzioso fallito:', e); }
 }
 
 async function salvaBackupFirebase() {
