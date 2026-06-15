@@ -1480,7 +1480,7 @@ function renderCantieri() {
     el.innerHTML = `<div class="empty"><div class="empty-ic">🏗️</div><div class="empty-txt">Nessun cantiere ancora.<br>Crea il primo cantiere!</div></div>`;
     return;
   }
-  el.innerHTML = S.cantieri.map(c=>{
+  el.innerHTML = [...S.cantieri].sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','it')).map(c=>{
     const init = (c.nome||'?').split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('');
     const voci = (c.capitoli||[]).reduce((a,cap)=>a+(cap.voci||[]).length,0);
     const totPrev = calcolaPreventivo(c);
@@ -2421,7 +2421,7 @@ function saveSpesaMateriali() {
 
 // ════════════ RENDER MARGINI ════════════
 function renderCosti(c) {
-  const fE = n => '€ ' + Math.round(n||0).toLocaleString('it-IT');
+  const fE = n => '€ ' + (+(n||0)).toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2});
   const targetM = +(c.targetMargine||20);
   const totRicavo = calcolaConsuntivo(c);
   const totMdo = calcolaManodopera(c);
