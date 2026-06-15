@@ -1300,6 +1300,9 @@ function switchTab(tab) {
   const tabEl = $('t-'+tab), navEl = $('n-'+tab);
   if(tabEl) tabEl.classList.add('active');
   if(navEl) navEl.classList.add('active');
+  // Nasconde FAB nelle tab in sola lettura da TB Gestione
+  const fabEl = $('fab');
+  if(fabEl) fabEl.classList[tab==='costi'?'remove':'add']('show');
   renderTab(tab);
 }
 
@@ -3037,7 +3040,7 @@ function aggiornaKPIImpresa() {
     const totCG=(ct.voci||[]).filter(v=>v.assegnazione==='generale').reduce((s,v)=>s+(v.importo||0),0)
       + (ct.fatture||[]).filter(f=>f.assegnazione==='generale'&&f.tipo==='passiva').reduce((s,f)=>s+(f.imponibile||f.totale||0),0);
     const kpiCG=$('kpi-cg'); if(kpiCG) kpiCG.textContent=totCG?fE(totCG):'—';
-    const ricavi=getRicaviCantieri();
+    const ricavi = S.cantieri.reduce((s,c) => s + calcolaConsuntivo(c), 0);
     const kpiR=$('kpi-ricavi'); if(kpiR) kpiR.textContent=ricavi?fE(ricavi):'—';
   });
 }
