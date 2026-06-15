@@ -1645,9 +1645,10 @@ function calcolaManodopera(c) {
     });
   });
   // Costo = costo mensile × (ore cantiere / ore totali)
-  const operaiAll = [...(S.operaiGlobali||[]), ...(c.operai||[])];
+  // S.operaiGlobali ha priorità — sovrascrive gli operai locali del cantiere
   const operaiMap = {};
-  operaiAll.forEach(op => { if(op && op.id) operaiMap[op.id] = op; });
+  (c.operai||[]).forEach(op => { if(op && op.id) operaiMap[op.id] = op; });
+  (S.operaiGlobali||[]).forEach(op => { if(op && op.id) operaiMap[op.id] = op; });
   return Object.entries(oreCantiere).reduce((tot, [opId, ore]) => {
     const op = operaiMap[opId];
     const costoMensile = +op?.costo||0;
@@ -2511,8 +2512,10 @@ function renderCosti(c) {
   (c.rapportini||[]).forEach(r => {
     (r.oreOperai||[]).forEach(x => { oreCantiere[x.opId]=(oreCantiere[x.opId]||0)+(+x.ore||0); });
   });
+  // S.operaiGlobali ha priorità sugli operai locali del cantiere
   const operaiMap = {};
-  [...(S.operaiGlobali||[]),...(c.operai||[])].forEach(op=>{ if(op&&op.id) operaiMap[op.id]=op; });
+  (c.operai||[]).forEach(op=>{ if(op&&op.id) operaiMap[op.id]=op; });
+  (S.operaiGlobali||[]).forEach(op=>{ if(op&&op.id) operaiMap[op.id]=op; });
 
   const mdoDettaglio = Object.entries(oreCantiere).map(([opId,ore])=>{
     const op=operaiMap[opId]; if(!op) return null;
