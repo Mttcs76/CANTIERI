@@ -575,7 +575,7 @@ function renderCantieri(){
       const costiTot = costiDaFatture + costiDaVoci;
       const costiIva = fatture.filter(f => f.cantiereId===c.id && f.tipo==='passiva').reduce((s,f) => s+(f.iva||0), 0);
       const costiLordi = fatture.filter(f => f.cantiereId===c.id && f.tipo==='passiva').reduce((s,f) => s+(f.totale||0), 0);
-      const ricavi = c.importo || 0;
+      const ricavi = calcolaContratto(c);
       const margine = ricavi > 0 ? ((ricavi - costiTot) / ricavi * 100) : null;
       const target = c.targetMargine || 20;
       const nFatture = fatture.filter(f => f.cantiereId===c.id).length;
@@ -657,6 +657,19 @@ function renderGenerali(){
 // Usa imponibile se disponibile, altrimenti totale (fallback per record senza IVA separata)
 function costoNetto(f){ return f.imponibile && f.imponibile > 0 ? f.imponibile : (f.totale||0); }
 
+
+// Calcola il valore del contratto: usa importo se impostato, altrimenti somma il computo
+function calcolaContratto(c) {
+  if(c.importo && c.importo > 0) return c.importo;
+  // Somma le voci del computo (usa qtyEff se disponibile, come TB Cantieri)
+  return (c.capitoli||[]).reduce((s, cap) => {
+    return s + (cap.voci||[]).reduce((sv, v) => {
+      const q = (v.qtyEff != null && v.qtyEff !== '') ? +v.qtyEff : (+v.qty||0);
+      return sv + q * (+v.pu||0);
+    }, 0);
+  }, 0);
+}
+
 function renderFlusso(){
   const fatture = _contabile.fatture || [];
   const saldoBanca = _contabile.saldoBanca || 0;
@@ -668,7 +681,8 @@ function renderFlusso(){
   const scadenze = fatture.filter(f => f.scadenza && f.stato!=='pagata' && f.stato!=='riconciliata').sort((a,b) => a.scadenza.localeCompare(b.scadenza)).slice(0,6);
   const margini = _cantieri.filter(c => c.nome).map(c => {
     const costi = fatture.filter(f => f.cantiereId===c.id && f.tipo==='passiva').reduce((s,f) => s+costoNetto(f), 0);
-    const margine = c.importo > 0 ? ((c.importo - costi) / c.importo * 100) : null;
+    const contratto = calcolaContratto(c);
+    const margine = contratto > 0 ? ((contratto - costi) / contratto * 100) : null;
     return { ...c, costiReali: costi, margine };
   }).sort((a,b) => {
     // Prima quelli con contratto (ordinati per margine crescente), poi senza
@@ -713,8 +727,8 @@ function renderFlusso(){
       const barW = hasMargine ? Math.min(100, Math.max(0, c.margine)) : 0;
       const margineStr = hasMargine ? c.margine.toFixed(0)+'%' : '—';
       const subTxt = hasMargine
-        ? 'contratto ' + fmt(c.importo) + ' · costi ' + fmt(c.costiReali)
-        : 'contratto non impostato · costi ' + fmt(c.costiReali);
+        ? 'contratto ' + fmt(calcolaContratto(c)) + ' · costi ' + fmt(c.costiReali)
+        : 'nessun computo · costi ' + fmt(c.costiReali);
       html += '<div style="padding:12px 14px;border-bottom:1px solid var(--s1)">';
       html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:' + (hasMargine?'6':'2') + 'px">';
       html += '<div><div style="font-weight:700;font-size:13px">' + c.nome + '</div>';
