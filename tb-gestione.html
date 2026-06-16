@@ -854,7 +854,26 @@ function buildFattureTabella(fatture, filtro, prefisso) {
 }
 
 function buildFatturaRow(f, idx){
-  return buildFattureTabella([f], 'tutte', f.tipo==='passiva'?'P':'A');
+  // Usato in renderBanca per fatture singole — formato riga compatta
+  const df = f.dataFattura ? f.dataFattura.split('-').reverse().join('/') : '';
+  const assegnata = f.assegnazione && (f.cantiereId || f.assegnazione === 'generale');
+  const cantNome = assegnata && f.assegnazione === 'cantiere' ? ((_cantieri.find(function(c){ return c.id === f.cantiereId; })||{}).nome||'?') : '';
+  const isNC = (f.tipdoc||'').toUpperCase() === 'NC';
+  const imp = f.imponibile || 0; const iva = f.iva || 0; const tot = f.totale || 0;
+  const aliq = f.aliquotaIva !== undefined ? f.aliquotaIva : 0;
+  const statoStyle = {pagata:'background:#d8f3dc;color:#1a4a2e', assegnata:'background:#dbeafe;color:#185fa5',
+    riconciliata:'background:#dbeafe;color:#185fa5', annullata:'background:#fee2e2;color:#a32d2d'}[f.stato||''] || 'background:var(--s2);color:var(--soft)';
+  const centroLabel = assegnata ? (f.assegnazione==='generale' ? 'Generale' : cantNome) : '—';
+  return '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--s1);font-size:12px' + (isNC?';opacity:.6':'') + '">' +
+    '<span style="font-size:10px;color:var(--soft);font-weight:600;flex-shrink:0">P' + String((idx||0)+1).padStart(3,'0') + '</span>' +
+    '<span style="color:var(--soft);font-size:11px;flex-shrink:0;width:70px">' + df + '</span>' +
+    '<span style="font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (f.fornitore||f.cliente||'—') + '</span>' +
+    '<span style="color:var(--soft);font-size:11px;flex-shrink:0;width:60px;text-align:right">' + fmtDec(imp) + '</span>' +
+    '<span style="color:var(--soft);font-size:11px;flex-shrink:0;width:30px;text-align:right">' + aliq + '%</span>' +
+    '<span style="font-weight:700;color:var(--red);flex-shrink:0;width:70px;text-align:right">' + fmtDec(tot) + '</span>' +
+    '<span style="font-size:10px;padding:2px 6px;border-radius:6px;flex-shrink:0;' + statoStyle + '">' + (f.stato||'—') + '</span>' +
+    '<button onclick="apriAssegna(\'' + f.id + '\')" style="flex-shrink:0;font-size:10px;padding:2px 7px;border-radius:5px;border:1px solid var(--s2);background:#fff;cursor:pointer;font-family:\'Nunito\',sans-serif;color:var(--g1);font-weight:700">' + (assegnata?'✏️':'→') + '</button>' +
+    '</div>';
 }
 
 function renderBanca(){
@@ -878,8 +897,8 @@ function renderBanca(){
   html += '</div>';
   if(fattureExcel.length > 0) {
     html += '<div class="section-card"><div class="section-head" style="cursor:pointer" onclick="toggleSezione(\'secFattExcel\')"><span>🧾 Fatture da riconciliazione</span><span class="chip chip-amber">' + fattureExcel.length + '</span></div>';
-    html += '<div id="secFattExcel" style="display:none">';
-    fattureExcel.forEach(function(f, i){ html += buildFatturaRow(f, i); });
+    html += '<div id="secFattExcel" style="display:none;padding:8px 10px">';
+    html += buildFattureTabella(fattureExcel, 'tutte', 'P');
     html += '</div></div>';
   }
   const posVoci = voci.filter(function(v){ return v.tipoVoce==='costo_pos'; });
