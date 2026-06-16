@@ -976,13 +976,6 @@ function setFbStatus(online) {
 }
 
 async function initFirebase() {
-  try {
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith('tbc_backup_')) localStorage.removeItem(k);
-    }
-  } catch(e) {}
-
   await new Promise(r => setTimeout(r, 800));
   if (!window._fbEnabled) { setFbStatus(false); return; }
   setFbStatus(true);
@@ -1007,6 +1000,7 @@ async function initFirebase() {
       await window._fbSave({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda });
       toast('☁️ Dati locali salvati su Firebase');
     }
+    // Firebase attivo ma nessun dato né locale né remoto: app vuota, nessun demo
   } catch(e) { console.warn('Firebase init error:', e); setFbStatus(false); }
 
   if (window._fbListen) {
@@ -1629,39 +1623,61 @@ function renderComputo(c) {
 }
 
 function calcolaManodopera(c) {
-  // Calcola ore totali per operaio su TUTTI i cantieri (per ripartizione proporzionale)
-  const oreTotaliPerOp = {};
+  // Ripartizione proporzionale PER MESE:
+  // Per ogni mese, costo_operaio_su_cantiere = costoMensile × (ore_cantiere_mese / ore_totali_mese)
+  // S.operaiGlobali ha priorità sulle copie locali
+  const operaiMap = buildOperaiMap(c);
+
+  // Ore per operaio per mese su TUTTI i cantieri
+  const oreTotaliMese = {}; // { 'opId_YYYY-MM': totalOre }
   S.cantieri.forEach(cant => {
     (cant.rapportini||[]).forEach(r => {
+      const mese = (r.data||'').slice(0,7);
+      if(!mese) return;
       (r.oreOperai||[]).forEach(x => {
-        oreTotaliPerOp[x.opId] = (oreTotaliPerOp[x.opId]||0) + (+x.ore||0);
+        const k = x.opId + '_' + mese;
+        oreTotaliMese[k] = (oreTotaliMese[k]||0) + (+x.ore||0);
       });
     });
   });
-  // Ore di questo cantiere per operaio
-  const oreCantiere = {};
+
+  // Ore per operaio per mese su QUESTO cantiere
+  const oreCantiereMese = {}; // { 'opId_YYYY-MM': ore }
   (c.rapportini||[]).forEach(r => {
+    const mese = (r.data||'').slice(0,7);
+    if(!mese) return;
     (r.oreOperai||[]).forEach(x => {
-      oreCantiere[x.opId] = (oreCantiere[x.opId]||0) + (+x.ore||0);
+      const k = x.opId + '_' + mese;
+      oreCantiereMese[k] = (oreCantiereMese[k]||0) + (+x.ore||0);
     });
   });
-  // Costo = costo mensile × (ore cantiere / ore totali)
-  // S.operaiGlobali ha priorità — sovrascrive gli operai locali del cantiere
-  const operaiMap = {};
-  (c.operai||[]).forEach(op => { if(op && op.id) operaiMap[op.id] = op; });
-  (S.operaiGlobali||[]).forEach(op => { if(op && op.id) operaiMap[op.id] = op; });
-  return Object.entries(oreCantiere).reduce((tot, [opId, ore]) => {
+
+  // Somma: per ogni (operaio, mese) quota proporzionale del costo mensile
+  return Object.entries(oreCantiereMese).reduce((tot, [key, oreCant]) => {
+    const [opId, mese] = key.split(/_(.+)/); // split solo sul primo _
     const op = operaiMap[opId];
-    const costoMensile = +op?.costo||0;
-    const oreT = oreTotaliPerOp[opId]||ore;
-    return tot + costoMensile * (ore / oreT);
+    if(!op) return tot;
+    const costoMensile = +op.costo||0;
+    const oreT = oreTotaliMese[key] || oreCant;
+    return tot + costoMensile * (oreCant / oreT);
   }, 0);
 }
 
+// ════════════ OPERAI MAP — fonte unica costo ════════════
+// S.operaiGlobali ha sempre priorità sulle copie locali c.operai.
+// Usare questa funzione ovunque si cerca un operaio per costo/qualifica.
+function buildOperaiMap(c) {
+  const map = {};
+  (c && c.operai || []).forEach(op => { if(op && op.id) map[op.id] = op; });
+  (S.operaiGlobali || []).forEach(op => { if(op && op.id) map[op.id] = op; });
+  return map;
+}
+
 function costoGiornalieroIndicativo(op) {
-  // Costo giornaliero = costo mensile / 22 giorni lavorativi
   return (+op.costo||0) / 22;
 }
+
+
 
 function calcolaRipartizioneCG(c, ct) {
   // Ripartisce i costi generali in proporzione al fatturato di ogni cantiere
@@ -1749,8 +1765,8 @@ function renderRapportini(c) {
   const items = [...(c.rapportini||[])].reverse();
   if(!items.length) return `<div class="empty"><div class="empty-ic">📋</div><div class="empty-txt">Nessun rapportino ancora.<br>Aggiungi il primo!</div></div>`;
   const stCol = {'Completato':'chip chip-green','In corso':'chip chip-amber','Sospeso':'chip chip-red','Pianificato':'chip chip-blue'};
-  const operaiMap = {};
-  (c.operai||[]).forEach(op => { operaiMap[op.id] = op; });
+  // Usa buildOperaiMap: S.operaiGlobali ha priorità sulle copie locali
+  const operaiMap = buildOperaiMap(c);
 
   return `<div style="padding:8px 0">
     <div style="padding:4px 10px 8px">
@@ -1759,23 +1775,25 @@ function renderRapportini(c) {
     ${items.map(r => {
       const oreRapp = r.oreOperai || [];
       const totOreGiorno = oreRapp.reduce((s,x) => s + (+x.ore||0), 0);
+      // Costo giornata = somma costi indicativi giornalieri (costoMensile/22 per i soci)
       const costoGiorno = oreRapp.reduce((s,x) => {
         const op = operaiMap[x.opId];
-        return s + (+x.ore||0) * (+op?.costo||0);
+        if(!op) return s;
+        return s + costoGiornalieroIndicativo(op);
       }, 0);
       const oreRows = oreRapp.map(x => {
         const op = operaiMap[x.opId];
         if(!op) return '';
-        const costo = (+x.ore||0) * (+op.costo||0);
+        const costGg = costoGiornalieroIndicativo(op);
         return `<div style="padding:6px 0;border-bottom:1px solid var(--s1)">
           <div style="display:flex;align-items:center;justify-content:space-between">
             <div>
               <span style="font-size:13px;color:var(--text);font-weight:600">${esc(op.nome)}</span>
-              <span style="font-size:11px;color:var(--soft);margin-left:6px">${esc(op.qualifica||'')} · ~€${Math.round(costoGiornalieroIndicativo(op))}/gg</span>
+              <span style="font-size:11px;color:var(--soft);margin-left:6px">${esc(op.qualifica||'')} · ~€${Math.round(costGg)}/gg</span>
             </div>
             <div style="text-align:right">
               <span style="font-size:13px;font-weight:600;color:var(--g1)">${x.ore}h</span>
-              <span style="font-size:11px;color:var(--soft);margin-left:4px">${fmtEur(costo)}</span>
+              <span style="font-size:11px;color:var(--soft);margin-left:4px">~€${Math.round(costGg)} ind.</span>
             </div>
           </div>
           ${x.lav ? `<div style="font-size:12px;color:var(--soft);margin-top:3px;padding-left:2px">↳ ${esc(x.lav)}</div>` : ''}
@@ -1790,7 +1808,7 @@ function renderRapportini(c) {
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
             <span class="${stCol[r.stato]||'chip chip-gray'}">${esc(r.stato||'')}</span>
-            ${totOreGiorno > 0 ? `<span class="chip chip-blue">${totOreGiorno}h · ${fmtEur(costoGiorno)}</span>` : ''}
+            ${totOreGiorno > 0 ? `<span class="chip chip-blue">${totOreGiorno}h · ~€${Math.round(costoGiorno)} ind.</span>` : ''}
           </div>
         </div>
         <div class="item-body">
@@ -1812,16 +1830,15 @@ function getOreOperaio(c, opId) {
 }
 
 function renderOperai(c) {
+  const operaiMap = buildOperaiMap(c);
   const operai = c.operai||[];
   if(!operai.length) return `<div class="empty"><div class="empty-ic">👷</div><div class="empty-txt">Nessun operaio associato.<br>Aggiungi prima gli operai del cantiere,<br>poi inseriscili nei rapportini giornalieri.</div></div>`;
 
   const totOre = operai.reduce((s,op) => {
     return s + getOreOperaio(c, op.id).reduce((a,r) => a + (+r.ore||0), 0);
   }, 0);
-  const totCosto = operai.reduce((s,op) => {
-    const ore = getOreOperaio(c, op.id).reduce((a,r) => a + (+r.ore||0), 0);
-    return s + ore * (+op.costo||0);
-  }, 0);
+  // Costo totale: usa calcolaManodopera per coerenza con la tab Costi
+  const totCosto = calcolaManodopera(c);
 
   return `<div style="padding:8px 0">
     <div class="kpi-row">
@@ -1833,10 +1850,14 @@ function renderOperai(c) {
       <button onclick="exportPresenze()" style="width:100%;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif">📄 Esporta registro presenze PDF</button>
     </div>
     ${operai.map(op => {
+      // Legge dati sempre dall'anagrafica globale (fonte di verità)
+      const opInfo = operaiMap[op.id] || op;
       const righeOre = getOreOperaio(c, op.id).sort((a,b) => b.data.localeCompare(a.data));
       const totOreOp = righeOre.reduce((s,r) => s + (+r.ore||0), 0);
-      const costoOp = totOreOp * (+op.costo||0);
-      const ggLavorate = righeOre.length;
+      const ggLavorate = [...new Set(righeOre.map(r=>r.data))].length;
+      // Costo indicativo: costoMensile/22 × giorni lavorati
+      const costGg = costoGiornalieroIndicativo(opInfo);
+      const costoOpIndicativo = costGg * ggLavorate;
 
       const days7 = [...Array(7)].map((_,i) => {
         const d = new Date(); d.setDate(d.getDate()-6+i);
@@ -1850,24 +1871,24 @@ function renderOperai(c) {
       const ultimeRighe = righeOre.slice(0,5).map(r =>
         `<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--soft);padding:3px 0;border-bottom:1px solid var(--s1)">
           <span>${r.data}</span>
-          <span style="color:var(--g2);font-weight:600">${r.ore}h · ${fmtEur((+r.ore||0)*(+op.costo||0))}</span>
+          <span style="color:var(--g2);font-weight:600">${r.ore}h · ~€${Math.round(costGg)} ind.</span>
         </div>`
       ).join('');
 
       return `<div class="operaio-row">
         <div class="operaio-head">
           <div>
-            <div class="operaio-name">${esc(op.nome)}</div>
-            <div class="operaio-role">${esc(op.qualifica||'—')} · ${fmtEur(op.costo||0)}/mese</div>
+            <div class="operaio-name">${esc(opInfo.nome)}</div>
+            <div class="operaio-role">${esc(opInfo.qualifica||'—')} · ${fmtEur(opInfo.costo||0)}/mese</div>
           </div>
           <div style="text-align:right">
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--g1)">${fmtEur(costoOp)}</div>
-            <div style="font-size:10px;color:var(--soft)">${fmtN(totOreOp)}h su ${ggLavorate} gg</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--g1)">~${fmtEur(costoOpIndicativo)}</div>
+            <div style="font-size:10px;color:var(--soft)">${fmtN(totOreOp)}h · ${ggLavorate} gg · indicativo</div>
           </div>
         </div>
         <div class="operaio-stats">
           <div class="op-stat"><div class="op-stat-n">${fmtN(totOreOp)}h</div><div class="op-stat-l">Ore tot.</div></div>
-          <div class="op-stat"><div class="op-stat-n">${fmtEur(costoOp)}</div><div class="op-stat-l">Costo tot.</div></div>
+          <div class="op-stat"><div class="op-stat-n">~${fmtEur(costoOpIndicativo)}</div><div class="op-stat-l">Costo ind.</div></div>
           <div class="op-stat"><div class="op-stat-n">${ggLavorate}</div><div class="op-stat-l">Gg lavorate</div></div>
         </div>
         <div class="presenze-row">
@@ -2128,7 +2149,7 @@ function saveRapportino() {
   toast(`✅ Rapportino salvato${totH>0?' · '+fmtN(totH)+'h registrate':''}`);
 }
 
-function saveOperaio() {
+function apriModalOperaio() {
   openModal('mOperaio');
 }
 
@@ -2502,30 +2523,43 @@ function renderCosti(c) {
   const targetM = +(c.targetMargine||20);
   const totRicavo = calcolaConsuntivo(c);
 
-  // Manodopera proporzionale
-  const oreTotaliPerOp = {};
+  // Ripartizione manodopera mensile con buildOperaiMap
+  const operaiMap = buildOperaiMap(c);
+
+  // Ore per operaio per mese su tutti cantieri
+  const oreTotaliMese = {};
   S.cantieri.forEach(cant => {
     (cant.rapportini||[]).forEach(r => {
-      (r.oreOperai||[]).forEach(x => { oreTotaliPerOp[x.opId]=(oreTotaliPerOp[x.opId]||0)+(+x.ore||0); });
+      const mese = (r.data||'').slice(0,7); if(!mese) return;
+      (r.oreOperai||[]).forEach(x => {
+        const k = x.opId + '_' + mese;
+        oreTotaliMese[k] = (oreTotaliMese[k]||0) + (+x.ore||0);
+      });
     });
   });
-  const oreCantiere = {};
+  // Ore per operaio per mese su questo cantiere
+  const oreCantiereMese = {};
   (c.rapportini||[]).forEach(r => {
-    (r.oreOperai||[]).forEach(x => { oreCantiere[x.opId]=(oreCantiere[x.opId]||0)+(+x.ore||0); });
+    const mese = (r.data||'').slice(0,7); if(!mese) return;
+    (r.oreOperai||[]).forEach(x => {
+      const k = x.opId + '_' + mese;
+      oreCantiereMese[k] = (oreCantiereMese[k]||0) + (+x.ore||0);
+    });
   });
-  // S.operaiGlobali ha priorità sugli operai locali del cantiere
-  const operaiMap = {};
-  (c.operai||[]).forEach(op=>{ if(op&&op.id) operaiMap[op.id]=op; });
-  (S.operaiGlobali||[]).forEach(op=>{ if(op&&op.id) operaiMap[op.id]=op; });
 
-  const mdoDettaglio = Object.entries(oreCantiere).map(([opId,ore])=>{
-    const op=operaiMap[opId]; if(!op) return null;
-    const oreT=oreTotaliPerOp[opId]||ore;
-    const costoMensile=+op.costo||0;
-    const quota=costoMensile*(ore/oreT);
-    const costGg=costoGiornalieroIndicativo(op);
-    return {op, ore, oreT, costoMensile, quota, costGg};
-  }).filter(Boolean);
+  // Aggrega per operaio (somma tutti i mesi) per il dettaglio
+  const mdoPerOp = {};
+  Object.entries(oreCantiereMese).forEach(([key, oreCant]) => {
+    const [opId] = key.split('_');
+    const op = operaiMap[opId]; if(!op) return;
+    const costoMensile = +op.costo||0;
+    const oreT = oreTotaliMese[key] || oreCant;
+    const quota = costoMensile * (oreCant / oreT);
+    if(!mdoPerOp[opId]) mdoPerOp[opId] = { op, oreTot:0, quota:0 };
+    mdoPerOp[opId].oreTot += oreCant;
+    mdoPerOp[opId].quota += quota;
+  });
+  const mdoDettaglio = Object.values(mdoPerOp);
   const totMdo = mdoDettaglio.reduce((s,x)=>s+x.quota,0);
 
   // Fatture da __contabile
@@ -2544,18 +2578,19 @@ function renderCosti(c) {
   const semaforo = margPct>=targetM?'#22c55e':margPct>=targetM/2?'#f59e0b':'#dc2626';
 
   // Righe manodopera
-  const mdoRows = mdoDettaglio.map(({op,ore,oreT,costoMensile,quota,costGg})=>
-    `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--s1)">
+  const mdoRows = mdoDettaglio.map(({op, oreTot, quota})=>{
+    const costGg = costoGiornalieroIndicativo(op);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--s1)">
       <div>
         <div style="font-size:13px;font-weight:600">${esc(op.nome)}</div>
-        <div style="font-size:10px;color:var(--soft)">${esc(op.qualifica||'')} · ${fE(ore)}h su ${fE(oreT)}h tot · <span style="color:var(--g3)">~${fE(costGg)}/gg</span></div>
+        <div style="font-size:10px;color:var(--soft)">${esc(op.qualifica||'')} · ${fE(op.costo||0)}/mese · ${fE(oreTot)}h · <span style="color:var(--g3)">~${fE(costGg)}/gg</span></div>
       </div>
       <div style="text-align:right">
         <div style="font-size:13px;font-weight:700;color:var(--red)">−${fE(quota)}</div>
-        <div style="font-size:10px;color:var(--soft)">${Math.round(ore/oreT*100)}% del mese</div>
+        <div style="font-size:10px;color:var(--soft)">quota mensile ripartita</div>
       </div>
-    </div>`
-  ).join('');
+    </div>`;
+  }).join('');
 
   // Fatture per categoria
   const perCat = {};
@@ -2676,6 +2711,30 @@ function getBackupData() {
 }
 
 function autoSnapshot() {
+  // Backup locale automatico: salva una versione ogni volta che i dati cambiano
+  // Mantiene al massimo BK_MAX versioni, elimina le più vecchie
+  if(!S.cantieri.length) return;
+  try {
+    const ts = Date.now();
+    const key = BK_PREFIX + ts;
+    const data = { version:3, exportedAt:new Date().toISOString(), exportedBy:S.uid||'Auto', cantieri:S.cantieri, operaiGlobali:S.operaiGlobali||[] };
+    // Salva solo se i dati sono cambiati rispetto all'ultimo snapshot
+    const existingKeys = Object.keys(localStorage).filter(k=>k.startsWith(BK_PREFIX)).sort().reverse();
+    if(existingKeys.length > 0) {
+      try {
+        const lastData = JSON.parse(localStorage.getItem(existingKeys[0])||'{}');
+        // Confronto leggero: numero cantieri + rapportini totali
+        const lastRapp = (lastData.cantieri||[]).reduce((s,c)=>s+(c.rapportini||[]).length,0);
+        const currRapp = S.cantieri.reduce((s,c)=>s+(c.rapportini||[]).length,0);
+        const lastCant = (lastData.cantieri||[]).length;
+        if(lastCant===S.cantieri.length && lastRapp===currRapp) return; // nessuna modifica rilevante
+      } catch(e) {}
+    }
+    localStorage.setItem(key, JSON.stringify(data));
+    // Rimuovi versioni in eccesso
+    const keys = Object.keys(localStorage).filter(k=>k.startsWith(BK_PREFIX)).sort().reverse();
+    keys.slice(BK_MAX).forEach(k => localStorage.removeItem(k));
+  } catch(e) { /* localStorage pieno o errore: silenzioso */ }
 }
 
 async function checkWeeklyBackup() {
@@ -2921,51 +2980,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if(screen) screen.style.display = 'flex';
   }
 
-  if(!S.cantieri.length) {
-    S.operaiGlobali = [
-      {id:'og1',nome:'Giuseppe Ferrara',qualifica:'Capo squadra muratore',costo:28,oreDay:8,note:'',created:Date.now()},
-      {id:'og2',nome:'Antonio Mancini',qualifica:'Muratore',costo:22,oreDay:8,note:'',created:Date.now()}
-    ];
-    S.cantieri = [{
-      id: 'demo1', nome: 'Palazzo Rossi – Via Roma 12', indirizzo: 'Milano, MI', resp: 'Ing. Marco Bianchi',
-      data: '2026-01-15', importo: 320000,
-      capitoli: [
-        { id:'cap1', nome:'Opere Demolitive', voci:[
-          {id:'v1',desc:'Demolizione muratura portante sp. 30cm',um:'mc',qty:12.5,pu:85,created:Date.now()},
-          {id:'v2',desc:'Rimozione pavimentazione esistente',um:'mq',qty:180,pu:12,created:Date.now()},
-          {id:'v3',desc:'Smontaggio infissi esterni',um:'cad',qty:14,pu:45,created:Date.now()}
-        ]},
-        { id:'cap2', nome:'Opere Murarie', voci:[
-          {id:'v4',desc:'Muratura in laterizio forato 12cm',um:'mq',qty:220,pu:48,created:Date.now()},
-          {id:'v5',desc:'Intonaco civile interno',um:'mq',qty:560,pu:22,created:Date.now()},
-          {id:'v6',desc:'Rasatura e tinteggiatura interna',um:'mq',qty:560,pu:18,created:Date.now()}
-        ]},
-        { id:'cap3', nome:'Impermeabilizzazioni', voci:[
-          {id:'v7',desc:'Guaina bituminosa doppio strato copertura',um:'mq',qty:280,pu:38,qtyEff:240,created:Date.now()},
-          {id:'v8',desc:'Impermeabilizzazione terrazzi',um:'mq',qty:120,pu:55,qtyEff:85,created:Date.now()}
-        ]}
-      ],
-      rapportini: [{id:'r1',data:'2026-04-14',dir:'Ing. Marco Bianchi',meteo:'☀️ Soleggiato',stato:'In corso',
-        oreOperai:[{opId:'og1',ore:8,lav:'4h demolizioni piano terra, 4h pulizia area'},{opId:'og2',ore:8,lav:'8h demolizioni muratura portante'}],
-        lav:'Completata demolizione murature piano terra lato nord.',mat:'',note:'Ritardo 2h per interferenza impianto.',utente:'Marco B.',created:Date.now()},
-        {id:'r2',data:'2026-04-15',dir:'Geom. Rossi',meteo:'⛅ Nuvoloso',stato:'In corso',
-        oreOperai:[{opId:'og1',ore:9,lav:'9h posa guaina copertura zona A'},{opId:'og2',ore:8,lav:'4h ponteggi, 4h impermeabilizzazione'}],
-        lav:'Posa guaina bituminosa zona A copertura.',mat:'Guaina Isotec 4+4 – 120mq',note:'',utente:'Marco B.',created:Date.now()}],
-      operai: [
-        {id:'og1',nome:'Giuseppe Ferrara',qualifica:'Capo squadra muratore',costo:28,oreDay:8,note:'',created:Date.now()},
-        {id:'og2',nome:'Antonio Mancini',qualifica:'Muratore',costo:22,oreDay:8,note:'',created:Date.now()}
-      ],
-      foto: [{id:'f1',data:'2026-04-14',tag:'Struttura',desc:'Demolizione piano terra',url:null,utente:'Marco B.',created:Date.now()}],
-      documenti: [{id:'d1',nome:'Contratto_Palazzo_Rossi.pdf',tipo:'Contratto',data:'2026-01-15',note:'',fileData:null,utente:'Marco B.',created:Date.now()}],
-      created: Date.now()
-    },{
-      id: 'demo2', nome: 'Capannone Industriale SP14', indirizzo: 'Bergamo, BG', resp: 'Geom. Laura Esposito',
-      data: '2026-02-01', importo: 85000,
-      capitoli: [{id:'cap4',nome:'Copertura',voci:[{id:'v9',desc:'Impermeabilizzazione copertura industriale',um:'mq',qty:800,pu:42,created:Date.now()}]}],
-      rapportini: [], operai: [], foto: [], documenti: [], created: Date.now()
-    }];
-    save();
-  }
+  // Se localStorage vuoto aspetta Firebase prima di inserire demo.
+  // I demo vengono inseriti SOLO se Firebase è disabilitato (sandbox/offline).
   renderCantieri();
   initFirebase();
   setTimeout(checkWeeklyBackup, 4000);
@@ -3419,18 +3435,21 @@ function exportPresenzeCSV() {
   rows.push(['Nome','Qualifica','Gg ordinarie','Ore ord.','Gg straord.','Ore straord.','Ferie','Malattia','Permessi','Assenze','Costo totale €']);
 
   operai.forEach(op => {
+    // Usa sempre operaiGlobali come fonte del costo
+    const opInfo = (S.operaiGlobali||[]).find(o=>o.id===op.id) || op;
+    const costGg = (+opInfo.costo||0) / 22; // costo giornaliero indicativo
     let ggOrd=0, oreOrd=0, ggStr=0, oreStr=0, ggFerie=0, ggMal=0, ggPerm=0, ggAss=0, costoTot=0;
     giorni.forEach(data => {
       const p = S.presenze[data] && S.presenze[data][op.id];
       if (!p) return;
-      if (p.tipo==='ordinario')    { ggOrd++;  oreOrd  += +p.ore||0; costoTot += (+p.ore||0)*(+op.costo||0); }
-      if (p.tipo==='straordinario'){ ggStr++;  oreStr  += +p.ore||0; costoTot += (+p.ore||0)*(+op.costo||0); }
+      if (p.tipo==='ordinario')    { ggOrd++;  oreOrd  += +p.ore||0; costoTot += costGg; }
+      if (p.tipo==='straordinario'){ ggStr++;  oreStr  += +p.ore||0; costoTot += costGg; }
       if (p.tipo==='ferie')        { ggFerie++; }
       if (p.tipo==='malattia')     { ggMal++; }
       if (p.tipo==='permesso')     { ggPerm++; }
       if (p.tipo==='assente')      { ggAss++; }
     });
-    rows.push([op.nome, op.qualifica||'', ggOrd, oreOrd, ggStr, oreStr, ggFerie, ggMal, ggPerm, ggAss, costoTot.toFixed(2)]);
+    rows.push([opInfo.nome, opInfo.qualifica||'', ggOrd, oreOrd, ggStr, oreStr, ggFerie, ggMal, ggPerm, ggAss, costoTot.toFixed(2)]);
   });
 
   const csv = rows.map(r => r.join(';')).join('\n');
@@ -3472,6 +3491,9 @@ function exportPresenzePDF() {
     doc.setFontSize(9); doc.setFont(undefined,'bold');
     doc.text(`${op.nome}  —  ${op.qualifica||''}  —  €${op.costo}/mese`, M+2, y+1);
 
+    // Usa operaiGlobali come fonte del costo
+    const opInfo = (S.operaiGlobali||[]).find(o=>o.id===op.id) || op;
+    const costGg = (+opInfo.costo||0) / 22;
     let oreOrd=0, oreStr=0, ggFerie=0, ggMal=0, ggPerm=0, ggAss=0;
     giorni.forEach(data => {
       const p = S.presenze[data] && S.presenze[data][op.id];
@@ -3483,9 +3505,11 @@ function exportPresenzePDF() {
       if (p.tipo==='permesso')      ggPerm++;
       if (p.tipo==='assente')       ggAss++;
     });
-    const costoTot = (oreOrd + oreStr) * (+op.costo||0);
+    const ggLavOrd = giorni.filter(d => S.presenze[d]&&S.presenze[d][op.id]&&S.presenze[d][op.id].tipo==='ordinario').length;
+    const ggLavStr = giorni.filter(d => S.presenze[d]&&S.presenze[d][op.id]&&S.presenze[d][op.id].tipo==='straordinario').length;
+    const costoTot = (ggLavOrd + ggLavStr) * costGg;
     doc.setFont(undefined,'normal'); doc.setFontSize(8);
-    doc.text(`Ord: ${oreOrd}h  Straord: ${oreStr}h  Ferie: ${ggFerie}gg  Mal: ${ggMal}gg  Perm: ${ggPerm}gg  Ass: ${ggAss}gg  Costo: €${costoTot.toFixed(2)}`, W-M-2, y+1, {align:'right'});
+    doc.text(`Ord: ${oreOrd}h (${ggLavOrd}gg)  Straord: ${oreStr}h (${ggLavStr}gg)  Ferie: ${ggFerie}gg  Mal: ${ggMal}gg  Perm: ${ggPerm}gg  Ass: ${ggAss}gg  Costo ind.: €${costoTot.toFixed(2)}`, W-M-2, y+1, {align:'right'});
     y += 9;
 
     const presGiorno = giorni.filter(d => S.presenze[d] && S.presenze[d][op.id]);
