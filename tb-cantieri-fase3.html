@@ -185,114 +185,85 @@ window._fbDeleteCantiere = async (id) => {
 </div>
 
 <!-- User menu dropdown -->
-<div id="userMenu" style="display:none;position:fixed;top:66px;right:10px;background:#fff;border-radius:var(--r);box-shadow:var(--shadow-md);border:1px solid var(--s2);z-index:100;min-width:210px;overflow:hidden">
+<div id="userMenu" style="display:none;position:fixed;top:66px;right:10px;background:#fff;border-radius:var(--r);box-shadow:var(--shadow-md);border:1px solid var(--s2);z-index:100;min-width:180px;overflow:hidden">
   <div id="userMenuName" style="padding:12px 16px;font-size:13px;color:var(--soft);border-bottom:1px solid var(--s2)">Utente</div>
-  <button onclick="closeUserMenu();openModal('mOperaioGlobale')" style="width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-size:13px;color:var(--text);cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--s1)">👷 Anagrafica operai</button>
-  <button onclick="closeUserMenu();openModal('mBackup')" style="width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-size:13px;color:var(--text);cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--s1)">💾 Backup e ripristino</button>
-  <button onclick="closeUserMenu();openModal('mPassword')" style="width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-size:13px;color:var(--text);cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--s1)">🔑 Cambia password</button>
+  <button onclick="closeUserMenu();openModal('mPassword')" style="width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-size:13px;color:var(--text);cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--s1)">🔑 Password</button>
   <button onclick="closeUserMenu();doLogout()" style="width:100%;text-align:left;padding:12px 16px;border:none;background:none;font-size:13px;color:var(--red);cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:10px">🚪 Esci</button>
 </div>
 
 <!-- APP BODY -->
 <div class="app-body">
 
-  <!-- SCREEN CANTIERI -->
+  <!-- SCREEN CANTIERI (home) -->
   <div class="screen" id="scrCantieri">
-    <div style="padding:10px;display:flex;flex-direction:column;gap:10px">
+    <!-- Tab bar home -->
+    <div style="display:flex;background:#fff;border-bottom:1px solid var(--s2);overflow-x:auto;scrollbar-width:none;flex-shrink:0;position:sticky;top:0;z-index:40" id="homeTabBar">
+      <button class="home-tab active" id="htab-cantieri" onclick="switchHomeTab('cantieri')" style="flex:none;padding:11px 16px;border:none;background:none;font-size:12px;font-weight:600;color:var(--g1);cursor:pointer;white-space:nowrap;border-bottom:2.5px solid var(--g1);margin-bottom:-1px;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:5px">🏗️ Cantieri <span id="htab-cant-badge" style="background:var(--g1);color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;font-weight:600">0</span></button>
+      <button class="home-tab" id="htab-operai" onclick="switchHomeTab('operai')" style="flex:none;padding:11px 16px;border:none;background:none;font-size:12px;font-weight:600;color:var(--s4);cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-1px;font-family:'Nunito',sans-serif">👷 Operai <span id="htab-op-badge" style="background:var(--g6);color:var(--g2);border-radius:99px;padding:1px 6px;font-size:10px;font-weight:600">0</span></button>
+      <button class="home-tab" id="htab-presenze" onclick="switchHomeTab('presenze')" style="flex:none;padding:11px 16px;border:none;background:none;font-size:12px;font-weight:600;color:var(--s4);cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-1px;font-family:'Nunito',sans-serif">📅 Presenze <span id="presenze-today-badge" style="background:#fff8e1;color:#b45309;border-radius:99px;padding:1px 6px;font-size:10px;font-weight:600">oggi</span></button>
+      <button class="home-tab" id="htab-impresa" onclick="switchHomeTab('impresa')" style="flex:none;padding:11px 16px;border:none;background:none;font-size:12px;font-weight:600;color:var(--s4);cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-1px;font-family:'Nunito',sans-serif">💼 Impresa</button>
+      <button class="home-tab" id="htab-backup" onclick="switchHomeTab('backup')" style="flex:none;padding:11px 16px;border:none;background:none;font-size:12px;font-weight:600;color:var(--s4);cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-1px;font-family:'Nunito',sans-serif">⚙️ Impostazioni</button>
+    </div>
 
-      <!-- IMPRESA -->
-      <div style="background:#fff;border-radius:14px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden">
-        <div onclick="toggleHomeSection('impresa')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none">
-          <div style="width:36px;height:36px;border-radius:10px;background:#e8f0ff;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">💼</div>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:.4px;flex:1">IMPRESA</span>
-          <span id="arr-impresa" style="color:var(--s4);font-size:12px;transition:transform .25s">▼</span>
+    <!-- Contenuto tab home -->
+    <div id="homeContent">
+
+      <!-- TAB CANTIERI -->
+      <div id="hbody-cantieri">
+        <div style="padding:10px 10px 4px;display:flex;align-items:center;justify-content:space-between">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;color:var(--g1);letter-spacing:.5px">CANTIERI ATTIVI</div>
+          <button onclick="openModal('mNuovoCantiere')" style="background:var(--g1);color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">+ Nuovo</button>
         </div>
-        <div id="body-impresa" style="max-height:0;overflow:hidden;transition:max-height .3s ease">
-          <div style="border-top:1px solid var(--s1);padding:12px 14px;display:flex;flex-direction:column;gap:8px">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--s1);border-radius:10px"><span style="font-size:11px;color:var(--soft);font-weight:600">Saldo BTS</span><span id="kpi-saldo" style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--g1)">—</span></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--s1);border-radius:10px"><span style="font-size:11px;color:var(--soft);font-weight:600">CG totali</span><span id="kpi-cg" style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--red)">—</span></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--s1);border-radius:10px"><span style="font-size:11px;color:var(--soft);font-weight:600">Ricavi cantieri</span><span id="kpi-ricavi" style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--g2)">—</span></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px">
-              <button onclick="openAzienda();switchAzTab('cruscotto')" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">📊 Cruscotto</button>
-              <button onclick="openAzienda();switchAzTab('costi')" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">💼 CG</button>
-              <button onclick="openAzienda();switchAzTab('flusso')" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">💰 Flusso</button>
-            </div>
-          </div>
+        <div id="cantieriList"></div>
+      </div>
+
+      <!-- TAB OPERAI -->
+      <div id="hbody-operai" style="display:none">
+        <div style="padding:10px 10px 4px;display:flex;align-items:center;justify-content:space-between">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;color:var(--g1);letter-spacing:.5px">ANAGRAFICA OPERAI</div>
+          <button onclick="openModal('mOperaioGlobale')" style="background:var(--g1);color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">+ Aggiungi</button>
+        </div>
+        <div id="homeOperaiList" style="padding:4px 0"></div>
+      </div>
+
+      <!-- TAB PRESENZE -->
+      <div id="hbody-presenze" style="display:none;padding:12px 14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <button onclick="presenzeGiornoPrec()" style="background:var(--s1);border:1px solid var(--s2);border-radius:8px;padding:8px 16px;font-size:20px;cursor:pointer;font-family:'Nunito',sans-serif;line-height:1">&#8249;</button>
+          <input type="date" id="presenzeData" style="flex:1;border:1px solid var(--s2);border-radius:8px;padding:7px 10px;font-size:13px;font-family:'Nunito',sans-serif;text-align:center;color:var(--text);background:#fff;-webkit-appearance:none" onchange="renderPresenzeGiorno()" readonly onclick="this.removeAttribute('readonly')">
+          <button onclick="presenzeGiornoSucc()" style="background:var(--s1);border:1px solid var(--s2);border-radius:8px;padding:8px 16px;font-size:20px;cursor:pointer;font-family:'Nunito',sans-serif;line-height:1">&#8250;</button>
+        </div>
+        <div id="prezDateDisplay" style="text-align:center;font-size:14px;font-weight:700;color:var(--g1);margin-bottom:10px;margin-top:-6px"></div>
+        <div id="presenzeList"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+          <button onclick="exportPresenzeCSV()" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">📊 Export CSV paghe</button>
+          <button onclick="exportPresenzePDF()" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">📄 Export PDF</button>
         </div>
       </div>
 
-      <!-- CANTIERI -->
-      <div style="background:#fff;border-radius:14px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden">
-        <div onclick="toggleHomeSection('cantieri')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none">
-          <div style="width:36px;height:36px;border-radius:10px;background:#fff3e0;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🏗️</div>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:.4px;flex:1">CANTIERI</span>
-          <span id="home-cant-badge" style="background:var(--g6);color:var(--g1);font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;margin-right:4px">0</span>
-          <button onclick="event.stopPropagation();openModal('mNuovoCantiere')" style="background:var(--g1);color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;flex-shrink:0">+ Nuovo</button>
-          <span id="arr-cantieri" style="color:var(--s4);font-size:12px;transition:transform .25s;margin-left:6px">▼</span>
+      <!-- TAB IMPRESA -->
+      <div id="hbody-impresa" style="display:none">
+        <!-- KPI rapidi -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 10px 6px">
+          <div style="background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);padding:12px;text-align:center;box-shadow:var(--shadow)"><div style="font-size:10px;color:var(--soft);font-weight:700;text-transform:uppercase;margin-bottom:3px">Saldo BTS</div><div id="kpi-saldo" style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--g1)">—</div></div>
+          <div style="background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);padding:12px;text-align:center;box-shadow:var(--shadow)"><div style="font-size:10px;color:var(--soft);font-weight:700;text-transform:uppercase;margin-bottom:3px">Ricavi cantieri</div><div id="kpi-ricavi" style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--g2)">—</div></div>
+          <div style="background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);padding:12px;text-align:center;box-shadow:var(--shadow)"><div style="font-size:10px;color:var(--soft);font-weight:700;text-transform:uppercase;margin-bottom:3px">CG totali</div><div id="kpi-cg" style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--red)">—</div></div>
         </div>
-        <div id="body-cantieri" style="max-height:0;overflow:hidden;transition:max-height .5s ease">
-          <div style="border-top:1px solid var(--s1)"><div id="cantieriList"></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:0 10px 12px">
+          <button onclick="openAzienda();switchAzTab('cruscotto')" style="background:var(--g1);color:#fff;border:none;border-radius:9px;padding:11px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">📊 Cruscotto</button>
+          <button onclick="openAzienda();switchAzTab('costi')" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:11px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">💼 CG</button>
+          <button onclick="openAzienda();switchAzTab('flusso')" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:11px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">💰 Flusso</button>
         </div>
+        <div id="hbody-impresa-content" style="padding:0 10px 10px"></div>
       </div>
 
-      <!-- OPERAI -->
-      <div style="background:#fff;border-radius:14px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden">
-        <div onclick="toggleHomeSection('operai')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none">
-          <div style="width:36px;height:36px;border-radius:10px;background:#e8f5ed;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">👷</div>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:.4px;flex:1">OPERAI</span>
-          <span id="homeOpCount" style="background:var(--g6);color:var(--g1);font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;margin-right:4px">0</span>
-          <button onclick="event.stopPropagation();openModal('mOperaioGlobale')" style="background:var(--g1);color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;flex-shrink:0">+ Aggiungi</button>
-          <span id="arr-operai" style="color:var(--s4);font-size:12px;transition:transform .25s;margin-left:6px">▼</span>
-        </div>
-        <div id="body-operai" style="max-height:0;overflow:hidden;transition:max-height .35s ease">
-          <div style="border-top:1px solid var(--s1)">
-            <div id="homeOperaiList" style="padding:4px 0"></div>
-            <div style="padding:10px 14px;border-top:1px solid var(--s1)">
-              <button onclick="openModal('mOperaioGlobale')" style="width:100%;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">＋ Aggiungi operaio</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PRESENZE -->
-      <div style="background:#fff;border-radius:14px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden" id="homePresenzeCard">
-        <div onclick="toggleHomeSection('presenze');setTimeout(initPresenzeUI,80)" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none">
-          <div style="width:36px;height:36px;border-radius:10px;background:#fff8e1;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">&#128197;</div>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:.4px;flex:1">PRESENZE</span>
-          <span id="presenze-today-badge" style="background:#fff8e1;color:#b45309;font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;margin-right:4px">oggi</span>
-          <span id="arr-presenze" style="color:var(--s4);font-size:12px;transition:transform .25s">&#9660;</span>
-        </div>
-        <div id="body-presenze" style="max-height:0;overflow:hidden;transition:max-height .4s ease">
-          <div style="border-top:1px solid var(--s1);padding:12px 14px">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-              <button onclick="presenzeGiornoPrec()" style="background:var(--s1);border:1px solid var(--s2);border-radius:8px;padding:8px 16px;font-size:20px;cursor:pointer;font-family:'Nunito',sans-serif;line-height:1">&#8249;</button>
-              <input type="date" id="presenzeData" style="flex:1;border:1px solid var(--s2);border-radius:8px;padding:7px 10px;font-size:13px;font-family:'Nunito',sans-serif;text-align:center;color:var(--text);background:#fff;-webkit-appearance:none" onchange="renderPresenzeGiorno()" readonly onclick="this.removeAttribute('readonly')">
-              <button onclick="presenzeGiornoSucc()" style="background:var(--s1);border:1px solid var(--s2);border-radius:8px;padding:8px 16px;font-size:20px;cursor:pointer;font-family:'Nunito',sans-serif;line-height:1">&#8250;</button>
-            </div>
-            <div id="prezDateDisplay" style="text-align:center;font-size:14px;font-weight:700;color:var(--g1);margin-bottom:10px;margin-top:-6px"></div>
-            <div id="presenzeList"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
-              <button onclick="exportPresenzeCSV()" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">&#128202; Export CSV paghe</button>
-              <button onclick="exportPresenzePDF()" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:9px;padding:9px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">&#128196; Export PDF</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- IMPOSTAZIONI -->
-      <div style="background:#fff;border-radius:14px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden">
-        <div onclick="toggleHomeSection('impost')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none">
-          <div style="width:36px;height:36px;border-radius:10px;background:#f3f3f3;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">⚙️</div>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:.4px;flex:1">IMPOSTAZIONI</span>
-          <span id="arr-impost" style="color:var(--s4);font-size:12px;transition:transform .25s">▼</span>
-        </div>
-        <div id="body-impost" style="max-height:0;overflow:hidden;transition:max-height .35s ease">
-          <div style="border-top:1px solid var(--s1);padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <button onclick="openModal('mPassword')" style="background:#f5f8f5;border:1px solid var(--s2);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="font-size:20px">🔑</span><span style="font-size:9px;font-weight:700;color:var(--text)">Password</span></button>
-            <button onclick="openModal('mBackup')" style="background:#f5f8f5;border:1px solid var(--s2);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="font-size:20px">💾</span><span style="font-size:9px;font-weight:700;color:var(--text)">Backup</span></button>
-            <button onclick="changeUser()" style="background:#f5f8f5;border:1px solid var(--s2);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="font-size:20px">👤</span><span style="font-size:9px;font-weight:700;color:var(--text)">Utente</span></button>
-            <button onclick="doLogout()" style="background:#fff0f0;border:1px solid var(--red-border);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:'Nunito',sans-serif"><span style="font-size:20px">🚪</span><span style="font-size:9px;font-weight:700;color:var(--red)">Esci</span></button>
-          </div>
+      <!-- TAB IMPOSTAZIONI -->
+      <div id="hbody-backup" style="display:none;padding:12px 10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <button onclick="openModal('mPassword')" style="background:#fff;border:1px solid var(--s2);border-radius:10px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:var(--shadow)"><span style="font-size:22px">🔑</span><span style="font-size:10px;font-weight:700;color:var(--text)">Password</span></button>
+          <button onclick="openModal('mBackup')" style="background:#fff;border:1px solid var(--s2);border-radius:10px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:var(--shadow)"><span style="font-size:22px">💾</span><span style="font-size:10px;font-weight:700;color:var(--text)">Backup</span></button>
+          <button onclick="changeUser()" style="background:#fff;border:1px solid var(--s2);border-radius:10px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:var(--shadow)"><span style="font-size:22px">👤</span><span style="font-size:10px;font-weight:700;color:var(--text)">Utente</span></button>
+          <button onclick="doLogout()" style="background:#fff0f0;border:1px solid var(--red-border);border-radius:10px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:var(--shadow)"><span style="font-size:22px">🚪</span><span style="font-size:10px;font-weight:700;color:var(--red)">Esci</span></button>
         </div>
       </div>
 
@@ -1498,26 +1469,53 @@ function toggleHomeOperai() {
   if(arrow) arrow.style.transform = open ? '' : 'rotate(180deg)';
 }
 
+// ════════════ HOME TAB BAR ════════════
+let _homeTab = 'cantieri';
+function switchHomeTab(tab) {
+  _homeTab = tab;
+  // Aggiorna stile tab buttons
+  document.querySelectorAll('.home-tab').forEach(btn => {
+    const isActive = btn.id === 'htab-' + tab;
+    btn.style.color = isActive ? 'var(--g1)' : 'var(--s4)';
+    btn.style.borderBottom = isActive ? '2.5px solid var(--g1)' : '2.5px solid transparent';
+  });
+  // Mostra/nascondi contenuti
+  ['cantieri','operai','presenze','impresa','backup'].forEach(t => {
+    const el = $('hbody-' + t);
+    if(el) el.style.display = t === tab ? '' : 'none';
+  });
+  // Azioni specifiche per tab
+  if(tab === 'presenze') setTimeout(initPresenzeUI, 80);
+  if(tab === 'impresa') aggiornaKPIImpresa();
+  if(tab === 'operai') renderHomeOperai();
+}
+
 function renderHomeOperai() {
   const el = $('homeOperaiList');
-  const badge = $('homeOpCount');
+  const badge = $('htab-op-badge');
   if(!el) return;
   const operai = S.operaiGlobali || [];
-  if(badge) badge.textContent = operai.length;
+  if(badge) {
+    badge.textContent = operai.length;
+    badge.style.background = _homeTab === 'operai' ? 'var(--g1)' : 'var(--g6)';
+    badge.style.color = _homeTab === 'operai' ? '#fff' : 'var(--g2)';
+  }
   if(!operai.length) {
     el.innerHTML = `<div style="padding:14px 16px;font-size:12px;color:var(--soft);text-align:center">Nessun operaio in anagrafica.<br>Tocca + Aggiungi per crearne uno.</div>`;
     return;
   }
-  el.innerHTML = operai.map(op => `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--s1)">
+  el.innerHTML = operai.map(op => {
+    const cOr = getCostoOrario(op);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--s1)">
       <div style="width:32px;height:32px;border-radius:50%;background:var(--g6);color:var(--g1);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${esc(op.nome.charAt(0).toUpperCase())}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(op.nome)}</div>
-        <div style="font-size:11px;color:var(--soft)">${esc(op.qualifica||'—')} · ${fmtEur(op.costo||0)}/mese · ${op.oreDay||8}h/g</div>
+        <div style="font-size:11px;color:var(--soft)">${esc(op.qualifica||'—')} · €${fmtN(cOr)}/h · ${fmtEur(op.costo||0)}/mese</div>
       </div>
       <button onclick="editOperaioGlobale('${op.id}')" style="background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:'Nunito',sans-serif;margin-right:4px">✏️</button>
       <button onclick="eliminaOperaioGlobale('${op.id}')" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:'Nunito',sans-serif">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function eliminaOperaioGlobale(opId) {
@@ -1528,20 +1526,20 @@ function eliminaOperaioGlobale(opId) {
   toast('Operaio rimosso dall\'anagrafica');
 }
 
-function toggleHomeSection(id) {
-  const body = document.getElementById('body-'+id);
-  const arr  = document.getElementById('arr-'+id);
-  if(!body) return;
-  const isOpen = body.style.maxHeight && body.style.maxHeight !== '0px';
-  body.style.maxHeight = isOpen ? '0px' : '4000px';
-  if(arr) arr.style.transform = isOpen ? '' : 'rotate(180deg)';
-}
-function toggleHomeOperai_unused() { toggleHomeSection('operai'); }
+function toggleHomeSection(id) { /* mantenuta per compatibilità */ }
+function toggleHomeOperai_unused() { switchHomeTab('operai'); }
 
 function renderCantieri() {
   renderHomeOperai();
-  const cantBadge = $('home-cant-badge'); if(cantBadge) cantBadge.textContent = S.cantieri.length;
+  // Aggiorna badge cantieri
+  const cantBadge = $('htab-cant-badge');
+  if(cantBadge) {
+    cantBadge.textContent = S.cantieri.length;
+    cantBadge.style.background = _homeTab === 'cantieri' ? 'var(--g1)' : 'var(--g6)';
+    cantBadge.style.color = _homeTab === 'cantieri' ? '#fff' : 'var(--g2)';
+  }
   const el = $('cantieriList');
+  if(!el) return;
   if(!S.cantieri.length) {
     el.innerHTML = `<div class="empty"><div class="empty-ic">🏗️</div><div class="empty-txt">Nessun cantiere ancora.<br>Crea il primo cantiere!</div></div>`;
     return;
