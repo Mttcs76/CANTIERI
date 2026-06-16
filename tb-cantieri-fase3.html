@@ -1626,35 +1626,37 @@ function calcolaManodopera(c) {
   // Ripartizione proporzionale PER MESE:
   // Per ogni mese, costo_operaio_su_cantiere = costoMensile × (ore_cantiere_mese / ore_totali_mese)
   // S.operaiGlobali ha priorità sulle copie locali
+  // NOTA: usa '|' come separatore nella chiave perché gli opId iniziano con '_'
   const operaiMap = buildOperaiMap(c);
 
   // Ore per operaio per mese su TUTTI i cantieri
-  const oreTotaliMese = {}; // { 'opId_YYYY-MM': totalOre }
+  const oreTotaliMese = {}; // { 'opId|YYYY-MM': totalOre }
   S.cantieri.forEach(cant => {
     (cant.rapportini||[]).forEach(r => {
       const mese = (r.data||'').slice(0,7);
       if(!mese) return;
       (r.oreOperai||[]).forEach(x => {
-        const k = x.opId + '_' + mese;
+        const k = x.opId + '|' + mese;
         oreTotaliMese[k] = (oreTotaliMese[k]||0) + (+x.ore||0);
       });
     });
   });
 
   // Ore per operaio per mese su QUESTO cantiere
-  const oreCantiereMese = {}; // { 'opId_YYYY-MM': ore }
+  const oreCantiereMese = {}; // { 'opId|YYYY-MM': ore }
   (c.rapportini||[]).forEach(r => {
     const mese = (r.data||'').slice(0,7);
     if(!mese) return;
     (r.oreOperai||[]).forEach(x => {
-      const k = x.opId + '_' + mese;
+      const k = x.opId + '|' + mese;
       oreCantiereMese[k] = (oreCantiereMese[k]||0) + (+x.ore||0);
     });
   });
 
   // Somma: per ogni (operaio, mese) quota proporzionale del costo mensile
   return Object.entries(oreCantiereMese).reduce((tot, [key, oreCant]) => {
-    const [opId, mese] = key.split(/_(.+)/); // split solo sul primo _
+    const sep = key.indexOf('|');
+    const opId = key.slice(0, sep);
     const op = operaiMap[opId];
     if(!op) return tot;
     const costoMensile = +op.costo||0;
@@ -1854,8 +1856,10 @@ function renderOperai(c) {
       const opInfo = operaiMap[op.id] || op;
       const righeOre = getOreOperaio(c, op.id).sort((a,b) => b.data.localeCompare(a.data));
       const totOreOp = righeOre.reduce((s,r) => s + (+r.ore||0), 0);
-      const ggLavorate = [...new Set(righeOre.map(r=>r.data))].length;
-      // Costo indicativo: costoMensile/22 × giorni lavorati
+      // Giorni equivalenti: ore totali / ore medie giornaliere (oreDay, default 8)
+      const oreDayOp = +opInfo.oreDay || 8;
+      const ggLavorate = totOreOp > 0 ? Math.round(totOreOp / oreDayOp * 10) / 10 : 0;
+      // Costo indicativo: costoMensile/22 × giorni equivalenti
       const costGg = costoGiornalieroIndicativo(opInfo);
       const costoOpIndicativo = costGg * ggLavorate;
 
@@ -1883,13 +1887,13 @@ function renderOperai(c) {
           </div>
           <div style="text-align:right">
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--g1)">~${fmtEur(costoOpIndicativo)}</div>
-            <div style="font-size:10px;color:var(--soft)">${fmtN(totOreOp)}h · ${ggLavorate} gg · indicativo</div>
+            <div style="font-size:10px;color:var(--soft)">${fmtN(totOreOp)}h · ~${ggLavorate} gg eq. · indicativo</div>
           </div>
         </div>
         <div class="operaio-stats">
           <div class="op-stat"><div class="op-stat-n">${fmtN(totOreOp)}h</div><div class="op-stat-l">Ore tot.</div></div>
           <div class="op-stat"><div class="op-stat-n">~${fmtEur(costoOpIndicativo)}</div><div class="op-stat-l">Costo ind.</div></div>
-          <div class="op-stat"><div class="op-stat-n">${ggLavorate}</div><div class="op-stat-l">Gg lavorate</div></div>
+          <div class="op-stat"><div class="op-stat-n">${ggLavorate}</div><div class="op-stat-l">Gg equiv.</div></div>
         </div>
         <div class="presenze-row">
           <span style="font-size:10px;color:var(--soft);font-weight:600;margin-right:4px">Ultimi 7 gg:</span>
@@ -2457,6 +2461,8 @@ function eliminaCantiere(id) {
   if(!conf) return;
   S.cantieri = S.cantieri.filter(x=>x.id!==id);
   save(); renderCantieri();
+  // Elimina anche il documento Firebase (save() non lo cancella, lo sovrascrive)
+  if(window._fbDeleteCantiere) window._fbDeleteCantiere(id);
   toast('🗑 Cantiere eliminato');
 }
 
@@ -2532,7 +2538,7 @@ function renderCosti(c) {
     (cant.rapportini||[]).forEach(r => {
       const mese = (r.data||'').slice(0,7); if(!mese) return;
       (r.oreOperai||[]).forEach(x => {
-        const k = x.opId + '_' + mese;
+        const k = x.opId + '|' + mese;
         oreTotaliMese[k] = (oreTotaliMese[k]||0) + (+x.ore||0);
       });
     });
@@ -2542,7 +2548,7 @@ function renderCosti(c) {
   (c.rapportini||[]).forEach(r => {
     const mese = (r.data||'').slice(0,7); if(!mese) return;
     (r.oreOperai||[]).forEach(x => {
-      const k = x.opId + '_' + mese;
+      const k = x.opId + '|' + mese;
       oreCantiereMese[k] = (oreCantiereMese[k]||0) + (+x.ore||0);
     });
   });
@@ -2550,7 +2556,8 @@ function renderCosti(c) {
   // Aggrega per operaio (somma tutti i mesi) per il dettaglio
   const mdoPerOp = {};
   Object.entries(oreCantiereMese).forEach(([key, oreCant]) => {
-    const [opId] = key.split('_');
+    const sep = key.indexOf('|');
+    const opId = key.slice(0, sep);
     const op = operaiMap[opId]; if(!op) return;
     const costoMensile = +op.costo||0;
     const oreT = oreTotaliMese[key] || oreCant;
