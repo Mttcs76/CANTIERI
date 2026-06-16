@@ -746,107 +746,115 @@ function renderFlusso(){
 }
 
 function renderFatture(){
-  const fatture = (_contabile.fatture || []).slice().sort((a,b) => (b.dataFattura||'').localeCompare(a.dataFattura||''));
-  const passive = fatture.filter(f => f.tipo === 'passiva');
-  const attive = fatture.filter(f => f.tipo === 'attiva');
-  const nAssegnate = fatture.filter(f => f.assegnazione).length;
+  const tuttefatture = (_contabile.fatture || []).slice().sort(function(a,b){ return (a.dataFattura||'').localeCompare(b.dataFattura||''); });
+  const passive = tuttefatture.filter(function(f){ return f.tipo==='passiva'; });
+  const attive  = tuttefatture.filter(function(f){ return f.tipo==='attiva'; });
+  const nDaAssegnare = tuttefatture.filter(function(f){ return !f.assegnazione && f.tipdoc !== 'NC'; }).length;
 
-  const nDaAssegnare = fatture.filter(f => !f.assegnazione && f.tipdoc !== 'NC').length;
-  let html = '<div style="padding:12px 12px 4px;display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+  // Stato filtro corrente
+  var filtro = window._fattFiltro || 'tutte';
+
+  var html = '<div style="padding:12px 12px 4px;display:grid;grid-template-columns:1fr 1fr;gap:8px">';
   html += '<button onclick="triggerImportZip()" style="background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:11px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">📦 Importa ZIP TIC</button>';
   html += '<button onclick="triggerImportCsv()" style="background:var(--g2);color:#fff;border:none;border-radius:var(--r-sm);padding:11px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">🏦 Importa CSV banca</button>';
   html += '</div>';
-  if(nDaAssegnare > 0) {
-    html += '<div style="padding:0 12px 6px"><button onclick="assegnaAutomatica()" style="width:100%;background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:var(--r-sm);padding:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">🤖 Suggerisci assegnazioni automatiche (' + nDaAssegnare + ')</button></div>';
-  }
+  if(nDaAssegnare > 0) html += '<div style="padding:0 12px 6px"><button onclick="assegnaAutomatica()" style="width:100%;background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:var(--r-sm);padding:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">🤖 Suggerisci assegnazioni automatiche (' + nDaAssegnare + ')</button></div>';
   html += '<div style="padding:0 12px 8px"><button onclick="apriNuovaVoce(\'fattura_passiva\')" style="width:100%;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);border-radius:var(--r-sm);padding:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">✏️ + Fattura manuale</button></div>';
-  if(_contabile.updatedAt) {
-    html += '<div style="text-align:center;font-size:10px;color:var(--soft);padding:4px 0">Ultimo aggiornamento: ' + new Date(_contabile.updatedAt).toLocaleDateString('it-IT') + '</div>';
-  }
-  if(fatture.length > 0) {
-    html += '<div style="text-align:center;font-size:11px;color:var(--soft);padding:2px 0 8px">' + fatture.length + ' fatture · ' + nAssegnate + ' assegnate</div>';
-  }
+  if(_contabile.updatedAt) html += '<div style="text-align:center;font-size:10px;color:var(--soft);padding:4px 0">Ultimo aggiornamento: ' + new Date(_contabile.updatedAt).toLocaleDateString('it-IT') + '</div>';
+  if(tuttefatture.length > 0) html += '<div style="text-align:center;font-size:11px;color:var(--soft);padding:2px 0 8px">' + tuttefatture.length + ' fatture · ' + tuttefatture.filter(function(f){ return f.assegnazione; }).length + ' assegnate</div>';
 
-  html += '<div class="section-card"><div class="section-head"><span>📤 Fatture passive (fornitori)</span><span class="chip chip-red">' + passive.length + '</span></div>';
-  if(passive.length === 0) {
-    html += '<div class="empty"><div class="empty-ic">📭</div><div class="empty-txt">Nessuna fattura passiva<br>Importa ZIP Tieni il Conto</div></div>';
-  } else {
-    passive.forEach(function(f, i){ html += buildFatturaRow(f, i); });
-  }
+  // Filtri cantiere
+  var centri = ['tutte'];
+  tuttefatture.forEach(function(f){
+    var c = f.assegnazione==='cantiere' ? ((_cantieri.find(function(x){ return x.id===f.cantiereId; })||{}).nome||'?') : f.assegnazione==='generale' ? 'Generale' : '';
+    if(c && centri.indexOf(c)===-1) centri.push(c);
+  });
+  centri.push('da assegnare');
+  html += '<div style="padding:0 12px 8px;display:flex;gap:6px;flex-wrap:wrap;overflow-x:auto">';
+  centri.forEach(function(c){
+    var isActive = filtro===c;
+    html += '<button onclick="window._fattFiltro=\''+c+'\';renderFatture()" style="flex:none;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;font-family:\'Nunito\',sans-serif;border:1px solid '+(isActive?'var(--g1)':'var(--s2)')+';background:'+(isActive?'var(--g1)':'#fff')+';color:'+(isActive?'#fff':'var(--soft)')+'">'+c+'</button>';
+  });
   html += '</div>';
 
-  html += '<div class="section-card"><div class="section-head"><span>📥 Fatture attive (clienti)</span><span class="chip chip-green">' + attive.length + '</span></div>';
-  if(attive.length === 0) {
-    html += '<div class="empty"><div class="empty-ic">📭</div><div class="empty-txt">Nessuna fattura attiva<br>Importa ZIP Tieni il Conto</div></div>';
-  } else {
-    attive.forEach(function(f, i){ html += buildFatturaRow(f, i); });
-  }
+  // Tabella passive
+  html += '<div style="padding:0 12px 4px"><div style="font-size:11px;font-weight:700;color:var(--soft);padding:4px 0 6px">📤 FATTURE PASSIVE (FORNITORI) <span style="background:var(--red-bg);color:var(--red);padding:2px 7px;border-radius:10px;font-size:10px">'+passive.length+'</span></div>';
+  html += buildFattureTabella(passive, filtro, 'P');
+  html += '</div>';
+
+  // Tabella attive
+  html += '<div style="padding:0 12px 16px"><div style="font-size:11px;font-weight:700;color:var(--soft);padding:4px 0 6px">📥 FATTURE ATTIVE (CLIENTI) <span style="background:var(--g6);color:var(--g2);padding:2px 7px;border-radius:10px;font-size:10px">'+attive.length+'</span></div>';
+  html += buildFattureTabella(attive, filtro, 'A');
   html += '</div>';
 
   document.getElementById('mainContent').innerHTML = html;
 }
 
+function buildFattureTabella(fatture, filtro, prefisso) {
+  // Filtra
+  var filtered = fatture.filter(function(f, i){
+    if(filtro==='tutte') return true;
+    if(filtro==='da assegnare') return !f.assegnazione;
+    if(filtro==='Generale') return f.assegnazione==='generale';
+    var cantNome = (_cantieri.find(function(x){ return x.id===f.cantiereId; })||{}).nome||'';
+    return cantNome === filtro;
+  });
+
+  if(!filtered.length) return '<div style="text-align:center;padding:16px;font-size:12px;color:var(--soft)">Nessuna fattura per questo filtro.</div>';
+
+  var totImp=0, totIva=0, totTot=0;
+  filtered.forEach(function(f){ totImp+=(f.imponibile||0); totIva+=(f.iva||0); totTot+=(f.totale||0); });
+
+  var tbl = '<div style="overflow-x:auto;border-radius:10px;border:1px solid var(--s2)">';
+  tbl += '<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:780px">';
+  tbl += '<thead><tr style="background:var(--s1);border-bottom:1px solid var(--s2)">';
+  var cols = ['#','Data','Fornitore / Cliente','N. Fatt.','Imponibile','IVA %','IVA €','Totale','Centro','Stato',''];
+  var aligns = ['c','l','l','l','r','r','r','r','l','c','c'];
+  cols.forEach(function(c,i){
+    tbl += '<th style="padding:7px 8px;font-size:10px;font-weight:700;color:var(--soft);text-align:'+(aligns[i]==='r'?'right':aligns[i]==='c'?'center':'left')+';white-space:nowrap">'+c+'</th>';
+  });
+  tbl += '</tr></thead><tbody>';
+
+  filtered.forEach(function(f, i){
+    var df = f.dataFattura ? f.dataFattura.split('-').reverse().join('/') : '—';
+    var imp = f.imponibile||0, iva = f.iva||0, tot = f.totale||0, aliq = f.aliquotaIva||0;
+    var assegnata = f.assegnazione && (f.cantiereId || f.assegnazione==='generale');
+    var cantNome = assegnata && f.assegnazione==='cantiere' ? ((_cantieri.find(function(x){ return x.id===f.cantiereId; })||{}).nome||'?') : '';
+    var centroLabel = assegnata ? (f.assegnazione==='generale' ? 'Generale' : cantNome) : '—';
+    var isNC = (f.tipdoc||'').toUpperCase()==='NC';
+
+    var statoStyle = {pagata:'background:#eaf3de;color:#3b6d11', assegnata:'background:#dbeafe;color:#185fa5', riconciliata:'background:#dbeafe;color:#185fa5', da_assegnare:'background:#fee2e2;color:#a32d2d'}[f.stato||'da_assegnare'] || 'background:var(--s2);color:var(--soft)';
+
+    tbl += '<tr style="border-bottom:1px solid var(--s1)'+(isNC?';opacity:.6':'')+(i%2===0?'':';background:var(--s1)')+'" onmouseover="this.style.background=\'var(--g6)\'" onmouseout="this.style.background=\''+(i%2===0?'#fff':'var(--s1)')+'\'">'; 
+    tbl += '<td style="padding:7px 8px;text-align:center;font-size:10px;color:var(--soft);font-weight:600;white-space:nowrap">'+prefisso+(i+1).toString().padStart(3,'0')+'</td>';
+    tbl += '<td style="padding:7px 8px;white-space:nowrap;color:var(--soft);font-size:11px">'+df+'</td>';
+    tbl += '<td style="padding:7px 8px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">'+((f.fornitore||f.cliente||'—'))+'</td>';
+    tbl += '<td style="padding:7px 8px;white-space:nowrap;color:var(--soft)">'+((f.numeroFattura||'—'))+'</td>';
+    tbl += '<td style="padding:7px 8px;text-align:right;font-weight:600">'+fmtDec(imp)+'</td>';
+    tbl += '<td style="padding:7px 8px;text-align:right;color:var(--soft)">'+aliq+'%</td>';
+    tbl += '<td style="padding:7px 8px;text-align:right;color:var(--soft)">'+fmtDec(iva)+'</td>';
+    tbl += '<td style="padding:7px 8px;text-align:right;font-weight:700;color:'+(f.tipo==='passiva'?'var(--red)':'var(--g2)')+'">'+fmtDec(tot)+'</td>';
+    tbl += '<td style="padding:7px 8px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="font-size:10px;background:var(--s1);border:1px solid var(--s2);border-radius:6px;padding:2px 6px">'+centroLabel+'</span></td>';
+    tbl += '<td style="padding:7px 8px;text-align:center"><span style="font-size:10px;padding:2px 7px;border-radius:10px;'+statoStyle+'">'+(f.stato||'—')+'</span></td>';
+    tbl += '<td style="padding:7px 8px;text-align:center"><button onclick="apriAssegna(\''+f.id+'\')" style="font-size:10px;padding:3px 8px;border-radius:6px;border:1px solid var(--s2);background:#fff;cursor:pointer;font-family:\'Nunito\',sans-serif;color:var(--g1);font-weight:700">'+(assegnata?'✏️':'→')+'</button></td>';
+    tbl += '</tr>';
+  });
+
+  // Totali
+  tbl += '<tr style="background:var(--s1);border-top:2px solid var(--s2);font-weight:700">';
+  tbl += '<td colspan="4" style="padding:8px;font-size:11px;color:var(--soft)">Totale ('+filtered.length+' fatture)</td>';
+  tbl += '<td style="padding:8px;text-align:right;font-size:12px">'+fmtDec(totImp)+'</td>';
+  tbl += '<td></td>';
+  tbl += '<td style="padding:8px;text-align:right;font-size:12px">'+fmtDec(totIva)+'</td>';
+  tbl += '<td style="padding:8px;text-align:right;font-size:12px;color:'+(prefisso==='P'?'var(--red)':'var(--g2)')+'">'+fmtDec(totTot)+'</td>';
+  tbl += '<td colspan="3"></td></tr>';
+
+  tbl += '</tbody></table></div>';
+  return tbl;
+}
+
 function buildFatturaRow(f, idx){
-  const statoMap = { importata:'chip-gray', assegnata:'chip-blue', pagata:'chip-green', riconciliata:'chip-green' };
-  const statoChip = statoMap[f.stato || 'importata'] || 'chip-gray';
-  const df = f.dataFattura ? f.dataFattura.split('-').reverse().join('/') : '';
-  const assegnata = f.assegnazione && (f.cantiereId || f.assegnazione === 'generale');
-  const cantNome = assegnata && f.assegnazione === 'cantiere' ? ((_cantieri.find(c => c.id === f.cantiereId)||{}).nome||'?') : '';
-  const isNC = (f.tipdoc||'').toUpperCase() === 'NC';
-  const suggerimento = !assegnata ? suggerisciAssegnazione(f) : null;
-  const imp = f.imponibile || 0;
-  const iva = f.iva || 0;
-  const tot = f.totale || 0;
-  const aliq = f.aliquotaIva !== undefined ? f.aliquotaIva : null;
-
-  let row = '<div class="fattura-row"' + (isNC ? ' style="opacity:.65;background:var(--s1)"' : '') + '>';
-
-  // Riga 1: nome + totale
-  row += '<div class="fattura-top">';
-  row += '<div style="display:flex;align-items:center;gap:5px;min-width:0;flex:1">';
-  row += '<div class="fattura-nome" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (f.fornitore||f.cliente||'—') + '</div>';
-  if(isNC) row += '<span style="font-size:9px;background:var(--red-bg);color:var(--red);border-radius:3px;padding:1px 4px;flex-shrink:0">NC</span>';
-  if(f.fonte==='manuale') row += '<span style="font-size:9px;background:var(--amber-bg);color:var(--amber);border-radius:3px;padding:1px 4px;flex-shrink:0">man.</span>';
-  row += '</div>';
-  row += '<div class="fattura-importo ' + f.tipo + '" style="flex-shrink:0' + (isNC?';text-decoration:line-through':'') + '">' + fmtDec(tot) + '</div>';
-  row += '</div>';
-
-  // Riga 2: Fatt. N · data · imp · IVA xx% · €iva (tutto inline)
-  row += '<div style="font-size:11px;color:var(--soft);padding:2px 0 4px;line-height:1.5">';
-  const parts2 = [];
-  if(f.numeroFattura) parts2.push('<span style="font-weight:600;color:var(--text)">Fatt. ' + f.numeroFattura + '</span>');
-  if(df) parts2.push(df);
-  if(imp > 0) parts2.push('Imp. ' + fmtDec(imp));
-  if(aliq !== null) parts2.push('IVA ' + aliq + '%');
-  if(iva > 0) parts2.push(fmtDec(iva));
-  if(f.ritenuta && f.ritenuta > 0) parts2.push('<span style="color:var(--amber)">Rit. ' + fmtDec(f.ritenuta) + '</span>');
-  row += parts2.join(' · ');
-  row += '</div>';
-
-  // Riga 3: assegnazione + stato + suggerimento
-  row += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:2px 0 4px">';
-  if(assegnata) {
-    row += '<span style="font-size:12px;font-weight:700;color:var(--g2)">' + (f.assegnazione==='cantiere' ? '🏗️ '+cantNome : '📋 Generale') + '</span>';
-    if(f.categoria) row += '<span style="font-size:11px;color:var(--soft)">· ' + f.categoria + '</span>';
-  }
-  row += '<span class="chip ' + statoChip + '">' + (f.stato||'importata') + '</span>';
-  if(suggerimento) row += '<span class="chip chip-amber">🤖 ' + suggerimento.label + '</span>';
-  row += '</div>';
-
-  // Riga 4: azioni
-  row += '<div class="fattura-actions">';
-  row += '<button class="btn-assign' + (assegnata?' done':'') + '" onclick="apriAssegna(\'' + f.id + '\')">' + (assegnata ? '✅ Riassegna' : 'Assegna →') + '</button>';
-  if(suggerimento && !assegnata) {
-    row += '<button onclick="confermaSuggerimento(\'' + f.id + '\')" style="background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">✅ Conferma</button>';
-  }
-  if(!assegnata) {
-    const nSimili = (_contabile.fatture||[]).filter(function(x){ return !x.assegnazione && (x.fornitore||x.cliente||'') === (f.fornitore||f.cliente||''); }).length;
-    if(nSimili > 1) row += '<button onclick="apriAssegnaTutte(\'' + f.id + '\')" style="background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">Assegna tutte (' + nSimili + ')</button>';
-  }
-  if(f.fonte === 'manuale') row += '<button onclick="apriModificaVoce(\'fattura\',\'' + f.id + '\')" style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">✏️ Modifica</button>';
-  row += '</div>';
-  row += '</div>';
-  return row;
+  return buildFattureTabella([f], 'tutte', f.tipo==='passiva'?'P':'A');
 }
 
 function renderBanca(){
