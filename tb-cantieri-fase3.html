@@ -2601,21 +2601,57 @@ function renderCosti(c) {
     </div>`
   ).join('');
 
-  // Lista fatture reali
+  // Lista fatture reali — layout mobile compatto con netto e lordo
   const tutteVoci = [
-    ...fattureReali.map(f=>({desc:f.fornitore||f.note||'—',cat:f.categoria||'Altro',importo:f.imponibile||f.totale||0,data:f.dataFattura||'',stato:f.stato||''})),
-    ...vociReali.map(v=>({desc:v.descrizione||'—',cat:v.categoria||'Altro',importo:v.importo||0,data:v.data||'',stato:''}))
+    ...fattureReali.map(f=>({
+      desc: f.fornitore||f.note||'—',
+      num:  f.numeroFattura||'',
+      cat:  f.categoria||'Altro',
+      netto: f.imponibile||f.totale||0,
+      lordo: f.totale||0,
+      data:  f.dataFattura||'',
+      stato: f.stato||''
+    })),
+    ...vociReali.map(v=>({
+      desc:  v.descrizione||'—',
+      num:   '',
+      cat:   v.categoria||'Altro',
+      netto: v.importo||0,
+      lordo: v.importo||0,
+      data:  v.data||'',
+      stato: ''
+    }))
   ];
   const statoColor={pagata:'var(--g3)',assegnata:'var(--amber)',annullata:'var(--soft)'};
-  const fattureRows=[...tutteVoci].sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(v=>
-    `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--s1)">
+  const vociOrdinati = [...tutteVoci].sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  const totNettoVoci = vociOrdinati.reduce((s,v)=>s+v.netto,0);
+  const totLordoVoci = vociOrdinati.reduce((s,v)=>s+v.lordo,0);
+
+  const fattureRows = vociOrdinati.map((v,i)=>{
+    const dataFmt = v.data ? v.data.slice(5).split('-').reverse().join('/') : '—';
+    const subParts = [v.num?`Fatt. ${v.num}`:'', v.cat, v.stato].filter(Boolean);
+    const hasDiff = Math.abs(v.lordo - v.netto) > 0.01;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--s1);${i%2===1?'background:var(--s1)':''}">
+      <span style="font-size:10px;color:var(--soft);font-weight:600;width:26px;flex-shrink:0;text-align:center">${String(i+1).padStart(2,'0')}</span>
+      <span style="font-size:11px;color:var(--soft);width:38px;flex-shrink:0">${dataFmt}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v.desc)}</div>
-        <div style="font-size:10px;color:var(--soft)">${esc(v.cat)} · ${esc(v.data)}${v.stato?` · <span style="color:${statoColor[v.stato]||'var(--soft)'}">${v.stato}</span>`:''}</div>
+        <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${esc(v.desc)}</div>
+        <div style="font-size:10px;color:var(--soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${subParts.map((p,pi)=>pi===2&&v.stato?`<span style="color:${statoColor[v.stato]||'var(--soft)'}">${esc(p)}</span>`:esc(p)).join(' · ')}</div>
       </div>
-      <div style="font-size:13px;font-weight:700;color:var(--red);flex-shrink:0">−${fE(v.importo)}</div>
-    </div>`
-  ).join('');
+      <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;min-width:58px">
+        <span style="font-size:12px;font-weight:600;color:var(--text)">${fE(v.netto)}</span>
+        ${hasDiff?`<span style="font-size:10px;color:var(--soft)">${fE(v.lordo)}</span>`:''}
+      </div>
+    </div>`;
+  }).join('') +
+  (vociOrdinati.length ? `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--s1);border-top:1.5px solid var(--s2)">
+      <span style="font-size:11px;color:var(--soft);font-weight:600">Totale ${vociOrdinati.length} voci</span>
+      <div style="display:flex;flex-direction:column;align-items:flex-end">
+        <span style="font-size:12px;font-weight:700;color:var(--text)">${fE(totNettoVoci)}</span>
+        ${Math.abs(totLordoVoci-totNettoVoci)>0.01?`<span style="font-size:10px;color:var(--soft)">lordo ${fE(totLordoVoci)}</span>`:''}
+      </div>
+    </div>` : '');
 
   // Sezione compensi (esclusi dal totale, solo informativi)
   const compensiRows = compensi.length ? `
@@ -2689,9 +2725,19 @@ function renderCosti(c) {
       </div>
     </div>` : ''}
     <div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);overflow:hidden">
-      <div style="padding:10px 14px;background:var(--s1);border-bottom:1px solid var(--s2)">
+      <div style="padding:10px 14px;background:var(--s1);border-bottom:1px solid var(--s2);display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:12px;font-weight:700;color:var(--text)">🧾 Dettaglio voci (${tutteVoci.length}) — da TB Gestione</span>
+        <div style="display:flex;flex-direction:column;align-items:flex-end">
+          <span style="font-size:11px;font-weight:700;color:var(--text)">${fE(totNettoVoci)}</span>
+          ${Math.abs(totLordoVoci-totNettoVoci)>0.01?`<span style="font-size:9px;color:var(--soft)">lordo ${fE(totLordoVoci)}</span>`:''}
+        </div>
       </div>
+      ${tutteVoci.length>0?`<div style="display:flex;gap:8px;padding:4px 12px;background:var(--s1);border-bottom:1px solid var(--s2)">
+        <span style="width:26px"></span>
+        <span style="width:38px;font-size:9px;color:var(--soft);text-transform:uppercase;letter-spacing:.3px">Data</span>
+        <span style="flex:1;font-size:9px;color:var(--soft);text-transform:uppercase;letter-spacing:.3px">Fornitore</span>
+        <span style="min-width:58px;font-size:9px;color:var(--soft);text-align:right;text-transform:uppercase;letter-spacing:.3px">Netto / Lordo</span>
+      </div>`:''}
       ${fattureRows||`<div style="padding:16px;font-size:12px;color:var(--soft);text-align:center">Nessuna fattura assegnata a questo cantiere.</div>`}
     </div>
     ${compensiRows}
