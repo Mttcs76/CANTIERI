@@ -650,8 +650,9 @@ function renderGenerali(){
   html += '</div>';
   if(voci.length > 0) {
     html += '<div class="section-card"><div class="section-head"><span>💳 Altre voci</span><span class="chip chip-amber">' + voci.length + '</span></div>';
-    voci.slice().sort((a,b) => (b.data||'').localeCompare(a.data||'')).forEach(function(v){ html += buildVoceRow(v); });
-    html += '</div>';
+    html += '<div style="padding:8px 10px">';
+    html += buildVociTabella(voci.slice().sort(function(a,b){ return (a.data||'').localeCompare(b.data||''); }), 'V');
+    html += '</div></div>';
   }
   document.getElementById('mainContent').innerHTML = html;
 }
@@ -906,22 +907,29 @@ function renderBanca(){
   const posVoci = voci.filter(function(v){ return v.tipoVoce==='costo_pos'; });
   if(posVoci.length > 0) {
     html += '<div class="section-card"><div class="section-head" style="cursor:pointer" onclick="toggleSezione(\'secPos\')"><span>💳 Costi POS / diretti</span><span class="chip chip-amber">' + posVoci.length + '</span></div>';
-    html += '<div id="secPos" style="display:none">';
-    posVoci.forEach(function(v){ html += buildVoceRow(v); });
+    html += '<div id="secPos" style="display:none;padding:8px 10px">';
+    html += buildVociTabella(posVoci.slice().sort(function(a,b){ return (a.data||'').localeCompare(b.data||''); }), 'S');
     html += '</div></div>';
   }
   const fiscoVoci = voci.filter(function(v){ return v.tipoVoce==='fisco'; });
   if(fiscoVoci.length > 0) {
     html += '<div class="section-card"><div class="section-head" style="cursor:pointer" onclick="toggleSezione(\'secFisco\')"><span>🏛️ Fisco / F24 / Banca</span><span class="chip chip-red">' + fiscoVoci.length + '</span></div>';
-    html += '<div id="secFisco" style="display:none">';
-    fiscoVoci.forEach(function(v){ html += buildVoceRow(v); });
+    html += '<div id="secFisco" style="display:none;padding:8px 10px">';
+    html += buildVociTabella(fiscoVoci.slice().sort(function(a,b){ return (a.data||'').localeCompare(b.data||''); }), 'F');
     html += '</div></div>';
   }
   const compensiVoci = voci.filter(function(v){ return v.tipoVoce==='compenso'; });
   if(compensiVoci.length > 0) {
     html += '<div class="section-card"><div class="section-head" style="cursor:pointer" onclick="toggleSezione(\'secCompensi\')"><span>👤 Compensi soci</span><span class="chip chip-blue">' + compensiVoci.length + '</span></div>';
-    html += '<div id="secCompensi" style="display:none">';
-    compensiVoci.forEach(function(v){ html += buildVoceRow(v); });
+    html += '<div id="secCompensi" style="display:none;padding:8px 10px">';
+    html += buildVociTabella(compensiVoci.slice().sort(function(a,b){ return (a.data||'').localeCompare(b.data||''); }), 'C');
+    html += '</div></div>';
+  }
+  const cgVoci = voci.filter(function(v){ return v.tipoVoce==='costo_generale'; });
+  if(cgVoci.length > 0) {
+    html += '<div class="section-card"><div class="section-head" style="cursor:pointer" onclick="toggleSezione(\'secCG\')"><span>📋 Costi generali diversi</span><span class="chip chip-gray">' + cgVoci.length + '</span></div>';
+    html += '<div id="secCG" style="display:none;padding:8px 10px">';
+    html += buildVociTabella(cgVoci.slice().sort(function(a,b){ return (a.data||'').localeCompare(b.data||''); }), 'G');
     html += '</div></div>';
   }
   if(voci.length === 0 && fattureExcel.length === 0) {
@@ -938,7 +946,7 @@ function toggleSezione(id){
 
 function buildVoceRow(v){
   const df = v.data ? v.data.split('-').reverse().join('/') : '';
-  const tipoLabel = { costo_pos:'💳 POS', fisco:'🏛️ Fisco', compenso:'👤 Compenso', altro:'📋 Altro' }[v.tipoVoce] || '📋';
+  const tipoLabel = { costo_pos:'💳 POS', fisco:'🏛️ Fisco', compenso:'👤 Compenso', costo_generale:'📋 CG', altro:'📋 Altro' }[v.tipoVoce] || '📋';
   const cantNome = v.assegnazione==='cantiere' ? ((_cantieri.find(function(c){ return c.id===v.cantiereId; })||{}).nome||'?') : '';
   let row = '<div class="fattura-row">';
   row += '<div class="fattura-top"><div class="fattura-nome">' + (v.descrizione||'—') + '</div><div class="fattura-importo passiva">' + fmtDec(v.importo) + '</div></div>';
@@ -951,6 +959,43 @@ function buildVoceRow(v){
   if(v.fonte==='excel') row += '<div class="fattura-actions"><button onclick="apriModificaVoce(\'voce\',\'' + v.id + '\')" style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:\'Nunito\',sans-serif">✏️</button></div>';
   row += '</div>';
   return row;
+}
+
+function buildVociTabella(voci, prefisso) {
+  if(!voci || !voci.length) return '<div style="padding:16px;font-size:12px;color:var(--soft);text-align:center">Nessuna voce.</div>';
+  const tipoLabels = { costo_pos:'💳 POS', fisco:'🏛️ Fisco', compenso:'👤 Compenso', costo_generale:'📋 CG', altro:'📋 Altro' };
+  var tot = voci.reduce(function(s,v){ return s+(v.importo||0); }, 0);
+  var tbl = '<div style="overflow-x:auto;border-radius:10px;border:1px solid var(--s2)">';
+  tbl += '<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px">';
+  tbl += '<thead><tr style="background:var(--s1);border-bottom:1px solid var(--s2)">';
+  for(var i=0; i<[['#','c'],['Data','l'],['Descrizione','l'],['Tipo','c'],['Centro','l'],['Importo','r'],['']].length; i++){
+    var col=[['#','c'],['Data','l'],['Descrizione','l'],['Tipo','c'],['Centro','l'],['Importo','r'],['','c']][i];
+    tbl += '<th style="padding:7px 8px;font-size:10px;font-weight:700;color:var(--soft);text-align:'+(col[1]==='r'?'right':col[1]==='c'?'center':'left')+';white-space:nowrap">'+col[0]+'</th>';
+  }
+  tbl += '</tr></thead><tbody>';
+  voci.forEach(function(v, i) {
+    var df = v.data ? v.data.split('-').reverse().join('/') : '—';
+    var cantNome = v.assegnazione==='cantiere' ? ((_cantieri.find(function(c){ return c.id===v.cantiereId; })||{}).nome||'?') : '';
+    var centroLabel = v.assegnazione==='generale' ? 'Generale' : v.assegnazione==='cantiere' ? cantNome : '—';
+    var tipoLabel = tipoLabels[v.tipoVoce] || '📋';
+    var tipoBg = {fisco:'background:#fee2e2;color:#a32d2d', compenso:'background:#dbeafe;color:#185fa5',
+      costo_pos:'background:#fef3c7;color:#92400e', costo_generale:'background:#f1f5f9;color:#374151'}[v.tipoVoce] || 'background:var(--s2);color:var(--soft)';
+    tbl += '<tr style="border-bottom:1px solid var(--s1);'+(i%2===0?'':'background:var(--s1)')+'" onmouseover="this.style.background=\'var(--g6)\'" onmouseout="this.style.background=\''+(i%2===0?'#fff':'var(--s1)')+'\'">'; 
+    tbl += '<td style="padding:7px 8px;text-align:center;font-size:10px;color:var(--soft);font-weight:600">'+(prefisso||'V')+String(i+1).padStart(3,'0')+'</td>';
+    tbl += '<td style="padding:7px 8px;white-space:nowrap;color:var(--soft);font-size:11px">'+df+'</td>';
+    tbl += '<td style="padding:7px 8px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">'+(v.descrizione||'—')+'</td>';
+    tbl += '<td style="padding:7px 8px;text-align:center"><span style="font-size:10px;padding:2px 7px;border-radius:10px;'+tipoBg+'">'+tipoLabel+'</span></td>';
+    tbl += '<td style="padding:7px 8px;font-size:11px"><span style="font-size:10px;background:var(--s1);border:1px solid var(--s2);border-radius:6px;padding:2px 6px">'+centroLabel+'</span></td>';
+    tbl += '<td style="padding:7px 8px;text-align:right;font-weight:700;color:var(--red)">'+fmtDec(v.importo||0)+'</td>';
+    tbl += '<td style="padding:7px 8px;text-align:center">'+(v.fonte==='excel'?'<button onclick="apriModificaVoce(\'voce\',\''+v.id+'\')" style="font-size:10px;padding:2px 7px;border-radius:5px;border:1px solid var(--s2);background:#fff;cursor:pointer;font-family:\'Nunito\',sans-serif">✏️</button>':'')+'</td>';
+    tbl += '</tr>';
+  });
+  tbl += '<tr style="background:var(--s1);border-top:2px solid var(--s2);font-weight:700">';
+  tbl += '<td colspan="5" style="padding:8px;font-size:11px;color:var(--soft)">Totale ('+voci.length+' voci)</td>';
+  tbl += '<td style="padding:8px;text-align:right;font-size:12px;color:var(--red)">'+fmtDec(tot)+'</td>';
+  tbl += '<td></td></tr>';
+  tbl += '</tbody></table></div>';
+  return tbl;
 }
 
 function triggerImportExcel(){ document.getElementById('inputExcel').click(); }
