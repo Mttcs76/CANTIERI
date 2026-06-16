@@ -643,7 +643,9 @@ function renderGenerali(){
   if(fatture.length === 0) {
     html += '<div class="empty"><div class="empty-ic">📋</div><div class="empty-txt">Nessuna fattura generale</div></div>';
   } else {
-    fatture.slice().sort((a,b) => (b.dataFattura||'').localeCompare(a.dataFattura||'')).forEach(function(f,i){ html += buildFatturaRow(f,i); });
+    html += '<div style="padding:8px 10px">';
+    html += buildFattureTabella(fatture.slice().sort(function(a,b){ return (a.dataFattura||'').localeCompare(b.dataFattura||''); }), 'tutte', 'P');
+    html += '</div>';
   }
   html += '</div>';
   if(voci.length > 0) {
