@@ -965,21 +965,26 @@ async function importExcel(input){
       const categoria = String(row[col('categoria')]||'').trim();
       const data = parseDataExcel(row[col('data')] ? String(row[col('data')]).trim() : '');
       const numero = row[col('numero')] ? String(row[col('numero')]).trim() : '';
-      const id = 'xls_' + i + '_' + tipo + '_' + importo;
+      const id = 'xls_' + tipo + '_' + importo + '_' + (data||'') + '_' + (desc||'').slice(0,20).replace(/\s+/g,'');
       if(tipo === 'saldo_banca') {
         nuovoSaldoBanca = importo;
         continue;
       }
-      const cant = _cantieri.find(function(c){
-        if(!c.nome) return false;
-        const n = c.nome.toUpperCase();
-        const ce = centro.toUpperCase();
-        return n.indexOf(ce) !== -1 || ce.indexOf(n.split(' ').pop()) !== -1 ||
-               n.indexOf('FONTANASANTA') !== -1 && ce.indexOf('FONTANASANTA') !== -1 ||
-               n.indexOf('BORGHETTO') !== -1 && ce.indexOf('BORGHETTO') !== -1 ||
-               n.indexOf('SARNONICO') !== -1 && ce.indexOf('SARNONICO') !== -1 ||
-               n.indexOf('PALAZZO') !== -1 && ce.indexOf('PALAZZO') !== -1;
-      });
+      // Match cantiere: prima per ID esplicito (campo cantiere_id), poi per nome
+      const cantiereIdEsplicito = row[col('cantiere_id')] ? String(row[col('cantiere_id')]).trim() : null;
+      const cant = cantiereIdEsplicito
+        ? _cantieri.find(function(c){ return c.id === cantiereIdEsplicito; })
+        : _cantieri.find(function(c){
+            if(!c.nome) return false;
+            const nomeC = c.nome.toUpperCase().replace(/[^A-Z0-9]/g,' ').trim();
+            const centroU = centro.toUpperCase().replace(/[^A-Z0-9]/g,' ').trim();
+            // Match per parole significative (min 4 caratteri) presenti in entrambi
+            return nomeC.split(' ').some(function(w){
+              return w.length >= 4 && centroU.indexOf(w) !== -1;
+            }) || centroU.split(' ').some(function(w){
+              return w.length >= 4 && nomeC.indexOf(w) !== -1;
+            });
+          });
       if(tipo === 'fattura_passiva' || tipo === 'fattura_attiva') {
         const statoFattura = tipo==='fattura_attiva' ? 'riconciliata' : categoria === 'da pagare' ? 'assegnata' :
                              categoria === 'annullata NC' ? 'annullata' :
@@ -1002,14 +1007,22 @@ async function importExcel(input){
     }
     const vociFiltrate = (_contabile.voci||[]).filter(function(v){ return v.fonte!=='excel'; });
     const fattureFiltrate = (_contabile.fatture||[]).filter(function(f){ return f.fonte!=='excel'; });
-    const nuoveVoci = vociFiltrate.concat(voci);
-    const nuoveFatture = fattureFiltrate.concat(fatture);
+    // Deduplication: rimuovi voci/fatture con stesso ID (reimport dello stesso Excel)
+    const idsVoci = new Set(vociFiltrate.map(function(v){ return v.id; }));
+    const idsFatture = new Set(fattureFiltrate.map(function(f){ return f.id; }));
+    const vociUniche = voci.filter(function(v){ return !idsVoci.has(v.id); });
+    const fattureUniche = fatture.filter(function(f){ return !idsFatture.has(f.id); });
+    if(voci.length !== vociUniche.length || fatture.length !== fattureUniche.length) {
+      console.warn('Import: ' + (voci.length - vociUniche.length) + ' voci e ' + (fatture.length - fattureUniche.length) + ' fatture duplicate ignorati');
+    }
+    const nuoveVoci = vociFiltrate.concat(vociUniche);
+    const nuoveFatture = fattureFiltrate.concat(fattureUniche);
     _contabile.voci = nuoveVoci;
     _contabile.fatture = nuoveFatture;
     _contabile.saldoBanca = nuovoSaldoBanca;
     _contabile.ultimoImportPeriodo = file.name.replace(/\.xlsx?$/,'').replace('TB_Riconciliazione_','').replace(/_DEFINITIVO.*/,'');
     await window._fbSaveContabile({ fatture:nuoveFatture, movimenti:_contabile.movimenti||[], voci:nuoveVoci, saldoBanca:nuovoSaldoBanca, ultimoImportPeriodo:_contabile.ultimoImportPeriodo });
-    showToast('✅ ' + fatture.length + ' fatture · ' + voci.length + ' voci · saldo ' + fmtDec(nuovoSaldoBanca));
+    showToast('✅ ' + fattureUniche.length + ' fatture · ' + vociUniche.length + ' voci · saldo ' + fmtDec(nuovoSaldoBanca));
     renderBanca();
   } catch(e) {
     console.error('importExcel error:', e);
@@ -1123,7 +1136,7 @@ async function salvaAssegnazioneTutte(){
     return Object.assign({}, f, { assegnazione: tipo, cantiereId: tipo==='cantiere'?cantiereId:null, categoria: categoria, stato: 'assegnata' });
   });
   _contabile.fatture = fatture;
-  await window._fbSaveContabile({ fatture: fatture, movimenti: _contabile.movimenti||[], voci: _contabile.voci||[] });
+  await window._fbSaveContabile({ fatture: fatture, movimenti: _contabile.movimenti||[], voci: _contabile.voci||[], saldoBanca: _contabile.saldoBanca||0 });
   // Ripristina bottone originale
   document.getElementById('btnSalvaAssegna').textContent = 'SALVA ASSEGNAZIONE';
   document.getElementById('btnSalvaAssegna').onclick = salvaAssegnazione;
