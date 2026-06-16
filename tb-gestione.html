@@ -993,6 +993,11 @@ async function importExcel(input){
               return w.length >= 4 && nomeC.indexOf(w) !== -1;
             });
           });
+      if(tipo === 'movimento_conto') {
+        // Movimento di cassa puro (es. addebito Nexi, ricarica Kuwait):
+        // già coperto da voci singole — non genera costi, solo flusso cassa
+        continue;
+      }
       if(tipo === 'fattura_passiva' || tipo === 'fattura_attiva') {
         // Legge imponibile e iva_pct dalle nuove colonne (se presenti), altrimenti fallback su importo
         const imponibileRaw = row[col('imponibile')];
@@ -1015,7 +1020,7 @@ async function importExcel(input){
           cantiereId:cant?cant.id:null, categoria:'', stato:statoFattura,
           note:desc, createdAt:Date.now() });
       } else {
-        const tipoVoce = tipo==='fisco'?'fisco':tipo==='compenso'?'compenso':'costo_pos';
+        const tipoVoce = tipo==='fisco'?'fisco':tipo==='compenso'?'compenso':tipo==='costo_generale'?'costo_generale':'costo_pos';
         voci.push({ id:id, tipoVoce:tipoVoce, descrizione:desc, data:data, importo:importo,
           assegnazione:centro==='generale'||centro==='fisco'?'generale':'cantiere',
           cantiereId:cant?cant.id:null, categoria:categoria, note:'', fonte:'excel', createdAt:Date.now() });
