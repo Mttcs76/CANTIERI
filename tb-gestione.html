@@ -986,6 +986,14 @@ async function importExcel(input){
             });
           });
       if(tipo === 'fattura_passiva' || tipo === 'fattura_attiva') {
+        // Legge imponibile e iva_pct dalle nuove colonne (se presenti), altrimenti fallback su importo
+        const imponibileRaw = row[col('imponibile')];
+        const ivaPctRaw = row[col('iva_pct')];
+        const imponibile = (imponibileRaw !== null && imponibileRaw !== undefined) ? parseFloat(imponibileRaw)||0 : importo;
+        const aliquotaIva = (ivaPctRaw !== null && ivaPctRaw !== undefined) ? parseFloat(ivaPctRaw)||0 : 0;
+        const iva = Math.round((importo - imponibile) * 100) / 100;
+        // Per le fatture passive, la colonna 'categoria' contiene lo STATO (pagata/da pagare/ecc)
+        // La categoria merceologica non è nel foglio IMPORT (viene assegnata manualmente in TB Gestione)
         const statoFattura = tipo==='fattura_attiva' ? 'riconciliata' : categoria === 'da pagare' ? 'assegnata' :
                              categoria === 'annullata NC' ? 'annullata' :
                              categoria === 'pagata' ? 'pagata' :
@@ -994,7 +1002,7 @@ async function importExcel(input){
           numeroFattura:numero, dataFattura:data,
           fornitore:tipo==='fattura_passiva'?desc.split(' - Fatt.')[0]:'',
           cliente:tipo==='fattura_attiva'?desc.split(' - Fatt.')[0]:'',
-          totale:importo, imponibile:importo, iva:0, aliquotaIva:0,
+          totale:importo, imponibile:imponibile, iva:iva, aliquotaIva:aliquotaIva,
           assegnazione:centro==='generale'||centro==='fisco'?'generale':'cantiere',
           cantiereId:cant?cant.id:null, categoria:'', stato:statoFattura,
           note:desc, createdAt:Date.now() });
