@@ -817,7 +817,7 @@ window._fbDeleteCantiere = async (id) => {
           📷 Scatta foto o scegli dalla libreria
         </button>
       </div>
-      <button class="btn-prim" onclick="event.stopPropagation();salvaVoceGiornale()">SALVA NEL GIORNALE</button>
+      <button class="btn-prim" id="gn-btn-salva" onclick="event.stopPropagation();salvaVoceGiornale()">SALVA NEL GIORNALE</button>
     </div>
   </div>
 </div>
@@ -2001,6 +2001,9 @@ let _gnFotoDataUrl = null;
 
 function previewFotoGiornale(e) {
   const file = e.target.files && e.target.files[0]; if (!file) return;
+  // Disabilita il pulsante salva finché la foto non è elaborata (fix iOS Safari)
+  const btnSalva = $('gn-btn-salva');
+  if (btnSalva) { btnSalva.disabled = true; btnSalva.textContent = '⏳ Caricamento foto...'; }
   const reader = new FileReader();
   reader.onload = ev => {
     const tmpImg = new Image();
@@ -2012,8 +2015,16 @@ function previewFotoGiornale(e) {
       _gnFotoDataUrl = canvas.toDataURL('image/jpeg', 0.65);
       const wrap=$('gn-fotoPreview'), img=$('gn-fotoImg'), nm=$('gn-fotoName');
       if(wrap) wrap.style.display='block'; if(img) img.src=_gnFotoDataUrl; if(nm) nm.textContent=file.name;
+      // Riabilita il pulsante salva
+      if (btnSalva) { btnSalva.disabled = false; btnSalva.textContent = 'SALVA NEL GIORNALE'; }
+    };
+    tmpImg.onerror = () => {
+      if (btnSalva) { btnSalva.disabled = false; btnSalva.textContent = 'SALVA NEL GIORNALE'; }
     };
     tmpImg.src = ev.target.result;
+  };
+  reader.onerror = () => {
+    if (btnSalva) { btnSalva.disabled = false; btnSalva.textContent = 'SALVA NEL GIORNALE'; }
   };
   reader.readAsDataURL(file);
 }
