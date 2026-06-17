@@ -896,7 +896,23 @@ let xlsData = null, fotoDataUrl = null, docFileData = null;
 let deferredInstall = null;
 let _fbSyncing = false;
 
+// Rimuove le foto base64 da localStorage se la quota è piena.
+// Le foto reali restano su Firebase e vengono ricaricate al prossimo sync.
+function _purgaFotoLocali() {
+  try {
+    const raw = localStorage.getItem(SK);
+    if (!raw) return;
+    // Se il payload supera 3.5MB, rimuoviamo le foto per liberare spazio
+    if (raw.length < 3500000) return;
+    const d = JSON.parse(raw);
+    d.cantieri = _cantiereSenzaFoto(d.cantieri || []);
+    localStorage.setItem(SK, JSON.stringify(d));
+    console.info('_purgaFotoLocali: foto rimosse da localStorage (' + Math.round(raw.length/1024) + ' KB → ' + Math.round(JSON.stringify(d).length/1024) + ' KB)');
+  } catch(e) { console.warn('_purgaFotoLocali error:', e); }
+}
+
 function load() {
+  _purgaFotoLocali();
   try {
     const d = JSON.parse(localStorage.getItem(SK)||'{}');
     S.cantieri = d.cantieri||[];
@@ -907,18 +923,32 @@ function load() {
   } catch(e){}
 }
 
+// Ritorna una copia dei cantieri senza dati foto base64 (per localStorage)
+function _cantiereSenzaFoto(cantieri) {
+  return (cantieri||[]).map(c => ({
+    ...c,
+    foto: (c.foto||[]).map(f => ({ ...f, url: f.url ? '[foto]' : null })),
+    giornale: (c.giornale||[]).map(v => ({ ...v, foto: v.foto ? '[foto]' : null }))
+  }));
+}
+
 function save() {
+  const payload = { cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: Date.now() };
   try {
-    localStorage.setItem(SK, JSON.stringify({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: Date.now() }));
+    localStorage.setItem(SK, JSON.stringify(payload));
   } catch(e) {
     if (e.name === 'QuotaExceededError' || e.code === 22) {
-      toast('⚠️ Spazio locale pieno: la foto è troppo grande. Rimpicciolisci o rimuovi la foto.');
-      console.warn('localStorage quota exceeded:', e);
+      // Fallback: salva senza foto in localStorage; le foto restano solo su Firebase
+      try {
+        const payloadLight = { ...payload, cantieri: _cantiereSenzaFoto(S.cantieri) };
+        localStorage.setItem(SK, JSON.stringify(payloadLight));
+        console.info('localStorage: salvato senza foto (quota piena). Dati completi solo su Firebase.');
+      } catch(e2) {
+        console.warn('localStorage quota exceeded anche senza foto:', e2);
+      }
     } else {
-      toast('❌ Errore salvataggio locale: ' + e.message);
       console.warn('localStorage save error:', e);
     }
-    // Anche se localStorage fallisce, proviamo comunque Firebase
   }
   autoSnapshot();
   if (window._fbEnabled && window._fbSave) {
