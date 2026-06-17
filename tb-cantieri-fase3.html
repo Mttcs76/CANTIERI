@@ -263,7 +263,8 @@ window._fbDeleteCantiere = async (id) => {
           <button onclick="openModal('mPassword')" style="background:#fff;border:1px solid var(--s2);border-radius:10px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:var(--shadow)"><span style="font-size:22px">🔑</span><span style="font-size:10px;font-weight:700;color:var(--text)">Password</span></button>
           <button onclick="openModal('mBackup')" style="background:#fff;border:1px solid var(--s2);border-radius:10px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:var(--shadow)"><span style="font-size:22px">💾</span><span style="font-size:10px;font-weight:700;color:var(--text)">Backup</span></button>
           <button onclick="changeUser()" style="background:#fff;border:1px solid var(--s2);border-radius:10px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:var(--shadow)"><span style="font-size:22px">👤</span><span style="font-size:10px;font-weight:700;color:var(--text)">Utente</span></button>
-          <button onclick="doLogout()" style="background:#fff0f0;border:1px solid var(--red-border);border-radius:10px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:var(--shadow)"><span style="font-size:22px">🚪</span><span style="font-size:10px;font-weight:700;color:var(--red)">Esci</span></button>
+          <button onclick="syncPresenzeStoriciManuale()" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:10px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:var(--shadow)"><span style="font-size:22px">🔄</span><span style="font-size:10px;font-weight:700;color:var(--text)">Sync presenze</span></button>
+      <button onclick="doLogout()" style="background:#fff0f0;border:1px solid var(--red-border);border-radius:10px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:var(--shadow)"><span style="font-size:22px">🚪</span><span style="font-size:10px;font-weight:700;color:var(--red)">Esci</span></button>
         </div>
       </div>
 
@@ -3341,23 +3342,81 @@ function migraPresenze() {
 }
 
 // ── Sync retroattivo: riallinea presenze da TUTTI i rapportini esistenti ──────
-// Chiamata al boot dopo il load Firebase. Non sovrascrive righe manuali.
-function syncPresenzeStorici() {
-  if (!S.cantieri || !S.cantieri.length) return;
-  let changed = 0;
+function _buildOpIdMap() {
+  // Mappa opId locale cantiere → opId globale (per retrocompatibilità)
+  // Cerca per nome se gli ID non coincidono
+  const map = {};
+  (S.operaiGlobali||[]).forEach(og => { map[og.id] = og.id; });
   S.cantieri.forEach(c => {
-    if (!c.rapportini || !c.rapportini.length) return;
-    c.rapportini.forEach(r => {
-      if (!r || !r.data || !r.oreOperai) return;
-      const prima = JSON.stringify(S.presenze);
-      syncPresenzeFromRapportino(r, c);
-      if (JSON.stringify(S.presenze) !== prima) changed++;
+    (c.operai||[]).forEach(op => {
+      if (!map[op.id]) {
+        // Cerca per nome in operaiGlobali
+        const match = (S.operaiGlobali||[]).find(og => og.nome === op.nome);
+        if (match) map[op.id] = match.id;
+        else map[op.id] = op.id; // fallback: usa l'id locale
+      }
     });
   });
-  if (changed > 0) {
+  return map;
+}
+
+function syncPresenzeStorici() {
+  if (!S.cantieri || !S.cantieri.length) return;
+  const opMap = _buildOpIdMap();
+  let changed = 0;
+  S.cantieri.forEach(c => {
+    (c.rapportini||[]).forEach(r => {
+      if (!r || !r.data || !r.oreOperai || !r.oreOperai.length) return;
+      if (!S.presenze) S.presenze = {};
+      const data = r.data;
+      if (!S.presenze[data]) S.presenze[data] = {};
+      const cantiereName = c.nome || '';
+      const cantiereId = c.id;
+      r.oreOperai.forEach(x => {
+        if (!x.opId || !x.ore) return;
+        const globalOpId = opMap[x.opId] || x.opId;
+        if (!S.presenze[data][globalOpId]) S.presenze[data][globalOpId] = [];
+        const righe = S.presenze[data][globalOpId];
+        const idx = righe.findIndex(row => row.daRapportino && row.cantiereId === cantiereId);
+        if (idx >= 0) {
+          if (righe[idx].ore !== +x.ore) { righe[idx].ore = +x.ore; changed++; }
+        } else {
+          righe.push({ cantiereId, cantiereName, tipo: 'ordinario', ore: +x.ore, note: '', daRapportino: true });
+          changed++;
+        }
+      });
+    });
+  });
+  if (changed > 0) { save(); console.log(`syncPresenzeStorici: ${changed} aggiornamenti`); }
+}
+
+function syncPresenzeStoriciManuale() {
+  if (!S.cantieri || !S.cantieri.length) { toast('⚠️ Nessun cantiere caricato'); return; }
+  const opMap = _buildOpIdMap();
+  let nRapp = 0, nChanged = 0;
+  S.cantieri.forEach(c => {
+    (c.rapportini||[]).forEach(r => {
+      if (!r || !r.data || !r.oreOperai || !r.oreOperai.length) return;
+      nRapp++;
+      if (!S.presenze) S.presenze = {};
+      if (!S.presenze[r.data]) S.presenze[r.data] = {};
+      r.oreOperai.forEach(x => {
+        if (!x.opId || !x.ore) return;
+        const globalOpId = opMap[x.opId] || x.opId;
+        if (!S.presenze[r.data][globalOpId]) S.presenze[r.data][globalOpId] = [];
+        const righe = S.presenze[r.data][globalOpId];
+        const idx = righe.findIndex(row => row.daRapportino && row.cantiereId === c.id);
+        if (idx >= 0) { righe[idx].ore = +x.ore; righe[idx].cantiereName = c.nome||''; nChanged++; }
+        else { righe.push({ cantiereId: c.id, cantiereName: c.nome||'', tipo: 'ordinario', ore: +x.ore, note: '', daRapportino: true }); nChanged++; }
+      });
+    });
+  });
+  if (nChanged > 0) {
     save();
-    console.log(`syncPresenzeStorici: ${changed} rapportini riallineati`);
-    toast(`✅ Presenze aggiornate da ${changed} rapportini`);
+    toast(`✅ Sincronizzati ${nChanged} operai da ${nRapp} rapportini`);
+    if (_homeTab === 'presenze') initPresenzeUI();
+  } else {
+    toast('✅ Presenze già allineate con i rapportini');
   }
 }
 // Chiamata ogni volta che si salva un rapportino.
