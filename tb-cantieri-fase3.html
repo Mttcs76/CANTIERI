@@ -332,7 +332,7 @@ window._fbDeleteCantiere = async (id) => {
         </div>
       </div>
       <div><label class="f-label">Note</label><textarea class="f-ta" id="nc-note" rows="2" placeholder="Descrizione lavori..."></textarea></div>
-      <button class="btn-prim" onclick="saveCantiere()">CREA CANTIERE</button>
+      <button class="btn-prim" onclick="event.stopPropagation();saveCantiere()">CREA CANTIERE</button>
     </div>
   </div>
 </div>
@@ -360,7 +360,7 @@ window._fbDeleteCantiere = async (id) => {
           <input class="f-in" type="number" id="ic-target" step="1" min="0" max="100" placeholder="20">
         </div>
       </div>
-      <button class="btn-prim" onclick="saveImpostazioniCantiere()">SALVA IMPOSTAZIONI</button>
+      <button class="btn-prim" onclick="event.stopPropagation();saveImpostazioniCantiere()">SALVA IMPOSTAZIONI</button>
     </div>
   </div>
 </div>
@@ -436,7 +436,7 @@ window._fbDeleteCantiere = async (id) => {
         </div>
       </div>
       <div id="nv-totale" style="background:var(--g6);border-radius:var(--r-sm);padding:10px 14px;font-size:13px;color:var(--g1);font-weight:600;text-align:center;display:none"></div>
-      <button class="btn-prim" onclick="saveVoce()">SALVA VOCE</button>
+      <button class="btn-prim" onclick="event.stopPropagation();saveVoce()">SALVA VOCE</button>
     </div>
   </div>
 </div>
@@ -479,7 +479,7 @@ window._fbDeleteCantiere = async (id) => {
       <div><label class="f-label">Lavorazioni eseguite *</label><textarea class="f-ta" id="rp-lav" rows="3" placeholder="Descrivi i lavori svolti oggi..."></textarea></div>
       <div><label class="f-label">Materiali utilizzati</label><textarea class="f-ta" id="rp-mat" rows="2" placeholder="es. Cemento 200 sacchi, tondino 2t..."></textarea></div>
       <div><label class="f-label">Note / Problemi</label><textarea class="f-ta" id="rp-note" rows="2" placeholder="Segnalazioni, ritardi, imprevisti..."></textarea></div>
-      <button class="btn-prim" onclick="saveRapportino()">SALVA RAPPORTINO</button>
+      <button class="btn-prim" onclick="event.stopPropagation();saveRapportino()">SALVA RAPPORTINO</button>
     </div>
   </div>
 </div>
@@ -504,7 +504,7 @@ window._fbDeleteCantiere = async (id) => {
         </div>
       </div>
       <div><label class="f-label">Note</label><input class="f-in" id="og-note" placeholder="es. Patente, specializzazioni..."></div>
-      <button class="btn-prim" onclick="saveOperaioGlobale()">SALVA OPERAIO</button>
+      <button class="btn-prim" onclick="event.stopPropagation();saveOperaioGlobale()">SALVA OPERAIO</button>
     </div>
   </div>
 </div>
@@ -518,7 +518,7 @@ window._fbDeleteCantiere = async (id) => {
       <div><label class="f-label">Password attuale</label><input class="f-in" type="password" id="pw-old" placeholder="••••••••"></div>
       <div><label class="f-label">Nuova password *</label><input class="f-in" type="password" id="pw-new" placeholder="••••••••"></div>
       <div><label class="f-label">Conferma nuova password *</label><input class="f-in" type="password" id="pw-confirm" placeholder="••••••••"></div>
-      <button class="btn-prim" onclick="cambiaPassword()">SALVA NUOVA PASSWORD</button>
+      <button class="btn-prim" onclick="event.stopPropagation();cambiaPassword()">SALVA NUOVA PASSWORD</button>
     </div>
   </div>
 </div>
@@ -555,7 +555,7 @@ window._fbDeleteCantiere = async (id) => {
         </div>
       </div>
       <div><label class="f-label">Note</label><input class="f-in" id="ore-note" placeholder="Lavorazione specifica..."></div>
-      <button class="btn-prim" onclick="saveOre()">SALVA ORE</button>
+      <button class="btn-prim" onclick="event.stopPropagation();saveOre()">SALVA ORE</button>
     </div>
   </div>
 </div>
@@ -610,7 +610,7 @@ window._fbDeleteCantiere = async (id) => {
       <div><label class="f-label">Descrizione</label>
         <input class="f-in" id="ft-desc" placeholder="es. Avanzamento piano terra lato nord">
       </div>
-      <button class="btn-prim" onclick="saveFoto()">SALVA FOTO</button>
+      <button class="btn-prim" onclick="event.stopPropagation();saveFoto()">SALVA FOTO</button>
     </div>
   </div>
 </div>
@@ -636,7 +636,7 @@ window._fbDeleteCantiere = async (id) => {
         <input type="file" id="dcFile" style="display:none" onchange="handleDocFile(event)">
       </div>
       <div><label class="f-label">Note</label><textarea class="f-ta" id="dc-note" rows="2"></textarea></div>
-      <button class="btn-prim" onclick="saveDocumento()">SALVA DOCUMENTO</button>
+      <button class="btn-prim" onclick="event.stopPropagation();saveDocumento()">SALVA DOCUMENTO</button>
     </div>
   </div>
 </div>
@@ -669,7 +669,7 @@ window._fbDeleteCantiere = async (id) => {
         </div>
       </div>
       <div><label class="f-label">Note</label><input class="f-in" id="sg-note" placeholder="Fornitore, riferimento fattura..."></div>
-      <button class="btn-prim" onclick="saveSpesaGenerale()">SALVA SPESA</button>
+      <button class="btn-prim" onclick="event.stopPropagation();saveSpesaGenerale()">SALVA SPESA</button>
     </div>
   </div>
 </div>
@@ -718,7 +718,7 @@ window._fbDeleteCantiere = async (id) => {
         </div>
       </div>
       <div><label class="f-label">Fornitore / Note</label><input class="f-in" id="sm-note" placeholder="es. Edilizia Rossi, DDT 1234..."></div>
-      <button class="btn-prim" onclick="saveSpesaMateriali()">SALVA SPESA</button>
+      <button class="btn-prim" onclick="event.stopPropagation();saveSpesaMateriali()">SALVA SPESA</button>
     </div>
   </div>
 </div>
@@ -817,7 +817,7 @@ window._fbDeleteCantiere = async (id) => {
           📷 Scatta foto o scegli dalla libreria
         </button>
       </div>
-      <button class="btn-prim" onclick="salvaVoceGiornale()">SALVA NEL GIORNALE</button>
+      <button class="btn-prim" onclick="event.stopPropagation();salvaVoceGiornale()">SALVA NEL GIORNALE</button>
     </div>
   </div>
 </div>
@@ -850,7 +850,7 @@ window._fbDeleteCantiere = async (id) => {
       </div>
       <div><label class="f-label">Note</label><input class="f-in" id="ord-note" placeholder="Riferimento preventivo, colori, misure..."></div>
       <div style="background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--r-sm);padding:10px 13px;font-size:12px;color:var(--blue)">📧 Dopo il salvataggio puoi inviare l'ordine via Email o WhatsApp</div>
-      <button class="btn-prim" onclick="salvaOrdine()">SALVA ORDINE</button>
+      <button class="btn-prim" onclick="event.stopPropagation();salvaOrdine()">SALVA ORDINE</button>
     </div>
   </div>
 </div>
@@ -873,7 +873,7 @@ window._fbDeleteCantiere = async (id) => {
       <div><label class="f-label">Importo reale (€) — da DDT o fattura</label><input class="f-in" type="number" id="ord-importo-reale" step="0.01" placeholder="0"></div>
       <div><label class="f-label">Numero DDT / Fattura</label><input class="f-in" id="ord-rif-doc" placeholder="es. DDT 1234 / Fattura 567/2026"></div>
       <div><label class="f-label">Note</label><input class="f-in" id="ord-note-edit" placeholder="Aggiornamento..."></div>
-      <button class="btn-prim" onclick="aggiornaOrdine()">SALVA AGGIORNAMENTO</button>
+      <button class="btn-prim" onclick="event.stopPropagation();aggiornaOrdine()">SALVA AGGIORNAMENTO</button>
       <button onclick="inviaOrdineFornitore()" style="width:100%;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:var(--r-sm);padding:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:8px">📧 Invia al fornitore</button>
     </div>
   </div>
@@ -2027,7 +2027,11 @@ function rimuoviFotoGiornale() {
 function salvaVoceGiornale() {
   const testo = v('gn-testo').trim();
   if (!testo) { alert('Inserisci una descrizione'); return; }
-  const c = getCantiere(); if (!c) return;
+  const c = getCantiere();
+  if (!c) {
+    alert('Errore: cantiere non trovato (ID: ' + S.cantiereId + '). Torna alla home e riapri il cantiere.');
+    return;
+  }
   c.giornale = c.giornale || [];
   c.giornale.push({ id:uid(), data:v('gn-data')||today(), cat:v('gn-cat')||'nota', testo, foto:_gnFotoDataUrl||null, utente:S.uid||'Utente', created:Date.now() });
   _gnFotoDataUrl = null;
@@ -3189,6 +3193,23 @@ if(isIOS&&!isStandalone) $('iosHint').style.display='block';
 // ════════════ INIT ════════════
 document.addEventListener('DOMContentLoaded', () => {
   load();
+  // Su Safari iOS localStorage può essere vuoto o troncato: se non ci sono cantieri
+  // forziamo un reload immediato da Firebase prima ancora di initFirebase()
+  if (!S.cantieri.length && window._fbEnabled !== false) {
+    setTimeout(async () => {
+      if (window._fbLoad && !S.cantieri.length) {
+        try {
+          const rd = await window._fbLoad();
+          if (rd && rd.cantieri && rd.cantieri.length) {
+            S.cantieri = rd.cantieri;
+            if (rd.operaiGlobali) S.operaiGlobali = rd.operaiGlobali;
+            if (rd.presenze) S.presenze = rd.presenze;
+            renderCantieri();
+          }
+        } catch(e) { console.warn('Early Firebase load error:', e); }
+      }
+    }, 1200);
+  }
 
   const loginSvg = $('loginLogoSvg');
   if(loginSvg) loginSvg.style.display = 'block';
