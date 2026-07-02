@@ -121,7 +121,7 @@ window._fbDeleteCantiere = async (id) => {
 };</script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Bebas+Neue&family=Nunito:wght@400;500;600;700;800&display=swap');:root{--g0:#0d2b1a;--g1:#1a4a2e;--g2:#2d6a4f;--g3:#40916c;--g4:#52b788;--g5:#95d5b2;--g6:#d8f3dc;--white:#fff;--off:#f7faf8;--s1:#f0f5f2;--s2:#e2ede6;--s3:#b8d4c0;--s4:#6a9478;--text:#1a2e22;--soft:#4d6b58;--amber:#d97706;--amber-bg:#fffbeb;--amber-border:#fde68a;--red:#dc2626;--red-bg:#fef2f2;--red-border:#fecaca;--blue:#1d4ed8;--blue-bg:#eff6ff;--blue-border:#bfdbfe;--shadow:0 2px 12px rgba(26,74,46,.10);--shadow-md:0 4px 24px rgba(26,74,46,.14);--r:12px;--r-sm:8px;}*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}html,body{height:100%;overflow:hidden}body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);display:flex;flex-direction:column}.topbar{background:var(--g1);color:#fff;height:66px;display:flex;align-items:center;gap:11px;padding:0 14px;flex-shrink:0;position:relative;z-index:60;box-shadow:0 2px 10px rgba(0,0,0,.2)}.tb-logo{width:54px;height:54px;background:transparent;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:0}.tb-logo img{width:54px;height:54px;object-fit:cover;border-radius:50%;display:block}.tb-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;letter-spacing:2px;color:#fff}.tb-sub{font-size:11px;color:rgba(255,255,255,.55);font-weight:400}.tb-back{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:var(--r-sm);padding:5px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif;display:none;align-items:center;gap:4px;margin-right:4px}.tb-back.show{display:flex}.tb-user{margin-left:auto;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:50%;width:34px;height:34px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;justify-content:center;flex-shrink:0}.app-body{flex:1;overflow:hidden;display:flex;flex-direction:column;max-width:800px;margin:0 auto;width:100%;position:relative}.screen{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:72px}.screen::-webkit-scrollbar{width:4px}.screen::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px}.tabs{display:flex;background:#fff;border-bottom:1px solid var(--s2);position:sticky;top:0;z-index:40;overflow-x:auto;scrollbar-width:none;flex-shrink:0}.tabs::-webkit-scrollbar{display:none}.tab{flex:none;padding:12px 14px;border:none;background:none;font-size:12px;font-weight:500;color:var(--s4);cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-1px;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:5px;transition:color .15s}.tab.active{color:var(--g1);border-bottom-color:var(--g1)}.tab-cnt{background:var(--g6);color:var(--g2);border-radius:99px;padding:1px 6px;font-size:10px;font-weight:600}.tab.active .tab-cnt{background:var(--g1);color:#fff}.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:#fff;border-top:1px solid var(--s2);display:flex;padding:6px 0 calc(env(safe-area-inset-bottom,0px) + 6px);z-index:60;box-shadow:0 -2px 12px rgba(26,74,46,.07)}.nav-btn{flex:1;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:3px 0;color:var(--s4);font-family:'Nunito',sans-serif;transition:color .15s}.nav-btn.active{color:var(--g1)}.nav-ic{font-size:20px;line-height:1}.nav-lb{font-size:10px;font-weight:500;letter-spacing:.2px}.fab{position:fixed;bottom:76px;right:50%;transform:translateX(calc(50% - min(400px,50vw) + 18px));width:52px;height:52px;border-radius:50%;background:var(--g1);color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 18px rgba(26,74,46,.35);display:none;align-items:center;justify-content:center;z-index:55;transition:transform .15s,background .15s}.fab:active{transform:translateX(calc(50% - min(400px,50vw) + 18px)) scale(.93)}.fab.show{display:flex}.sec-head{padding:16px 14px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}.sec-title{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--g1);letter-spacing:.8px}.c-card{margin:0 10px 10px;background:#fff;border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--s2);overflow:hidden;cursor:pointer;transition:transform .15s}.c-card:active{transform:scale(.985)}.c-card-head{background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 100%);padding:14px 16px;display:flex;gap:12px;align-items:center}.c-initials{width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,.18);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid rgba(255,255,255,.25)}.c-name{font-weight:800;font-size:14px;color:#fff;line-height:1.2}.c-loc{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px}.c-stats{display:grid;grid-template-columns:repeat(4,1fr)}.c-stat{padding:10px 6px;text-align:center;border-right:1px solid var(--s1)}.c-stat:last-child{border-right:none}.c-stat-n{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--g2)}.c-stat-l{font-size:9px;color:var(--soft);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:1px}.item-card{background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.item-head{padding:10px 14px;background:var(--s1);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.item-title{font-weight:600;font-size:14px;color:var(--text)}.item-meta{font-size:11px;color:var(--soft);margin-top:1px}.item-body{padding:11px 14px}.item-text{font-size:13px;color:var(--text);line-height:1.5}.item-note{font-size:12px;color:var(--soft);border-left:3px solid var(--g4);padding-left:9px;margin-top:7px}.item-footer{font-size:10px;color:var(--s4);margin-top:8px}.chip{display:inline-flex;align-items:center;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:500;white-space:nowrap}.chip-green{background:var(--g6);color:var(--g1)}.chip-amber{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}.chip-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}.chip-blue{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}.chip-gray{background:var(--s1);color:var(--soft);border:1px solid var(--s2)}.computo-wrap{margin:0 10px 10px;background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.cap-header{padding:10px 14px;background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between}.cap-total{font-size:13px;font-weight:600;color:var(--g5)}.voce-row{display:grid;grid-template-columns:1fr 36px 52px 64px 72px;gap:4px;padding:8px 14px;border-bottom:1px solid var(--s1);align-items:center}.voce-row:last-child{border-bottom:none}.voce-row:hover{background:var(--s1)}.voce-desc{font-size:12px;font-weight:500;color:var(--text)}.voce-um{font-size:10px;color:var(--soft);text-align:center}.voce-qty{font-size:12px;font-weight:500;color:var(--text);text-align:right;min-width:48px}.voce-pu{font-size:11px;color:var(--soft);text-align:right;min-width:60px}.voce-price{font-size:12px;font-weight:600;color:var(--g2);text-align:right;min-width:72px}.voce-input{width:60px;background:var(--s1);border:1px solid var(--s3);border-radius:5px;padding:3px 6px;font-size:12px;font-weight:500;color:var(--g1);text-align:right;font-family:'Nunito',sans-serif;outline:none}.voce-input:focus{border-color:var(--g3)}.voce-delta-pos{font-size:11px;font-weight:500;color:var(--red);min-width:56px;text-align:right}.voce-delta-neg{font-size:11px;font-weight:500;color:var(--g3);min-width:56px;text-align:right}.table-header{display:grid;grid-template-columns:1fr 36px 52px 64px 72px;gap:4px;padding:6px 14px;background:var(--s1);border-bottom:1px solid var(--s2)}.th-label{font-size:9px;font-weight:600;color:var(--soft);text-transform:uppercase;letter-spacing:.5px}.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 10px 0}.kpi-box{background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);padding:10px 12px;text-align:center;box-shadow:var(--shadow)}.kpi-n{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--g1)}.kpi-l{font-size:9px;color:var(--soft);font-weight:500;letter-spacing:.5px;text-transform:uppercase;margin-top:1px}.kpi-box.danger .kpi-n{color:var(--red)}.kpi-box.success .kpi-n{color:var(--g3)}.import-zone{margin:12px 10px;border:2px dashed var(--s3);border-radius:var(--r);padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}.import-zone:hover,.import-zone.dragover{border-color:var(--g3);background:var(--g6)}.import-icon{font-size:40px;margin-bottom:10px}.import-title{font-weight:600;font-size:15px;color:var(--g1);margin-bottom:4px}.import-sub{font-size:12px;color:var(--soft);line-height:1.5}.import-btn{background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:12px;display:inline-block}.foto-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 10px 10px}.foto-thumb{aspect-ratio:1;background:var(--s1);border-radius:var(--r-sm);overflow:hidden;position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:28px;border:1px solid var(--s2)}.foto-thumb img{width:100%;height:100%;object-fit:cover}.foto-tag-badge{position:absolute;bottom:4px;left:4px;background:rgba(26,74,46,.82);color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:2px 5px}.foto-date{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.5);color:#fff;font-size:9px;border-radius:3px;padding:1px 5px}.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s}.overlay.show{opacity:1;pointer-events:all}.modal{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:800px;max-height:92vh;overflow-y:auto;transform:translateY(100%);transition:transform .28s cubic-bezier(.32,1.02,.6,1)}.overlay.show .modal{transform:translateY(0)}.modal-handle{width:36px;height:4px;background:var(--s2);border-radius:99px;margin:12px auto 0}.modal-title{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--g1);padding:10px 18px 14px;letter-spacing:.8px;border-bottom:1px solid var(--s2)}.modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:13px}.f-label{font-size:11px;color:var(--soft);font-weight:600;letter-spacing:.7px;text-transform:uppercase;margin-bottom:4px;display:block}.f-in,.f-sel,.f-ta{width:100%;background:var(--s1);border:1.5px solid var(--s2);border-radius:var(--r-sm);color:var(--text);padding:10px 12px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;transition:border-color .15s}.f-in:focus,.f-sel:focus,.f-ta:focus{border-color:var(--g3)}.f-ta{resize:vertical}.f-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.f-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}.btn-prim{width:100%;background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:6px;transition:background .15s}.btn-prim:active{background:var(--g2)}.upload-zone{border:2px dashed var(--s3);border-radius:var(--r-sm);padding:20px;text-align:center;cursor:pointer;transition:border-color .2s}.upload-zone:active{border-color:var(--g3)}.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;opacity:0;pointer-events:none;transition:opacity .2s}.lightbox.show{opacity:1;pointer-events:all}.lightbox img{max-width:95vw;max-height:72vh;border-radius:8px;object-fit:contain}.lb-close{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.15);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer}.lb-info{color:rgba(255,255,255,.65);font-size:12px;text-align:center}.empty{text-align:center;padding:40px 20px}.empty-ic{font-size:44px;margin-bottom:12px}.empty-txt{font-size:13px;color:var(--soft);font-weight:600;line-height:1.5}#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--g0);color:#fff;padding:9px 18px;border-radius:99px;font-size:12px;font-weight:700;z-index:400;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}.install-bar{background:var(--g1);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;flex-shrink:0}.install-bar button{background:#fff;color:var(--g1);border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif}.ios-hint{background:var(--g6);padding:10px 14px;font-size:12px;color:var(--g1);border-bottom:1px solid var(--s2);flex-shrink:0}.doc-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border-radius:var(--r-sm);margin:0 10px 7px;border:1px solid var(--s2);box-shadow:var(--shadow)}.doc-ic{font-size:24px;flex-shrink:0}.doc-info{flex:1;min-width:0}.doc-name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.doc-meta{font-size:11px;color:var(--soft);margin-top:1px}.doc-dl{background:var(--g6);border:none;color:var(--g1);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;flex-shrink:0}.operaio-row{background:#fff;border-radius:var(--r-sm);margin:0 10px 7px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.operaio-head{padding:10px 14px;background:var(--s1);display:flex;align-items:center;justify-content:space-between}.operaio-name{font-weight:800;font-size:14px;color:var(--text)}.operaio-role{font-size:11px;color:var(--soft)}.operaio-stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--s2)}.op-stat{padding:8px 10px;text-align:center;border-right:1px solid var(--s1)}.op-stat:last-child{border-right:none}.op-stat-n{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;color:var(--g2)}.op-stat-l{font-size:9px;color:var(--soft);font-weight:700;text-transform:uppercase;letter-spacing:.4px}.presenze-row{padding:8px 14px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--s1);flex-wrap:wrap}.presenza-dot{width:28px;height:28px;border-radius:50%;background:var(--s2);border:1.5px solid var(--s3);font-size:9px;font-weight:700;color:var(--soft);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0}.presenza-dot.present{background:var(--g4);border-color:var(--g3);color:#fff}.presenza-dot.absent{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}.pdf-page{position:fixed;left:-9999px;top:-9999px;width:794px;background:#fff;font-family:'Nunito',sans-serif;font-size:12px;color:#1a2e22;padding:32px}@media(min-width:600px){.f-grid-3{grid-template-columns:1fr 1fr 1fr}}
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Bebas+Neue&family=Nunito:wght@400;500;600;700;800&display=swap');:root{--g0:#0d2b1a;--g1:#1a4a2e;--g2:#2d6a4f;--g3:#40916c;--g4:#52b788;--g5:#95d5b2;--g6:#d8f3dc;--white:#fff;--off:#f7faf8;--s1:#f0f5f2;--s2:#e2ede6;--s3:#b8d4c0;--s4:#6a9478;--text:#1a2e22;--soft:#4d6b58;--amber:#d97706;--amber-bg:#fffbeb;--amber-border:#fde68a;--red:#dc2626;--red-bg:#fef2f2;--red-border:#fecaca;--blue:#1d4ed8;--blue-bg:#eff6ff;--blue-border:#bfdbfe;--shadow:0 2px 12px rgba(26,74,46,.10);--shadow-md:0 4px 24px rgba(26,74,46,.14);--r:12px;--r-sm:8px;}*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}html,body{height:100%;overflow:hidden}body{font-family:'Nunito',sans-serif;background:var(--off);color:var(--text);display:flex;flex-direction:column}.topbar{background:var(--g1);color:#fff;height:66px;display:flex;align-items:center;gap:11px;padding:0 14px;flex-shrink:0;position:relative;z-index:60;box-shadow:0 2px 10px rgba(0,0,0,.2)}.tb-logo{width:54px;height:54px;background:transparent;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:0}.tb-logo img{width:54px;height:54px;object-fit:cover;border-radius:50%;display:block}.tb-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;letter-spacing:2px;color:#fff}.tb-sub{font-size:11px;color:rgba(255,255,255,.55);font-weight:400}.tb-back{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:var(--r-sm);padding:5px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Nunito',sans-serif;display:none;align-items:center;gap:4px;margin-right:4px}.tb-back.show{display:flex}.tb-user{margin-left:auto;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:50%;width:34px;height:34px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;justify-content:center;flex-shrink:0}.app-body{flex:1;overflow:hidden;display:flex;flex-direction:column;max-width:800px;margin:0 auto;width:100%;position:relative}.screen{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:72px}.screen::-webkit-scrollbar{width:4px}.screen::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px}.tabs{display:flex;background:#fff;border-bottom:1px solid var(--s2);position:sticky;top:0;z-index:40;overflow-x:auto;scrollbar-width:none;flex-shrink:0}.tabs::-webkit-scrollbar{display:none}.tab{flex:none;padding:12px 14px;border:none;background:none;font-size:12px;font-weight:500;color:var(--s4);cursor:pointer;white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-1px;font-family:'Nunito',sans-serif;display:flex;align-items:center;gap:5px;transition:color .15s}.tab.active{color:var(--g1);border-bottom-color:var(--g1)}.tab-cnt{background:var(--g6);color:var(--g2);border-radius:99px;padding:1px 6px;font-size:10px;font-weight:600}.tab.active .tab-cnt{background:var(--g1);color:#fff}.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:800px;background:#fff;border-top:1px solid var(--s2);display:flex;padding:6px 0 calc(env(safe-area-inset-bottom,0px) + 6px);z-index:60;box-shadow:0 -2px 12px rgba(26,74,46,.07)}.nav-btn{flex:1;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:3px 0;color:var(--s4);font-family:'Nunito',sans-serif;transition:color .15s}.nav-btn.active{color:var(--g1)}.nav-ic{font-size:20px;line-height:1}.nav-lb{font-size:10px;font-weight:500;letter-spacing:.2px}.fab{position:fixed;bottom:76px;right:50%;transform:translateX(calc(50% - min(400px,50vw) + 18px));width:52px;height:52px;border-radius:50%;background:var(--g1);color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 18px rgba(26,74,46,.35);display:none;align-items:center;justify-content:center;z-index:55;transition:transform .15s,background .15s}.fab:active{transform:translateX(calc(50% - min(400px,50vw) + 18px)) scale(.93)}.fab.show{display:flex}.sec-head{padding:16px 14px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}.sec-title{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--g1);letter-spacing:.8px}.c-card{margin:0 10px 10px;background:#fff;border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--s2);overflow:hidden;cursor:pointer;transition:transform .15s}.c-card:active{transform:scale(.985)}.c-card-head{background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 100%);padding:14px 16px;display:flex;gap:12px;align-items:center}.c-initials{width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,.18);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid rgba(255,255,255,.25)}.c-name{font-weight:800;font-size:14px;color:#fff;line-height:1.2}.c-loc{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px}.c-stats{display:grid;grid-template-columns:repeat(3,1fr)}.c-stat{padding:10px 6px;text-align:center;border-right:1px solid var(--s1)}.c-stat:last-child{border-right:none}.c-stat-n{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--g2)}.c-stat-l{font-size:9px;color:var(--soft);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:1px}.item-card{background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.item-head{padding:10px 14px;background:var(--s1);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.item-title{font-weight:600;font-size:14px;color:var(--text)}.item-meta{font-size:11px;color:var(--soft);margin-top:1px}.item-body{padding:11px 14px}.item-text{font-size:13px;color:var(--text);line-height:1.5}.item-note{font-size:12px;color:var(--soft);border-left:3px solid var(--g4);padding-left:9px;margin-top:7px}.item-footer{font-size:10px;color:var(--s4);margin-top:8px}.chip{display:inline-flex;align-items:center;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:500;white-space:nowrap}.chip-green{background:var(--g6);color:var(--g1)}.chip-amber{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}.chip-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}.chip-blue{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}.chip-gray{background:var(--s1);color:var(--soft);border:1px solid var(--s2)}.computo-wrap{margin:0 10px 10px;background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.cap-header{padding:10px 14px;background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between}.cap-total{font-size:13px;font-weight:600;color:var(--g5)}.voce-row{display:grid;grid-template-columns:1fr 36px 52px 64px 72px;gap:4px;padding:8px 14px;border-bottom:1px solid var(--s1);align-items:center}.voce-row:last-child{border-bottom:none}.voce-row:hover{background:var(--s1)}.voce-desc{font-size:12px;font-weight:500;color:var(--text)}.voce-um{font-size:10px;color:var(--soft);text-align:center}.voce-qty{font-size:12px;font-weight:500;color:var(--text);text-align:right;min-width:48px}.voce-pu{font-size:11px;color:var(--soft);text-align:right;min-width:60px}.voce-price{font-size:12px;font-weight:600;color:var(--g2);text-align:right;min-width:72px}.voce-input{width:60px;background:var(--s1);border:1px solid var(--s3);border-radius:5px;padding:3px 6px;font-size:12px;font-weight:500;color:var(--g1);text-align:right;font-family:'Nunito',sans-serif;outline:none}.voce-input:focus{border-color:var(--g3)}.voce-delta-pos{font-size:11px;font-weight:500;color:var(--red);min-width:56px;text-align:right}.voce-delta-neg{font-size:11px;font-weight:500;color:var(--g3);min-width:56px;text-align:right}.table-header{display:grid;grid-template-columns:1fr 36px 52px 64px 72px;gap:4px;padding:6px 14px;background:var(--s1);border-bottom:1px solid var(--s2)}.th-label{font-size:9px;font-weight:600;color:var(--soft);text-transform:uppercase;letter-spacing:.5px}.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 10px 0}.kpi-box{background:#fff;border-radius:var(--r-sm);border:1px solid var(--s2);padding:10px 12px;text-align:center;box-shadow:var(--shadow)}.kpi-n{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--g1)}.kpi-l{font-size:9px;color:var(--soft);font-weight:500;letter-spacing:.5px;text-transform:uppercase;margin-top:1px}.kpi-box.danger .kpi-n{color:var(--red)}.kpi-box.success .kpi-n{color:var(--g3)}.import-zone{margin:12px 10px;border:2px dashed var(--s3);border-radius:var(--r);padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}.import-zone:hover,.import-zone.dragover{border-color:var(--g3);background:var(--g6)}.import-icon{font-size:40px;margin-bottom:10px}.import-title{font-weight:600;font-size:15px;color:var(--g1);margin-bottom:4px}.import-sub{font-size:12px;color:var(--soft);line-height:1.5}.import-btn{background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:12px;display:inline-block}.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s}.overlay.show{opacity:1;pointer-events:all}.modal{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:800px;max-height:92vh;overflow-y:auto;transform:translateY(100%);transition:transform .28s cubic-bezier(.32,1.02,.6,1)}.overlay.show .modal{transform:translateY(0)}.modal-handle{width:36px;height:4px;background:var(--s2);border-radius:99px;margin:12px auto 0}.modal-title{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:var(--g1);padding:10px 18px 14px;letter-spacing:.8px;border-bottom:1px solid var(--s2)}.modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:13px}.f-label{font-size:11px;color:var(--soft);font-weight:600;letter-spacing:.7px;text-transform:uppercase;margin-bottom:4px;display:block}.f-in,.f-sel,.f-ta{width:100%;background:var(--s1);border:1.5px solid var(--s2);border-radius:var(--r-sm);color:var(--text);padding:10px 12px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;transition:border-color .15s}.f-in:focus,.f-sel:focus,.f-ta:focus{border-color:var(--g3)}.f-ta{resize:vertical}.f-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.f-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}.btn-prim{width:100%;background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;margin-top:6px;transition:background .15s}.btn-prim:active{background:var(--g2)}.upload-zone{border:2px dashed var(--s3);border-radius:var(--r-sm);padding:20px;text-align:center;cursor:pointer;transition:border-color .2s}.upload-zone:active{border-color:var(--g3)}.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;opacity:0;pointer-events:none;transition:opacity .2s}.lightbox.show{opacity:1;pointer-events:all}.lightbox img{max-width:95vw;max-height:72vh;border-radius:8px;object-fit:contain}.lb-close{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.15);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer}.lb-info{color:rgba(255,255,255,.65);font-size:12px;text-align:center}.empty{text-align:center;padding:40px 20px}.empty-ic{font-size:44px;margin-bottom:12px}.empty-txt{font-size:13px;color:var(--soft);font-weight:600;line-height:1.5}#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--g0);color:#fff;padding:9px 18px;border-radius:99px;font-size:12px;font-weight:700;z-index:400;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}.install-bar{background:var(--g1);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;flex-shrink:0}.install-bar button{background:#fff;color:var(--g1);border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif}.ios-hint{background:var(--g6);padding:10px 14px;font-size:12px;color:var(--g1);border-bottom:1px solid var(--s2);flex-shrink:0}.operaio-row{background:#fff;border-radius:var(--r-sm);margin:0 10px 7px;border:1px solid var(--s2);box-shadow:var(--shadow);overflow:hidden}.operaio-head{padding:10px 14px;background:var(--s1);display:flex;align-items:center;justify-content:space-between}.operaio-name{font-weight:800;font-size:14px;color:var(--text)}.operaio-role{font-size:11px;color:var(--soft)}.operaio-stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--s2)}.op-stat{padding:8px 10px;text-align:center;border-right:1px solid var(--s1)}.op-stat:last-child{border-right:none}.op-stat-n{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;color:var(--g2)}.op-stat-l{font-size:9px;color:var(--soft);font-weight:700;text-transform:uppercase;letter-spacing:.4px}.presenze-row{padding:8px 14px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--s1);flex-wrap:wrap}.presenza-dot{width:28px;height:28px;border-radius:50%;background:var(--s2);border:1.5px solid var(--s3);font-size:9px;font-weight:700;color:var(--soft);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0}.presenza-dot.present{background:var(--g4);border-color:var(--g3);color:#fff}.presenza-dot.absent{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}.pdf-page{position:fixed;left:-9999px;top:-9999px;width:794px;background:#fff;font-family:'Nunito',sans-serif;font-size:12px;color:#1a2e22;padding:32px}@media(min-width:600px){.f-grid-3{grid-template-columns:1fr 1fr 1fr}}
 </style>
 </head>
 <body>
@@ -539,191 +539,6 @@ window._fbDeleteCantiere = async (id) => {
 </div>
 
 <!-- Registra Ore -->
-<div class="overlay" id="mOre" onclick="closeOv(event,'mOre')">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">REGISTRA ORE</div>
-    <div class="modal-body">
-      <input type="hidden" id="ore-opId">
-      <div class="f-grid">
-        <div><label class="f-label">Data *</label><input class="f-in" type="date" id="ore-data"></div>
-        <div><label class="f-label">Ore lavorate *</label><input class="f-in" type="number" id="ore-ore" step="0.5" min="0" max="24" placeholder="8"></div>
-        <div><label class="f-label">Tipo</label>
-          <select class="f-sel" id="ore-tipo">
-            <option>Ordinarie</option><option>Straordinarie</option><option>Assenza</option><option>Ferie</option>
-          </select>
-        </div>
-      </div>
-      <div><label class="f-label">Note</label><input class="f-in" id="ore-note" placeholder="Lavorazione specifica..."></div>
-      <button class="btn-prim" onclick="event.stopPropagation();saveOre()">SALVA ORE</button>
-    </div>
-  </div>
-</div>
-
-<!-- Nuova Foto -->
-<div class="overlay" id="mFoto" onclick="closeOv(event,'mFoto')">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">AGGIUNGI FOTO</div>
-    <div class="modal-body">
-
-      <!-- Preview immagine selezionata -->
-      <div id="fotoPreviewWrap" style="display:none;text-align:center;margin-bottom:4px">
-        <img id="fotoPreviewImg" style="max-height:200px;border-radius:10px;max-width:100%;object-fit:contain;border:1px solid var(--s2)">
-        <div style="font-size:11px;color:var(--soft);margin-top:6px" id="fotoPreviewName"></div>
-      </div>
-
-      <!-- Unico input senza capture — lascia scegliere all'utente camera o libreria -->
-      <input type="file"
-             id="fotoInputMain"
-             accept="image/*"
-             style="display:none"
-             onchange="previewFoto(event)">
-
-      <!-- Bottone principale selezione -->
-      <div id="fotoPickerArea">
-        <button onclick="document.getElementById('fotoInputMain').click()"
-          style="width:100%;background:var(--g1);color:#fff;border:none;border-radius:var(--r-sm);padding:16px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;display:flex;align-items:center;justify-content:center;gap:10px">
-          <span style="font-size:22px">📷</span> Scatta foto o scegli dalla libreria
-        </button>
-        <div style="font-size:11px;color:var(--soft);text-align:center;margin-top:8px;line-height:1.6">
-          Il telefono chiederà se usare la fotocamera o la libreria foto.<br>
-          Per foto da <strong>WhatsApp</strong>: scegli "File" → cartella <em>WhatsApp/Media</em>
-        </div>
-      </div>
-
-      <!-- Campi info foto -->
-      <div class="f-grid">
-        <div><label class="f-label">Data</label><input class="f-in" type="date" id="ft-data"></div>
-        <div><label class="f-label">Tag</label>
-          <select class="f-sel" id="ft-tag">
-            <option>Avanzamento</option>
-            <option>Struttura</option>
-            <option>Impianti</option>
-            <option>Impermeabilizzazione</option>
-            <option>Finiture</option>
-            <option>Sicurezza</option>
-            <option>Problema</option>
-          </select>
-        </div>
-      </div>
-      <div><label class="f-label">Descrizione</label>
-        <input class="f-in" id="ft-desc" placeholder="es. Avanzamento piano terra lato nord">
-      </div>
-      <button class="btn-prim" onclick="event.stopPropagation();saveFoto()">SALVA FOTO</button>
-    </div>
-  </div>
-</div>
-
-<!-- Nuovo Documento -->
-<div class="overlay" id="mDocumento" onclick="closeOv(event,'mDocumento')">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">AGGIUNGI DOCUMENTO</div>
-    <div class="modal-body">
-      <div><label class="f-label">Nome file *</label><input class="f-in" id="dc-nome" placeholder="es. Progetto_esecutivo.pdf"></div>
-      <div class="f-grid">
-        <div><label class="f-label">Tipo</label>
-          <select class="f-sel" id="dc-tipo">
-            <option>Contratto</option><option>Progetto</option><option>Planimetria</option><option>Permesso</option><option>SAL</option><option>Relazione</option><option>Sicurezza</option><option>Fattura</option><option>Altro</option>
-          </select>
-        </div>
-        <div><label class="f-label">Data</label><input class="f-in" type="date" id="dc-data"></div>
-      </div>
-      <div class="upload-zone" onclick="document.getElementById('dcFile').click()">
-        <div style="font-size:30px;margin-bottom:6px">📎</div>
-        <div id="dcFileName" style="font-size:13px;color:var(--soft)">Allega file (opzionale)</div>
-        <input type="file" id="dcFile" style="display:none" onchange="handleDocFile(event)">
-      </div>
-      <div><label class="f-label">Note</label><textarea class="f-ta" id="dc-note" rows="2"></textarea></div>
-      <button class="btn-prim" onclick="event.stopPropagation();saveDocumento()">SALVA DOCUMENTO</button>
-    </div>
-  </div>
-</div>
-
-<!-- Nuova Spesa Generale -->
-<div class="overlay" id="mSpesaGenerale" onclick="closeOv(event,'mSpesaGenerale')">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">SPESA GENERALE</div>
-    <div class="modal-body">
-      <div><label class="f-label">Descrizione *</label><input class="f-in" id="sg-desc" placeholder="es. Nolo ponteggi, Assicurazione cantiere..."></div>
-      <div class="f-grid">
-        <div><label class="f-label">Categoria</label>
-          <select class="f-sel" id="sg-cat">
-            <option>Noli / Macchinari</option>
-            <option>Spese sede</option>
-            <option>Subappalto</option>
-            <option>Carburante</option>
-            <option>Assicurazioni</option>
-            <option>Altro</option>
-          </select>
-        </div>
-        <div><label class="f-label">Data</label><input class="f-in" type="date" id="sg-data"></div>
-        <div><label class="f-label">Importo (€) *</label><input class="f-in" type="number" id="sg-importo" step="0.01" placeholder="0"></div>
-        <div><label class="f-label">Tipo</label>
-          <select class="f-sel" id="sg-tipo">
-            <option value="fisso">Importo fisso €</option>
-            <option value="pct">Percentuale % sul totale lavori</option>
-          </select>
-        </div>
-      </div>
-      <div><label class="f-label">Note</label><input class="f-in" id="sg-note" placeholder="Fornitore, riferimento fattura..."></div>
-      <button class="btn-prim" onclick="event.stopPropagation();saveSpesaGenerale()">SALVA SPESA</button>
-    </div>
-  </div>
-</div>
-
-<!-- Nuova Spesa Materiali (collegata a capitolo) -->
-<div class="overlay" id="mSpesaMateriali" onclick="closeOv(event,'mSpesaMateriali')">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">SPESA MATERIALI / NOLO</div>
-    <div class="modal-body">
-      <div style="background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--r-sm);padding:10px 13px;font-size:12px;color:var(--blue);margin-bottom:4px">
-        Collega questa spesa a un capitolo del computo per calcolare il margine reale su quella lavorazione.
-      </div>
-      <div><label class="f-label">Descrizione *</label><input class="f-in" id="sm-desc" placeholder="es. Sacchi cemento 300 cad, Guaina 120mq..."></div>
-      <div class="f-grid">
-        <div><label class="f-label">Capitolo di riferimento</label>
-          <select class="f-sel" id="sm-cap">
-            <option value="">-- Nessun capitolo (costo generale) --</option>
-          </select>
-        </div>
-        <div><label class="f-label">Data</label><input class="f-in" type="date" id="sm-data"></div>
-        <div><label class="f-label">Importo (€) *</label><input class="f-in" type="number" id="sm-importo" step="0.01" placeholder="0"></div>
-        <div><label class="f-label">Categoria</label>
-          <select class="f-sel" id="sm-cat">
-            <option>Materiali</option>
-            <option>Materiali</option>
-            <option>Nolo attrezzatura</option>
-            <option>Subappalto</option>
-            <option>Subappalto/Nolo</option>
-            <option>Trasporto</option>
-            <option>Vitto cantiere</option>
-            <option>Vitto/Trasferte</option>
-            <option>Carburante</option>
-            <option>Servizi/Carburante</option>
-            <option>INAIL/Sicurezza</option>
-            <option>Software/Licenze</option>
-            <option>Assicurazioni</option>
-            <option>Legale/Notaio</option>
-            <option>Commercialista</option>
-            <option>Associazioni</option>
-            <option>Formazione/Sicurezza</option>
-            <option>Certificazioni/SOA</option>
-            <option>Servizi</option>
-            <option>Altro</option>
-          </select>
-        </div>
-      </div>
-      <div><label class="f-label">Fornitore / Note</label><input class="f-in" id="sm-note" placeholder="es. Edilizia Rossi, DDT 1234..."></div>
-      <button class="btn-prim" onclick="event.stopPropagation();saveSpesaMateriali()">SALVA SPESA</button>
-    </div>
-  </div>
-</div>
-
-<!-- Backup e Ripristino -->
 <div class="overlay" id="mBackup" onclick="closeOv(event,'mBackup')">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -1096,8 +911,6 @@ let _selectedUser = null;
 function selectUser(nome) {
   _selectedUser = nome;
   localStorage.setItem('tbc_last_user', nome);
-  const pwField = $('loginPass');
-  if(pwField) { pwField.placeholder = 'Password per ' + nome; setTimeout(()=>pwField.focus(),100); }
   UTENTI.forEach(u => {
     const circle = document.getElementById('ucircle-' + u);
     const nameEl = document.querySelector(`#ubtn-${u} span:last-child`);
@@ -1114,8 +927,6 @@ function selectUser(nome) {
       if (nameEl) nameEl.style.color = 'rgba(255,255,255,.6)';
     }
   });
-  const pw = document.getElementById('loginPass');
-  if (pw) setTimeout(() => pw.focus(), 100);
 }
 
 function getPassword() {
@@ -1149,7 +960,6 @@ function doLogout() {
     const nameEl = document.querySelector(`#ubtn-${u} span:last-child`);
     if (nameEl) nameEl.style.color = 'rgba(255,255,255,.6)';
   });
-  const pw = $('loginPass'); if(pw) pw.value = '';
   const screen = $('screenLogin');
   if(screen) { screen.style.opacity = '1'; screen.style.display = 'flex'; }
   closeUserMenu();
@@ -1168,11 +978,6 @@ function cambiaPassword() {
   toast('🔑 Password aggiornata!');
 }
 
-function togglePassVis() {
-  const inp = $('loginPass'); if(!inp) return;
-  inp.type = inp.type === 'password' ? 'text' : 'password';
-  const btn = $('passVisBtn'); if(btn) btn.textContent = inp.type === 'password' ? '👁' : '🙈';
-}
 
 function openUserMenu() {
   const m = $('userMenu');
@@ -1355,7 +1160,7 @@ function switchTab(tab) {
 }
 
 function fabAction() {
-  const map = {computo:'mImportComputo',sal:null,rapportini:'mRapportino',operai:'mOperaio',costi:'mSpesaGenerale',ordini:'mNuovoOrdine',giornale:'mNuovaVoceGiornale'};
+  const map = {computo:'mImportComputo',sal:null,rapportini:'mRapportino',operai:'mOperaio',costi:null,ordini:'mNuovoOrdine',giornale:'mNuovaVoceGiornale'};
   if(map[S.tab]) openModal(map[S.tab]);
 }
 
@@ -1429,16 +1234,6 @@ function openModal(id) {
   
   if(id==='mBackup') {
     setTimeout(aggiornaBackupUI, 50);
-  }
-  if(id==='mSpesaMateriali') {
-    const c = getCantiere();
-    const sel = $('sm-cap');
-    if(sel && c) {
-      sel.innerHTML = '<option value="">-- Nessun capitolo (costo generale) --</option>';
-      (c.capitoli||[]).forEach(cap => {
-        const o=document.createElement('option'); o.value=cap.id; o.textContent=cap.nome; sel.appendChild(o);
-      });
-    }
   }
   if(id==='mRapportino') {
     // Reset per nuovo rapportino (editRapportino gestisce il caso modifica)
@@ -1514,14 +1309,7 @@ function closeOv(e, id) {
 function closeModal(id) { $(id).classList.remove('show'); }
 
 // ════════════ RENDER CANTIERI ════════════
-function toggleHomeOperai() {
-  const el = $('homeOperaiList');
-  const arrow = $('homeOpArrow');
-  if(!el) return;
-  const open = el.style.display !== 'none';
-  el.style.display = open ? 'none' : 'block';
-  if(arrow) arrow.style.transform = open ? '' : 'rotate(180deg)';
-}
+
 
 // ════════════ HOME TAB BAR ════════════
 let _homeTab = 'cantieri';
@@ -1579,9 +1367,6 @@ function eliminaOperaioGlobale(opId) {
   renderHomeOperai();
   toast('Operaio rimosso dall\'anagrafica');
 }
-
-function toggleHomeSection(id) { /* mantenuta per compatibilità */ }
-function toggleHomeOperai_unused() { switchHomeTab('operai'); }
 
 
 // Mappa ID Firebase → nome canonico.
@@ -1645,8 +1430,7 @@ function renderCantieri() {
         <div class="c-stat"><div class="c-stat-n">${voci}</div><div class="c-stat-l">Voci</div></div>
         <div class="c-stat"><div class="c-stat-n">${(c.rapportini||[]).length}</div><div class="c-stat-l">Rapp.</div></div>
         <div class="c-stat"><div class="c-stat-n">${(c.operai||[]).length}</div><div class="c-stat-l">Operai</div></div>
-        <div class="c-stat"><div class="c-stat-n">${(c.foto||[]).length}</div><div class="c-stat-l">Foto</div></div>
-      </div>
+              </div>
       <div style="padding:8px 14px;display:flex;gap:8px;border-top:1px solid var(--s1)" onclick="event.stopPropagation()">
         <button onclick="exportCantierePDF('${c.id}')" style="flex:1;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:6px;padding:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">📄 Esporta PDF</button>
         <button onclick="eliminaCantiere('${c.id}')" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:6px;padding:7px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">🗑 Elimina</button>
@@ -1768,7 +1552,6 @@ function buildOperaiMap(c) {
 function costoGiornalieroIndicativo(op) {
   return (+op.costo||0) / 22;
 }
-
 
 
 function calcolaRipartizioneCG(c, ct) {
@@ -1998,33 +1781,6 @@ function renderOperai(c) {
   </div>`;
 }
 
-function renderFoto(c) {
-  const items = [...(c.foto||[])].reverse();
-  if(!items.length) return `<div class="empty"><div class="empty-ic">📷</div><div class="empty-txt">Nessuna foto ancora.<br>Scatta la prima!</div></div>`;
-  const tagColors = {'Struttura':'#92400e','Impianti':'#1e3a8a','Impermeabilizzazione':'#0e7490','Finiture':'#9d174d','Sicurezza':'#7f1d1d','Avanzamento':'#14532d','Problema':'#78350f'};
-  return `<div style="padding:8px 10px 0"><div class="foto-grid">${items.map(f=>`
-    <div class="foto-thumb" onclick="openLightbox('${f.id}')">
-      ${f.url?`<img src="${f.url}" alt="${esc(f.desc||'')}">` : '<span>📷</span>'}
-      <div class="foto-tag-badge" style="background:${tagColors[f.tag]||'rgba(26,74,46,.82)'}cc">${esc(f.tag||'')}</div>
-      <div class="foto-date">${esc(f.data||'')}</div>
-    </div>`).join('')}</div></div>`;
-}
-
-function renderDocumenti(c) {
-  const items = [...(c.documenti||[])].reverse();
-  if(!items.length) return `<div class="empty"><div class="empty-ic">🗂️</div><div class="empty-txt">Nessun documento ancora.</div></div>`;
-  const icons = {'Contratto':'📄','Progetto':'📐','Planimetria':'🗺️','Permesso':'✅','SAL':'📊','Relazione':'📝','Sicurezza':'⛑️','Fattura':'🧾','Altro':'📎'};
-  return `<div style="padding:8px 0">${items.map(d=>`
-    <div class="doc-row">
-      <div class="doc-ic">${icons[d.tipo]||'📎'}</div>
-      <div class="doc-info">
-        <div class="doc-name">${esc(d.nome||'—')}</div>
-        <div class="doc-meta">${esc(d.tipo||'')} · ${esc(d.data||'')}${d.dim?' · '+esc(d.dim):''}</div>
-        ${d.note?`<div style="font-size:11px;color:var(--soft);margin-top:2px">${esc(d.note)}</div>`:''}
-      </div>
-      ${d.fileData?`<button class="doc-dl" onclick="downloadDoc('${d.id}')">⬇ Scarica</button>`:''}
-    </div>`).join('')}</div>`;
-}
 
 let _gnFotoDataUrl = null;
 
@@ -2344,86 +2100,9 @@ function eliminaRapportino(rappId) {
   toast('🗑 Rapportino eliminato');
 }
 
-function apriModalOperaio() {
-  openModal('mOperaio');
-}
-
-function saveOre() {
-  const ore = parseFloat(v('ore-ore'));
-  if(!ore && v('ore-tipo')==='Ordinarie') { alert('Inserisci le ore'); return; }
-  const c = getCantiere(); if(!c) return;
-  const opId = v('ore-opId');
-  const op = (c.operai||[]).find(x=>x.id===opId);
-  if(!op) return;
-  op.ore = op.ore||[];
-  op.ore.push({ id: uid(), data: v('ore-data')||today(), ore: ore||0, tipo: v('ore-tipo'), note: v('ore-note'), created: Date.now() });
-  save(); closeModal('mOre');
-  ['ore-data','ore-ore','ore-note'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
-  renderTab(S.tab); toast('✅ Ore registrate!');
-}
-
-function saveFoto() {
-  const c = getCantiere(); if (!c) return;
-  if (!fotoDataUrl) { toast('⚠️ Seleziona prima una foto'); return; }
-  c.foto = c.foto || [];
-  c.foto.push({
-    id: uid(), data: v('ft-data') || today(),
-    tag: v('ft-tag'), desc: v('ft-desc'),
-    url: fotoDataUrl, utente: S.uid || 'Utente', created: Date.now()
-  });
-  fotoDataUrl = null;
-  save();
-  closeModal('mFoto');
-  const wrap = $('fotoPreviewWrap'); if (wrap) wrap.style.display = 'none';
-  const inp = $('fotoInputMain'); if (inp) inp.value = '';
-  ['ft-data','ft-desc'].forEach(id => { const el=$(id); if(el) el.value=''; });
-  updateCounts(); renderTab(S.tab); toast('✅ Foto salvata!');
-}
-
-function saveDocumento() {
-  const nome = v('dc-nome').trim();
-  if(!nome) { alert('Inserisci il nome del file'); return; }
-  const c = getCantiere(); if(!c) return;
-  c.documenti = c.documenti||[];
-  c.documenti.push({ id: uid(), nome, tipo: v('dc-tipo'), data: v('dc-data')||today(), note: v('dc-note'), fileData: docFileData, dim: docFileData?fmtBytes(docFileData.length):null, utente: S.uid||'Utente', created: Date.now() });
-  docFileData = null;
-  save(); closeModal('mDocumento');
-  $('dcFileName').textContent = 'Allega file (opzionale)';
-  ['dc-nome','dc-data','dc-note'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
-  updateCounts(); renderTab(S.tab); toast('✅ Documento salvato!');
-}
 
 // ════════════ FILE HANDLERS ════════════
-function previewFoto(e) {
-  const file = e.target.files && e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const tmpImg = new Image();
-    tmpImg.onload = () => {
-      const MAX = 1200;
-      let w = tmpImg.width, h = tmpImg.height;
-      if (w > MAX || h > MAX) {
-        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-        else { w = Math.round(w * MAX / h); h = MAX; }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(tmpImg, 0, 0, w, h);
-      fotoDataUrl = canvas.toDataURL('image/jpeg', 0.82);
-      const wrap = $('fotoPreviewWrap');
-      const previewImg = $('fotoPreviewImg');
-      const nameEl = $('fotoPreviewName');
-      if (wrap) wrap.style.display = 'block';
-      if (previewImg) previewImg.src = fotoDataUrl;
-      if (nameEl) nameEl.textContent = file.name + ' · ' + w + '×' + h + 'px';
-    };
-    tmpImg.onerror = () => toast('❌ Impossibile leggere l\'immagine');
-    tmpImg.src = ev.target.result;
-  };
-  reader.onerror = () => toast('❌ Errore lettura file');
-  reader.readAsDataURL(file);
-}
+
 
 function handleDocFile(e) {
   const file = e.target.files[0]; if(!file) return;
@@ -2434,12 +2113,6 @@ function handleDocFile(e) {
   if(!v('dc-nome')) $('dc-nome').value = file.name;
 }
 
-function downloadDoc(docId) {
-  const c = getCantiere(); if(!c) return;
-  const d = (c.documenti||[]).find(x=>x.id===docId);
-  if(!d||!d.fileData) return;
-  const a = document.createElement('a'); a.href = d.fileData; a.download = d.nome||'documento'; a.click();
-}
 
 // ════════════ EXCEL IMPORT (SheetJS) ════════════
 let xlsParsed = null;
@@ -2513,15 +2186,7 @@ function parsePrimusExcel(rows) {
 }
 
 // ════════════ LIGHTBOX ════════════
-function openLightbox(fotoId) {
-  const c = getCantiere(); if(!c) return;
-  const f = (c.foto||[]).find(x=>x.id===fotoId);
-  if(!f) return;
-  const lb = $('lightbox'), img = $('lbImg'), info = $('lbInfo');
-  if(f.url){ img.src=f.url; img.style.display='block'; } else img.style.display='none';
-  info.textContent = `${f.tag||''} · ${f.data||''} · ${f.desc||''} · ${f.utente||''}`;
-  lb.classList.add('show');
-}
+
 function closeLightbox(){ $('lightbox').classList.remove('show'); }
 
 // ════════════ EXPORT PDF (jsPDF) ════════════
@@ -2669,12 +2334,10 @@ function exportCantierePDF(id) {
   doc.setFontSize(9); doc.setFont(undefined,'normal');
   doc.text('Indirizzo: '+(c.indirizzo||'—')+'  |  Responsabile: '+(c.resp||'—')+'  |  Data: '+(c.data||'—'), 14, y); y+=10;
   const totPrev=calcolaPreventivo(c), totEff=calcolaConsuntivo(c), totMdo=calcolaManodopera(c);
-  const totSG=(c.speseGenerali||[]).reduce((s,x)=>s+(x.tipo==='pct'?totPrev*(+x.importo||0)/100:(+x.importo||0)),0);
-  const totSM=(c.speseMateriali||[]).reduce((s,x)=>s+(+x.importo||0),0);
-  const margine=totEff-totMdo-totSG-totSM;
+  const margine=totEff-totMdo;
   doc.setFontSize(10); doc.setFont(undefined,'bold'); doc.text('RIEPILOGO ECONOMICO', 14, y); y+=5;
   doc.setFont(undefined,'normal'); doc.setFontSize(9);
-  [['Ricavo lavorazioni (effettivo)',fmtEur(totEff)],['Costo manodopera',fmtEur(totMdo)],['Spese materiali',fmtEur(totSM)],['Spese generali',fmtEur(totSG)],['MARGINE NETTO',fmtEur(margine)+' ('+Math.round(totEff>0?margine/totEff*100:0)+'%)']].forEach(([l,v])=>{
+  [['Ricavo lavorazioni (effettivo)',fmtEur(totEff)],['Costo manodopera',fmtEur(totMdo)],['MARGINE NETTO',fmtEur(margine)+' ('+Math.round(totEff>0?margine/totEff*100:0)+'%)']].forEach(([l,v])=>{
     doc.text(l,14,y); doc.text(v,185,y,{align:'right'}); y+=5;
   });
   y+=5; doc.line(14,y,196,y); y+=5;
@@ -2690,29 +2353,7 @@ function exportCantierePDF(id) {
 }
 
 // ════════════ SPESE GENERALI & MATERIALI ════════════
-function saveSpesaGenerale() {
-  const desc=v('sg-desc').trim(), importo=parseFloat(v('sg-importo'))||0;
-  if(!desc){alert('Inserisci la descrizione');return;}
-  if(!importo){alert('Inserisci l\'importo');return;}
-  const c=getCantiere();if(!c)return;
-  c.speseGenerali=c.speseGenerali||[];
-  c.speseGenerali.push({id:uid(),desc,cat:v('sg-cat'),tipo:v('sg-tipo'),importo,data:v('sg-data')||today(),note:v('sg-note'),utente:S.uid||'Utente',created:Date.now()});
-  save();closeModal('mSpesaGenerale');
-  ['sg-desc','sg-importo','sg-data','sg-note'].forEach(id=>{const el=$(id);if(el)el.value='';});
-  renderTab(S.tab);toast('✅ Spesa generale salvata!');
-}
 
-function saveSpesaMateriali() {
-  const desc=v('sm-desc').trim(), importo=parseFloat(v('sm-importo'))||0;
-  if(!desc){alert('Inserisci la descrizione');return;}
-  if(!importo){alert('Inserisci l\'importo');return;}
-  const c=getCantiere();if(!c)return;
-  c.speseMateriali=c.speseMateriali||[];
-  c.speseMateriali.push({id:uid(),desc,capId:v('sm-cap'),cat:v('sm-cat'),importo,data:v('sm-data')||today(),note:v('sm-note'),utente:S.uid||'Utente',created:Date.now()});
-  save();closeModal('mSpesaMateriali');
-  ['sm-desc','sm-importo','sm-data','sm-note'].forEach(id=>{const el=$(id);if(el)el.value='';});
-  renderTab(S.tab);toast('✅ Spesa materiali salvata!');
-}
 
 // ════════════ RENDER MARGINI ════════════
 function renderCosti(c) {
@@ -2924,16 +2565,6 @@ function renderCosti(c) {
   </div>`;
 }
 
-function eliminaSpesaGenerale(id) {
-  const c=getCantiere();if(!c)return;
-  c.speseGenerali=(c.speseGenerali||[]).filter(x=>x.id!==id);
-  save();renderTab(S.tab);toast('Spesa eliminata');
-}
-function eliminaSpesaMat(id) {
-  const c=getCantiere();if(!c)return;
-  c.speseMateriali=(c.speseMateriali||[]).filter(x=>x.id!==id);
-  save();renderTab(S.tab);toast('Spesa eliminata');
-}
 
 // ════════════ MIGRAZIONE COSTI ORARI ════════════
 // Imposta costoOrario per gli operai esistenti. Eseguita una volta dopo il caricamento Firebase.
@@ -3470,11 +3101,7 @@ function aggiornaOrdine(){
   const ns=v('ord-stato-edit'),ir=parseFloat(v('ord-importo-reale'))||0;
   if(ns!==ord.stato){ord.storico=ord.storico||[];ord.storico.push({data:today(),evento:`Stato → ${STATI_ORDINE[ns]?.label||ns}`,utente:S.uid||'Utente'});}
   ord.stato=ns;ord.importoReale=ir;ord.rifDoc=v('ord-rif-doc')||'';ord.note=v('ord-note-edit')||'';
-  if((ns==='consegnato'||ns==='fatturato')&&ir>0){
-    c.speseMateriali=c.speseMateriali||[];const gP=c.speseMateriali.find(s=>s.ordineId===_ordineId);
-    if(!gP){c.speseMateriali.push({id:uid(),ordineId:_ordineId,desc:`${ord.fornitore} — ${ord.desc.slice(0,40)}`,capId:ord.capId||'',cat:'Materiali',importo:ir,data:today(),note:ord.rifDoc||'',utente:S.uid||'Utente',created:Date.now()});toast('✅ Aggiunto ai costi materiali del cantiere!');}
-    else{gP.importo=ir;toast('✅ Costi materiali aggiornati!');}
-  } else toast('✅ Ordine aggiornato!');
+  toast('✅ Ordine aggiornato!');
   save();closeModal('mDettaglioOrdine');renderTab('ordini');
 }
 
@@ -3722,15 +3349,7 @@ function rimuoviRigaPresenza(opId, data, rigaIdx) {
 }
 
 // ── Modifica tipo/ore di una riga manuale ────────────────────────────────────
-function setRigaPresenza(opId, data, rigaIdx, tipo, ore) {
-  const righe = getRighePresenza(opId, data);
-  if (!righe[rigaIdx]) return;
-  righe[rigaIdx].tipo = tipo;
-  if (tipo !== 'assente' && tipo !== 'ferie' && tipo !== 'malattia') righe[rigaIdx].ore = +ore||0;
-  else righe[rigaIdx].ore = 0;
-  S.presenze[data][opId] = righe;
-  save(); renderPresenzeGiorno(); aggiornaBadgePresenze(data);
-}
+
 
 function aggiornaBadgePresenze(data) {
   const badge = document.getElementById('presenze-today-badge');
