@@ -1104,6 +1104,7 @@ async function salvaAssegnazione(){
   const categoria = document.getElementById('assegnaCategoria').value;
   if(!tipo){ showToast('Seleziona dove assegnare'); return; }
   if(tipo==='cantiere' && !cantiereId){ showToast('Seleziona un cantiere'); return; }
+  if(tipo==='cantiere' && !categoria){ showToast('Seleziona la categoria merceologica'); return; }
   const fatture = (_contabile.fatture||[]).map(function(f){
     if(f.id !== _assegnaFatturaId) return f;
     return Object.assign({}, f, { assegnazione:tipo, cantiereId:tipo==='cantiere'?cantiereId:null, categoria:categoria });
@@ -1148,6 +1149,7 @@ async function salvaAssegnazioneTutte(){
   const categoria = document.getElementById('assegnaCategoria').value;
   if(!tipo){ showToast('Seleziona dove assegnare'); return; }
   if(tipo === 'cantiere' && !cantiereId){ showToast('Seleziona un cantiere'); return; }
+  if(tipo === 'cantiere' && !categoria){ showToast('Seleziona la categoria merceologica'); return; }
   const fatture = (_contabile.fatture||[]).map(function(f){
     const nomeF = f.fornitore || f.cliente || '';
     if(f.assegnazione || nomeF !== _assegnaTutteFornitore) return f;

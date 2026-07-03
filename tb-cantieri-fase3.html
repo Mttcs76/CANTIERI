@@ -1560,8 +1560,8 @@ function calcolaRipartizioneCG(c, ct) {
   const totCG = (ct.voci||[]).filter(v=>v.assegnazione==='generale').reduce((s,v)=>s+(v.importo||0),0)
     + (ct.fatture||[]).filter(f=>f.assegnazione==='generale'&&f.tipo==='passiva').reduce((s,f)=>s+(f.imponibile||f.totale||0),0);
   if(!totCG) return 0;
-  const fatturatoCantiere = calcolaConsuntivo(c);
-  const fatturatoTotale = S.cantieri.reduce((s,cant)=>s+calcolaConsuntivo(cant),0);
+  const fatturatoCantiere = calcolaSALReale(c);
+  const fatturatoTotale = S.cantieri.reduce((s,cant)=>s+calcolaSALReale(cant),0);
   if(!fatturatoTotale) return 0;
   return totCG * (fatturatoCantiere / fatturatoTotale);
 }
@@ -1575,10 +1575,10 @@ function renderSAL(c) {
 
   const caps = c.capitoli.map(cap=>{
     const capPrev = (cap.voci||[]).reduce((s,v)=>s+(+v.qty||0)*(+v.pu||0),0);
-    const capEff = (cap.voci||[]).reduce((s,v)=>s+(v.qtyEff!==undefined&&v.qtyEff!==null?+v.qtyEff:+v.qty||0)*(+v.pu||0),0);
+    const capEff = (cap.voci||[]).reduce((s,v)=>s+(v.qtyEff!=null?+v.qtyEff:0)*(+v.pu||0),0);
     const rows = (cap.voci||[]).map(v=>{
       const prev = (+v.qty||0)*(+v.pu||0);
-      const qEff = v.qtyEff!==undefined&&v.qtyEff!==null ? +v.qtyEff : +v.qty;
+      const qEff = v.qtyEff!=null ? +v.qtyEff : 0;
       const eff = qEff*(+v.pu||0);
       const d = eff - prev;
       const pctV = prev>0 ? Math.min(100,Math.round((eff/prev)*100)) : 0;
@@ -2298,7 +2298,7 @@ function exportConsuntivo() {
   const rows = [['Capitolo','Descrizione','U.M.','Qtà Prevista','Qtà Effettiva','P.U. €','Importo Prev. €','Importo Eff. €','Δ €']];
   (c.capitoli||[]).forEach(cap=>{
     (cap.voci||[]).forEach(v=>{
-      const qEff = v.qtyEff!==undefined&&v.qtyEff!==null ? +v.qtyEff : +v.qty;
+      const qEff = v.qtyEff!=null ? +v.qtyEff : 0;
       const prev=(+v.qty||0)*(+v.pu||0), eff=qEff*(+v.pu||0);
       rows.push([cap.nome, v.desc, v.um||'', +v.qty||0, qEff, +v.pu||0, prev, eff, eff-prev]);
     });
@@ -2333,11 +2333,17 @@ function exportCantierePDF(id) {
   doc.setTextColor(0,0,0); y=36;
   doc.setFontSize(9); doc.setFont(undefined,'normal');
   doc.text('Indirizzo: '+(c.indirizzo||'—')+'  |  Responsabile: '+(c.resp||'—')+'  |  Data: '+(c.data||'—'), 14, y); y+=10;
-  const totPrev=calcolaPreventivo(c), totEff=calcolaConsuntivo(c), totMdo=calcolaManodopera(c);
-  const margine=totEff-totMdo;
+  const totPrev=calcolaPreventivo(c), produzione=calcolaConsuntivo(c), totMdo=calcolaManodopera(c);
+  const ricavoSAL=calcolaSALReale(c);
+  const ctP=_contabile||{};
+  const isCompP=x=>(x.categoria||'').toLowerCase().includes('compenso')||(x.tipoVoce||'')==='compenso';
+  const totFattP=(ctP.fatture||[]).filter(f=>f.cantiereId===c.id&&f.tipo==='passiva'&&!isCompP(f)).reduce((s,f)=>s+(f.imponibile||f.totale||0),0)
+    +(ctP.voci||[]).filter(v=>v.cantiereId===c.id&&!isCompP(v)).reduce((s,v)=>s+(v.importo||0),0);
+  const totCGP=calcolaRipartizioneCG(c, ctP);
+  const margine=ricavoSAL-totMdo-totFattP-totCGP;
   doc.setFontSize(10); doc.setFont(undefined,'bold'); doc.text('RIEPILOGO ECONOMICO', 14, y); y+=5;
   doc.setFont(undefined,'normal'); doc.setFontSize(9);
-  [['Ricavo lavorazioni (effettivo)',fmtEur(totEff)],['Costo manodopera',fmtEur(totMdo)],['MARGINE NETTO',fmtEur(margine)+' ('+Math.round(totEff>0?margine/totEff*100:0)+'%)']].forEach(([l,v])=>{
+  [['Ricavo SAL fatturato',fmtEur(ricavoSAL)],['Produzione misurata',fmtEur(produzione)],['Costo manodopera',fmtEur(totMdo)],['Fatture e voci cantiere',fmtEur(totFattP)],['Costi generali ripartiti',fmtEur(totCGP)],['MARGINE NETTO',fmtEur(margine)+' ('+Math.round(ricavoSAL>0?margine/ricavoSAL*100:0)+'%)']].forEach(([l,v])=>{
     doc.text(l,14,y); doc.text(v,185,y,{align:'right'}); y+=5;
   });
   y+=5; doc.line(14,y,196,y); y+=5;
@@ -2359,7 +2365,9 @@ function exportCantierePDF(id) {
 function renderCosti(c) {
   const fE = n => '€ ' + (+(n||0)).toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2});
   const targetM = +(c.targetMargine||20);
-  const totRicavo = calcolaConsuntivo(c);
+  const totRicavo = calcolaSALReale(c);          // ricavo SAL reale fatturato (da TB Gestione)
+  const produzione = calcolaConsuntivo(c);        // produzione misurata dal computo
+  const totPreventivo = calcolaPreventivo(c);
   const operaiMap = buildOperaiMap(c);
 
   // Manodopera: ore × costoOrario per operaio
@@ -2398,8 +2406,10 @@ function renderCosti(c) {
   const semaforo = margPct>=targetM?'#22c55e':margPct>=targetM/2?'#f59e0b':'#dc2626';
 
   // Righe manodopera
+  const tariffeAnomale = mdoDettaglio.filter(x=>{const t=getCostoOrario(x.op);return t>0&&(t<10||t>100);});
   const mdoRows = mdoDettaglio.map(({op, oreTot, quota})=>{
     const cOr = getCostoOrario(op);
+    const anomala = cOr>0 && (cOr<10||cOr>100);
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--s1)">
       <div>
         <div style="font-size:13px;font-weight:600">${esc(op.nome)}</div>
@@ -2407,7 +2417,7 @@ function renderCosti(c) {
       </div>
       <div style="text-align:right">
         <div style="font-size:13px;font-weight:700;color:var(--red)">−${fE(quota)}</div>
-        <div style="font-size:10px;color:var(--soft)">tariffa oraria CCNL</div>
+        <div style="font-size:10px;color:var(--soft)">${anomala?'<span style="color:var(--red);font-weight:700">⚠️ tariffa anomala</span>':'tariffa oraria CCNL'}</div>
       </div>
     </div>`;
   }).join('');
@@ -2489,8 +2499,33 @@ function renderCosti(c) {
 
   const noSync = !_contabile ? `<div style="margin:0 10px 8px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--r-sm);padding:10px 14px;font-size:12px;color:var(--amber)">⚠️ Dati non sincronizzati — apri la sezione Impresa per aggiornare.</div>` : '';
 
+  // ── Banner tariffe anomale ──
+  const warnTariffe = tariffeAnomale.length?`<div style="margin:8px 10px 0;background:var(--red-bg);border:1px solid var(--red-border);border-radius:var(--r-sm);padding:10px 12px;font-size:12px;color:var(--red)">⚠️ <b>Tariffa oraria anomala</b> per ${tariffeAnomale.map(x=>esc(x.op.nome)+' ('+fE(getCostoOrario(x.op))+'/h)').join(', ')} — verifica il costo mensile in Impresa → Operai. Il costo manodopera è probabilmente errato.</div>`:'';
+
+  // ── Controllo incrociato: presenze su questo cantiere senza ore a rapportino ──
+  const _opMap = _buildOpIdMap();
+  const _rappKeys = new Set();
+  (c.rapportini||[]).forEach(r=>{ (r.oreOperai||[]).forEach(x=>{ if(+x.ore>0){ _rappKeys.add(r.data+'|'+x.opId); const g=_opMap[x.opId]; if(g) _rappKeys.add(r.data+'|'+g); } }); });
+  let _presScoperte = 0, _oreScoperte = 0;
+  Object.keys(S.presenze||{}).forEach(data=>{
+    Object.keys(S.presenze[data]||{}).forEach(opId=>{
+      const righe = S.presenze[data][opId];
+      (Array.isArray(righe)?righe:[]).forEach(rg=>{
+        if(rg.cantiereId!==c.id) return;
+        if(rg.daRapportino) return;
+        if(!(+rg.ore>0)) return;
+        if(rg.tipo==='assente'||rg.tipo==='ferie'||rg.tipo==='malattia') return;
+        const g = _opMap[opId]||opId;
+        if(!_rappKeys.has(data+'|'+opId) && !_rappKeys.has(data+'|'+g)) { _presScoperte++; _oreScoperte += +rg.ore; }
+      });
+    });
+  });
+  const warnPresenze = _presScoperte?`<div style="margin:8px 10px 0;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--r-sm);padding:10px 12px;font-size:12px;color:var(--amber)">⚠️ <b>${_presScoperte} presenze senza rapportino</b> su questo cantiere (${_oreScoperte.toLocaleString('it-IT')}h) — costo manodopera potenzialmente sottostimato.</div>`:'';
+
   return `<div>
     ${noSync}
+    ${warnTariffe}
+    ${warnPresenze}
     <div style="margin:12px 10px 8px;background:var(--g1);border-radius:var(--r);padding:16px;color:#fff">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:.5px">COSTI CANTIERE</div>
@@ -2513,7 +2548,9 @@ function renderCosti(c) {
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;color:${semaforo}">${margine>=0?'+':''}${fE(margine)}</div>
         </div>
       </div>
+      ${totRicavo===0&&produzione>0?`<div style="font-size:10px;color:#fde68a;margin-bottom:6px">ℹ️ Nessun SAL fatturato ancora — il margine sarà visibile dopo l'emissione del primo SAL.</div>`:''}
       <div style="font-size:10px;color:rgba(255,255,255,.55);display:flex;gap:12px;flex-wrap:wrap">
+        <span>🏗️ Produzione: ${fE(produzione)}${totPreventivo>0?' ('+Math.round(produzione/totPreventivo*100)+'%)':''}</span>
         <span>👷 Mdo: ${fE(totMdo)}</span>
         <span>🧾 Fatture: ${fE(totFatture+totVoci)}</span>
         <span>📋 CG: ${fE(totCG)}</span>
@@ -2542,7 +2579,7 @@ function renderCosti(c) {
         <span style="font-size:12px;font-weight:700;color:var(--red)">−${fE(totCG)}</span>
       </div>
       <div style="padding:10px 14px;font-size:11px;color:var(--soft);line-height:1.6">
-        Quota proporzionale al fatturato · ${totRicavo>0?Math.round(totRicavo/Math.max(1,S.cantieri.reduce((s,x)=>s+calcolaConsuntivo(x),0))*100)+'%':'—'} del totale
+        Quota proporzionale al fatturato · ${totRicavo>0?Math.round(totRicavo/Math.max(1,S.cantieri.reduce((s,x)=>s+calcolaSALReale(x),0))*100)+'%':'—'} del totale
       </div>
     </div>` : ''}
     <div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);overflow:hidden">
@@ -2980,7 +3017,7 @@ function aggiornaKPIImpresa() {
     const totCG=(ct.voci||[]).filter(v=>v.assegnazione==='generale').reduce((s,v)=>s+(v.importo||0),0)
       + (ct.fatture||[]).filter(f=>f.assegnazione==='generale'&&f.tipo==='passiva').reduce((s,f)=>s+(f.imponibile||f.totale||0),0);
     const kpiCG=$('kpi-cg'); if(kpiCG) kpiCG.textContent=totCG?fE(totCG):'—';
-    const ricavi = S.cantieri.reduce((s,c) => s + calcolaConsuntivo(c), 0);
+    const ricavi = S.cantieri.reduce((s,c) => s + calcolaSALReale(c), 0);
     const kpiR=$('kpi-ricavi'); if(kpiR) kpiR.textContent=ricavi?fE(ricavi):'—';
   });
 }
