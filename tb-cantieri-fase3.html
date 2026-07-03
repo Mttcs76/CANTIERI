@@ -1458,7 +1458,15 @@ function calcolaPreventivo(c) {
   return (c.capitoli||[]).reduce((tot,cap)=>tot+(cap.voci||[]).reduce((s,v)=>s+(+v.qty||0)*(+v.pu||0),0),0);
 }
 function calcolaConsuntivo(c) {
-  return (c.capitoli||[]).reduce((tot,cap)=>tot+(cap.voci||[]).reduce((s,v)=>s+(+v.qtyEff||v.qty||0)*(+v.pu||0),0),0);
+  // PRODUZIONE MISURATA: solo quantità effettivamente inserite nel tab SAL (default 0, non più il preventivo)
+  return (c.capitoli||[]).reduce((tot,cap)=>tot+(cap.voci||[]).reduce((s,v)=>s+(v.qtyEff!=null?+v.qtyEff:0)*(+v.pu||0),0),0);
+}
+
+function calcolaSALReale(c) {
+  // RICAVO SAL REALE: fatture attive assegnate a questo cantiere in TB Gestione (imponibile)
+  const ct = (typeof _contabile!=='undefined' && _contabile) ? _contabile : {};
+  return (ct.fatture||[]).filter(f=>f.tipo==='attiva'&&f.cantiereId===c.id&&f.stato!=='annullata')
+    .reduce((s,f)=>s+(f.imponibile||f.totale||0),0);
 }
 
 function renderComputo(c) {
