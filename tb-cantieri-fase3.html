@@ -1759,16 +1759,17 @@ function renderRapportini(c) {
     ${items.map(r => {
       const oreRapp = r.oreOperai || [];
       const totOreGiorno = oreRapp.reduce((s,x) => s + (+x.ore||0), 0);
-      // Costo giornata = somma costi indicativi giornalieri (costoMensile/22 per i soci)
+      // Costo giornata = somma(ore × tariffa oraria CCNL) — coerente col tab Costi
       const costoGiorno = oreRapp.reduce((s,x) => {
         const op = operaiMap[x.opId];
         if(!op) return s;
-        return s + costoGiornalieroIndicativo(op);
+        return s + (+x.ore||0) * getCostoOrario(op);
       }, 0);
       const oreRows = oreRapp.map(x => {
         const op = operaiMap[x.opId];
         if(!op) return '';
         const costGg = costoGiornalieroIndicativo(op);
+        const costOre = (+x.ore||0) * getCostoOrario(op);
         return `<div style="padding:6px 0;border-bottom:1px solid var(--s1)">
           <div style="display:flex;align-items:center;justify-content:space-between">
             <div>
@@ -1777,7 +1778,7 @@ function renderRapportini(c) {
             </div>
             <div style="text-align:right">
               <span style="font-size:13px;font-weight:600;color:var(--g1)">${x.ore}h</span>
-              <span style="font-size:11px;color:var(--soft);margin-left:4px">~€${Math.round(costGg)} ind.</span>
+              <span style="font-size:11px;color:var(--soft);margin-left:4px">~€${Math.round(costOre)} ind.</span>
             </div>
           </div>
           ${x.lav ? `<div style="font-size:12px;color:var(--soft);margin-top:3px;padding-left:2px">↳ ${esc(x.lav)}</div>` : ''}
