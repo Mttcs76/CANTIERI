@@ -273,6 +273,7 @@ window._fbDeleteCantiere = async (id) => {
       <!-- TAB PRESENZE -->
       <div id="hbody-presenze" style="display:none;padding:12px 14px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <button onclick="syncPresenzeStorici(true)" title="Allinea presenze dai rapportini" style="background:var(--g6);border:1px solid var(--s3);border-radius:8px;padding:8px 12px;font-size:16px;cursor:pointer">🔄</button>
           <button onclick="presenzeGiornoPrec()" style="background:var(--s1);border:1px solid var(--s2);border-radius:8px;padding:8px 16px;font-size:20px;cursor:pointer;font-family:'Nunito',sans-serif;line-height:1">&#8249;</button>
           <input type="date" id="presenzeData" style="flex:1;border:1px solid var(--s2);border-radius:8px;padding:7px 10px;font-size:13px;font-family:'Nunito',sans-serif;text-align:center;color:var(--text);background:#fff;-webkit-appearance:none" onchange="renderPresenzeGiorno()" readonly onclick="this.removeAttribute('readonly')">
           <button onclick="presenzeGiornoSucc()" style="background:var(--s1);border:1px solid var(--s2);border-radius:8px;padding:8px 16px;font-size:20px;cursor:pointer;font-family:'Nunito',sans-serif;line-height:1">&#8250;</button>
@@ -827,6 +828,7 @@ async function manualSync() {
       renderCurrentScreen();
       setFbStatus(true);
       await salvaBackupSilenzioso('Sync — ' + new Date().toLocaleString('it-IT') + ' — ' + (S.uid||'?'));
+      setTimeout(syncPresenzeStorici, 400);
       toast('☁️ Sincronizzato da Firebase');
     } else {
       // Nessun dato remoto (DB vuoto) — primo popolamento esplicito
@@ -907,6 +909,7 @@ async function initFirebase() {
           save();
           renderCurrentScreen();
           setFbStatus(true);
+          setTimeout(syncPresenzeStorici, 400);
           toast('☁️ Riconnesso — dati fusi e sincronizzati');
         }
       } catch(e2) { /* riprova al prossimo giro */ }
@@ -3371,10 +3374,11 @@ function _buildOpIdMap() {
   return map;
 }
 
-function syncPresenzeStorici() {
+function syncPresenzeStorici(verbose) {
   if (!S.cantieri || !S.cantieri.length) return;
   const opMap = _buildOpIdMap();
-  let changed = 0;
+  const idsGlobali = new Set((S.operaiGlobali||[]).map(o=>o.id));
+  let changed = 0, nonRisolti = 0;
   S.cantieri.forEach(c => {
     (c.rapportini||[]).forEach(r => {
       if (!r || !r.data || !r.oreOperai || !r.oreOperai.length) return;
@@ -3383,6 +3387,7 @@ function syncPresenzeStorici() {
       r.oreOperai.forEach(x => {
         if (!x.opId || !x.ore) return;
         const globalOpId = opMap[x.opId] || x.opId;
+        if (!idsGlobali.has(globalOpId)) nonRisolti++;
         if (!S.presenze[r.data][globalOpId]) S.presenze[r.data][globalOpId] = [];
         const righe = S.presenze[r.data][globalOpId];
         const idx = righe.findIndex(row => row.daRapportino && row.cantiereId === c.id);
@@ -3396,6 +3401,12 @@ function syncPresenzeStorici() {
     });
   });
   if (changed > 0) { save(); console.log(`syncPresenzeStorici: ${changed} aggiornamenti`); }
+  if (verbose) {
+    if (changed > 0) toast(`✅ ${changed} presenze allineate dai rapportini`);
+    else toast('✔️ Presenze già allineate coi rapportini');
+    if (nonRisolti > 0) toast(`⚠️ ${nonRisolti} righe con operaio non riconosciuto — controlla Impresa → Operai`);
+    if (typeof renderPresenzeGiorno === 'function') renderPresenzeGiorno();
+  }
 }
 
 
