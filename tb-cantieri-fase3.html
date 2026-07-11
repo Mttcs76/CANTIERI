@@ -40,20 +40,55 @@ try {
 const COL = 'tbcantieri_v2';
 const GLOBALI = '__globali';
 
+// ── PROTEZIONE ANTI-SOVRASCRITTURA ──────────────────────────────
+// Gli array append-mostly (rapportini, giornale, ordini) non vengono MAI
+// sostituiti: si scrive l'UNIONE per id tra locale e ultima copia remota
+// nota (_remoteCache). Le eliminazioni volontarie passano dalle liste
+// tombstone (rapportini_del / giornale_del / ordini_del).
+window._remoteCache = {};   // id cantiere -> ultimo doc remoto noto
+window._fbInSync = false;   // true solo dopo un load remoto riuscito
+
+const ARRAY_PROTETTI = ['rapportini', 'giornale', 'ordini'];
+function _unionById(loc, rem, tombstones) {
+  const dead = new Set(tombstones || []);
+  const map = new Map();
+  (rem || []).forEach(x => { if (x && x.id && !dead.has(x.id)) map.set(x.id, x); });
+  (loc || []).forEach(x => { if (x && x.id && !dead.has(x.id)) map.set(x.id, x); }); // locale vince a parità di id
+  return Array.from(map.values());
+}
+function _mergeCantiereProtetto(c) {
+  const rem = window._remoteCache[c.id];
+  const out = { ...c };
+  ARRAY_PROTETTI.forEach(k => {
+    const tomb = (c[k + '_del'] || []).concat((rem && rem[k + '_del']) || []);
+    out[k] = _unionById(c[k], rem && rem[k], tomb);
+    out[k + '_del'] = Array.from(new Set(tomb)).slice(-200);
+  });
+  out.rapportino_seq = Math.max(+c.rapportino_seq || 0, +(rem && rem.rapportino_seq) || 0,
+    out.rapportini.reduce((m, r) => Math.max(m, +String(r.numero || '').replace(/\D/g, '') || 0), 0));
+  return out;
+}
+
 window._fbSave = async (data) => {
-  if (!fbDb) return;
+  if (!fbDb) return false;
+  if (!window._fbInSync) {
+    console.warn('Firebase save BLOCCATO: sessione non sincronizzata (protezione anti-sovrascrittura)');
+    if (typeof setFbStatus === 'function') setFbStatus('warn');
+    return false;
+  }
   try {
     // Salva prima i cantieri, poi __globali.
     // _fbListen ascolta __globali: se lo scriviamo prima, il listener si
     // attiva mentre i cantieri su Firestore non sono ancora aggiornati,
     // causando un reload che sovrascrive i dati appena salvati in memoria.
-    const cantieri = data.cantieri || [];
+    const cantieri = (data.cantieri || []).map(_mergeCantiereProtetto);
     if (cantieri.length) {
       await Promise.all(cantieri.map(c => setDoc(doc(fbDb, COL, c.id), {
         ...c,
         _updatedAt: Date.now(),
         _updatedBy: data._updatedBy || window._currentUser || '?'
       }, { merge: true })));
+      cantieri.forEach(c => { window._remoteCache[c.id] = c; });
     }
     await setDoc(doc(fbDb, COL, GLOBALI), {
       operaiGlobali: data.operaiGlobali || [],
@@ -62,7 +97,8 @@ window._fbSave = async (data) => {
       _updatedAt: Date.now(),
       _updatedBy: data._updatedBy || window._currentUser || '?'
     }, { merge: true });
-  } catch(e) { console.warn('Firebase save error:', e); }
+    return true;
+  } catch(e) { console.warn('Firebase save error:', e); return false; }
 };
 window._fbLoad = async () => {
   if (!fbDb) return null;
@@ -76,6 +112,8 @@ window._fbLoad = async () => {
     cantieriSnap.forEach(d => {
       if (d.id !== GLOBALI && d.id !== '__contabile') cantieri.push({ id: d.id, ...d.data() });
     });
+    cantieri.forEach(c => { window._remoteCache[c.id] = c; });
+    window._fbInSync = true;   // load remoto riuscito: scritture consentite
     return { ...globali, cantieri };
   } catch(e) { console.warn('Firebase load error:', e); return null; }
 };
@@ -269,7 +307,6 @@ window._fbDeleteCantiere = async (id) => {
           <button onclick="openModal('mPassword')" style="background:#fff;border:1px solid var(--s2);border-radius:10px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:var(--shadow)"><span style="font-size:22px">🔑</span><span style="font-size:10px;font-weight:700;color:var(--text)">Password</span></button>
           <button onclick="openModal('mBackup')" style="background:#fff;border:1px solid var(--s2);border-radius:10px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:var(--shadow)"><span style="font-size:22px">💾</span><span style="font-size:10px;font-weight:700;color:var(--text)">Backup</span></button>
           <button onclick="changeUser()" style="background:#fff;border:1px solid var(--s2);border-radius:10px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:var(--shadow)"><span style="font-size:22px">👤</span><span style="font-size:10px;font-weight:700;color:var(--text)">Utente</span></button>
-          <button onclick="syncPresenzeStoriciManuale()" style="background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:10px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:var(--shadow)"><span style="font-size:22px">🔄</span><span style="font-size:10px;font-weight:700;color:var(--text)">Sync presenze</span></button>
       <button onclick="doLogout()" style="background:#fff0f0;border:1px solid var(--red-border);border-radius:10px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:var(--shadow)"><span style="font-size:22px">🚪</span><span style="font-size:10px;font-weight:700;color:var(--red)">Esci</span></button>
         </div>
       </div>
@@ -767,9 +804,11 @@ function save() {
   }
   autoSnapshot();
   if (window._fbEnabled && window._fbSave) {
-    window._fbSave({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{} }).then(()=>{
-      setFbStatus(true);
-    }).catch(()=>setFbStatus(false));
+    window._lastSavePromise = window._fbSave({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{} })
+      .then(ok => { setFbStatus(ok ? true : (window._fbInSync ? false : 'warn')); return !!ok; })
+      .catch(() => { setFbStatus(false); return false; });
+  } else {
+    window._lastSavePromise = Promise.resolve(false);
   }
 }
 
@@ -781,7 +820,7 @@ async function manualSync() {
   try {
     const remoteData = await window._fbLoad();
     if (remoteData && remoteData.cantieri && remoteData.cantieri.length > 0) {
-      S.cantieri = _normalizzaNomiCantieri(remoteData.cantieri);
+      S.cantieri = _normalizzaNomiCantieri(_fondiCantieriRemoti(remoteData.cantieri));
       if (remoteData.operaiGlobali) S.operaiGlobali = remoteData.operaiGlobali;
       if (remoteData.presenze) S.presenze = remoteData.presenze;
       localStorage.setItem(SK, JSON.stringify({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: Date.now() }));
@@ -790,7 +829,8 @@ async function manualSync() {
       await salvaBackupSilenzioso('Sync — ' + new Date().toLocaleString('it-IT') + ' — ' + (S.uid||'?'));
       toast('☁️ Sincronizzato da Firebase');
     } else {
-      // Nessun dato remoto — salva locale su Firebase
+      // Nessun dato remoto (DB vuoto) — primo popolamento esplicito
+      window._fbInSync = true;
       await window._fbSave({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{} });
       setFbStatus(true);
       toast('☁️ Dati locali salvati su Firebase');
@@ -804,6 +844,12 @@ async function manualSync() {
 function setFbStatus(online) {
   const dot = $('fbDot'), label = $('fbLabel');
   if (!dot || !label) return;
+  if (online === 'warn') {
+    dot.style.background = '#f59e0b';
+    dot.style.boxShadow = '0 0 4px #f59e0b80';
+    label.textContent = '⚠️ non sync';
+    return;
+  }
   if (online) {
     dot.style.background = '#52b788';
     dot.style.boxShadow = '0 0 4px #52b78880';
@@ -838,11 +884,34 @@ async function initFirebase() {
       setTimeout(syncPresenzeStorici, 800);  // retroallinea presenze da rapportini storici
       toast('☁️ Dati sincronizzati da Firebase');
     } else if (S.cantieri.length > 0) {
+      window._fbInSync = true;  // DB remoto vuoto: primo popolamento esplicito
       await window._fbSave({ cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda });
       toast('☁️ Dati locali salvati su Firebase');
     }
     // Firebase attivo ma nessun dato né locale né remoto: app vuota, nessun demo
-  } catch(e) { console.warn('Firebase init error:', e); setFbStatus(false); }
+  } catch(e) {
+    console.warn('Firebase init error:', e);
+    setFbStatus('warn');
+    toast('⚠️ Non sincronizzato — modifiche solo su questo dispositivo');
+    // Riprova ogni 30s: al riaggancio fonde remoto+locale (il merge protettivo
+    // in _fbSave garantisce comunque che nulla venga sovrascritto)
+    const retry = setInterval(async () => {
+      try {
+        const rd = await window._fbLoad();
+        if (rd && rd.cantieri && rd.cantieri.length > 0) {
+          clearInterval(retry);
+          S.cantieri = _normalizzaNomiCantieri(_fondiCantieriRemoti(rd.cantieri));
+          if (rd.operaiGlobali && rd.operaiGlobali.length > 0) S.operaiGlobali = rd.operaiGlobali;
+          if (rd.azienda) S.azienda = rd.azienda;
+          if (rd.presenze) S.presenze = rd.presenze;
+          save();
+          renderCurrentScreen();
+          setFbStatus(true);
+          toast('☁️ Riconnesso — dati fusi e sincronizzati');
+        }
+      } catch(e2) { /* riprova al prossimo giro */ }
+    }, 30000);
+  }
 
   if (window._fbListen) {
     window._fbListen((remoteData) => {
@@ -851,7 +920,7 @@ async function initFirebase() {
       const remoteUpdated = remoteData.updated || 0;
       const localUpdated = (() => { try { return JSON.parse(localStorage.getItem(SK)||'{}').updated||0; } catch(e){return 0;} })();
       if (remoteUpdated > localUpdated + 500) {
-        S.cantieri = _normalizzaNomiCantieri(remoteData.cantieri);
+        S.cantieri = _normalizzaNomiCantieri(_fondiCantieriRemoti(remoteData.cantieri));
         if (remoteData.operaiGlobali) S.operaiGlobali = remoteData.operaiGlobali;
         if (remoteData.azienda) S.azienda = remoteData.azienda;
         if (remoteData.presenze) S.presenze = remoteData.presenze;
@@ -864,6 +933,26 @@ async function initFirebase() {
       }
     });
   }
+}
+
+function _fondiCantieriRemoti(remoteCantieri) {
+  // Fusione in PULL: parte dal remoto e reintegra gli elementi locali non ancora
+  // sincronizzati (rapportini/giornale/ordini creati offline), rispettando i tombstone.
+  const PROT = ['rapportini','giornale','ordini'];
+  return (remoteCantieri||[]).map(rc => {
+    const lc = (S.cantieri||[]).find(x => x.id === rc.id);
+    if (!lc) return rc;
+    const out = { ...rc };
+    PROT.forEach(k => {
+      const dead = new Set([...(rc[k+'_del']||[]), ...(lc[k+'_del']||[])]);
+      const map = new Map();
+      (rc[k]||[]).forEach(x => { if(x && x.id && !dead.has(x.id)) map.set(x.id, x); });
+      (lc[k]||[]).forEach(x => { if(x && x.id && !dead.has(x.id) && !map.has(x.id)) map.set(x.id, x); });
+      out[k] = Array.from(map.values());
+      out[k+'_del'] = Array.from(dead).slice(-200);
+    });
+    return out;
+  });
 }
 
 function renderCurrentScreen() {
@@ -1859,6 +1948,7 @@ function eliminaVoceGiornale(id) {
   if (!confirm('Eliminare questa voce?')) return;
   const c = getCantiere(); if (!c) return;
   c.giornale = (c.giornale||[]).filter(x=>x.id!==id);
+  c.giornale_del = (c.giornale_del || []).concat(id);
   save(); updateCounts(); renderTab('giornale');
 }
 
@@ -1993,6 +2083,17 @@ document.addEventListener('input', e => {
   }
 });
 
+function _toastEsitoSync() {
+  // Secondo toast dopo il salvataggio: dice al socio se il dato è già al sicuro
+  // su Firebase o solo sul dispositivo. Nessuna azione richiesta in entrambi i casi.
+  setTimeout(() => {
+    (window._lastSavePromise || Promise.resolve(false)).then(ok => {
+      toast(ok ? '☁️ Sincronizzato — tutto al sicuro'
+               : '📱 Salvato sul telefono — si sincronizza da solo appena c\'è rete');
+    });
+  }, 1400);
+}
+
 function saveRapportino() {
   const lav = v('rp-lav').trim();
   if(!lav) { alert('Inserisci le lavorazioni'); return; }
@@ -2035,6 +2136,11 @@ function saveRapportino() {
     (c.operai||[]).forEach(op => { const el = document.getElementById('ore-op-'+op.id); if(el) el.value = ''; });
     updateCounts(); renderTab(S.tab);
     toast('✅ Rapportino aggiornato!');
+    if (window._lastSavePromise) window._lastSavePromise.then(ok => {
+      if (ok) setTimeout(()=>toast('☁️ Sincronizzato ✓'), 1100);
+      else toast('⚠️ Non sincronizzato — il rapportino resta salvato sul telefono e partirà da solo appena c\'è rete');
+    });
+    _toastEsitoSync();
   } else {
     // — NUOVO rapportino —
     c.rapportino_seq = (c.rapportino_seq||0) + 1;
@@ -2064,6 +2170,11 @@ function saveRapportino() {
     updateCounts(); renderTab(S.tab);
     const totH = oreOperai.reduce((s,x)=>s+(+x.ore||0),0);
     toast(`✅ Rapportino salvato${totH>0?' · '+fmtN(totH)+'h registrate':''}`);
+    if (window._lastSavePromise) window._lastSavePromise.then(ok => {
+      if (ok) setTimeout(()=>toast('☁️ Sincronizzato ✓'), 1100);
+      else toast('⚠️ Non sincronizzato — il rapportino resta salvato sul telefono e partirà da solo appena c\'è rete');
+    });
+    _toastEsitoSync();
   }
 }
 
@@ -2112,6 +2223,7 @@ function eliminaRapportino(rappId) {
   if(!r) return;
   if(!confirm(`Eliminare il rapportino del ${r.data}?\nL'operazione non è reversibile.`)) return;
   c.rapportini = c.rapportini.filter(x => x.id !== rappId);
+  c.rapportini_del = (c.rapportini_del || []).concat(rappId);
   save();
   updateCounts(); renderTab(S.tab);
   toast('🗑 Rapportino eliminato');
@@ -3159,7 +3271,7 @@ function aggiornaOrdine(){
   save();closeModal('mDettaglioOrdine');renderTab('ordini');
 }
 
-function eliminaOrdine(ordId){if(!confirm('Eliminare questo ordine?'))return;const c=getCantiere();if(!c)return;c.ordini=(c.ordini||[]).filter(o=>o.id!==ordId);save();renderTab('ordini');updateCounts();}
+function eliminaOrdine(ordId){if(!confirm('Eliminare questo ordine?'))return;const c=getCantiere();if(!c)return;c.ordini=(c.ordini||[]).filter(o=>o.id!==ordId);c.ordini_del=(c.ordini_del||[]).concat(ordId);save();renderTab('ordini');updateCounts();}
 
 function inviaOrdineFornitore(){
   const c=getCantiere();if(!c||!_ordineId)return;const ord=(c.ordini||[]).find(o=>o.id===_ordineId);if(!ord)return;
@@ -3286,47 +3398,7 @@ function syncPresenzeStorici() {
   if (changed > 0) { save(); console.log(`syncPresenzeStorici: ${changed} aggiornamenti`); }
 }
 
-function syncPresenzeStoriciManuale() {
-  if (!S.cantieri || !S.cantieri.length) { toast('⚠️ Nessun cantiere caricato'); return; }
-  const opMap = _buildOpIdMap();
 
-  // Debug: stampa la mappa per vedere i match
-  console.log('OpIdMap:', JSON.stringify(opMap));
-
-  let nRapp = 0, nChanged = 0;
-  S.cantieri.forEach(c => {
-    (c.rapportini||[]).forEach(r => {
-      if (!r || !r.data || !r.oreOperai || !r.oreOperai.length) return;
-      nRapp++;
-      if (!S.presenze) S.presenze = {};
-      if (!S.presenze[r.data]) S.presenze[r.data] = {};
-      r.oreOperai.forEach(x => {
-        if (!x.opId || !x.ore) return;
-        const globalOpId = opMap[x.opId] || x.opId;
-        console.log(`Rapportino ${c.nome} ${r.data}: opId=${x.opId} → globalId=${globalOpId} ore=${x.ore}`);
-        if (!S.presenze[r.data][globalOpId]) S.presenze[r.data][globalOpId] = [];
-        const righe = S.presenze[r.data][globalOpId];
-        const idx = righe.findIndex(row => row.daRapportino && row.cantiereId === c.id);
-        if (idx >= 0) {
-          righe[idx].ore = +x.ore;
-          righe[idx].cantiereName = c.nome||'';
-          nChanged++;
-        } else {
-          righe.push({ cantiereId: c.id, cantiereName: c.nome||'', tipo: 'ordinario', ore: +x.ore, note: '', daRapportino: true });
-          nChanged++;
-        }
-      });
-    });
-  });
-
-  if (nChanged > 0) {
-    save();
-    toast(`✅ Sincronizzati ${nChanged} presenze da ${nRapp} rapportini`);
-    if (_homeTab === 'presenze') initPresenzeUI();
-  } else {
-    toast('✅ Presenze già allineate');
-  }
-}
 // Chiamata ogni volta che si salva un rapportino.
 // Scrive/aggiorna le righe "daRapportino" nelle presenze.
 // Non tocca le righe manuali (ferie, malattia, straordinari).
