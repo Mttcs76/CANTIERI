@@ -2133,6 +2133,7 @@ function saveRapportino() {
     };
     save();
     syncPresenzeFromRapportino(c.rapportini[idx], c);
+    syncPresenzeStorici();  // se la data è stata corretta, rimuove le righe della data vecchia
     closeModal('mRapportino');
     ['rp-data','rp-dir','rp-lav','rp-mat','rp-note'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
     const editIdEl = $('rp-edit-id'); if(editIdEl) editIdEl.value = '';
@@ -3376,34 +3377,65 @@ function _buildOpIdMap() {
 }
 
 function syncPresenzeStorici(verbose) {
+  // RICONCILIAZIONE COMPLETA presenze ↔ rapportini:
+  // le righe daRapportino esistono se e solo se esiste il rapportino che le genera.
+  // Aggiunge le mancanti, aggiorna le ore, RIMUOVE le orfane (rapportino eliminato
+  // o data corretta) e unifica le chiavi sull'id globale dell'operaio.
   if (!S.cantieri || !S.cantieri.length) return;
   const opMap = _buildOpIdMap();
   const idsGlobali = new Set((S.operaiGlobali||[]).map(o=>o.id));
-  let changed = 0, nonRisolti = 0;
+  let changed = 0, rimosse = 0, nonRisolti = 0;
+  if (!S.presenze) S.presenze = {};
+
+  // 1. Set atteso: data|opGlobale|cantiere → ore
+  const atteso = new Map();
   S.cantieri.forEach(c => {
     (c.rapportini||[]).forEach(r => {
-      if (!r || !r.data || !r.oreOperai || !r.oreOperai.length) return;
-      if (!S.presenze) S.presenze = {};
-      if (!S.presenze[r.data]) S.presenze[r.data] = {};
+      if (!r || !r.data || !r.oreOperai) return;
       r.oreOperai.forEach(x => {
-        if (!x.opId || !x.ore) return;
-        const globalOpId = opMap[x.opId] || x.opId;
-        if (!idsGlobali.has(globalOpId)) nonRisolti++;
-        if (!S.presenze[r.data][globalOpId]) S.presenze[r.data][globalOpId] = [];
-        const righe = S.presenze[r.data][globalOpId];
-        const idx = righe.findIndex(row => row.daRapportino && row.cantiereId === c.id);
-        if (idx >= 0) {
-          if (righe[idx].ore !== +x.ore) { righe[idx].ore = +x.ore; changed++; }
-        } else {
-          righe.push({ cantiereId: c.id, cantiereName: c.nome||'', tipo: 'ordinario', ore: +x.ore, note: '', daRapportino: true });
-          changed++;
-        }
+        if (!x.opId || !(+x.ore > 0)) return;
+        const gid = opMap[x.opId] || x.opId;
+        if (!idsGlobali.has(gid)) nonRisolti++;
+        atteso.set(r.data + '|' + gid + '|' + c.id, { ore: +x.ore, nome: c.nome||'' });
       });
     });
   });
-  if (changed > 0) { save(); console.log(`syncPresenzeStorici: ${changed} aggiornamenti`); }
+
+  // 2. Rimuovi le righe daRapportino non più attese (chiave locale O globale)
+  Object.keys(S.presenze).forEach(data => {
+    Object.keys(S.presenze[data]).forEach(opId => {
+      const righe = S.presenze[data][opId];
+      if (!Array.isArray(righe)) return;
+      const gid = opMap[opId] || opId;
+      const filtrate = righe.filter(row => {
+        if (!row.daRapportino) return true;                      // manuali: mai toccate
+        if (opId !== gid) return false;                          // chiave locale: sempre migrata alla globale (ricreata al passo 3)
+        return atteso.has(data + '|' + gid + '|' + row.cantiereId); // globale: resta solo se attesa
+      });
+      if (filtrate.length !== righe.length) { rimosse += righe.length - filtrate.length; changed++; }
+      if (filtrate.length) S.presenze[data][opId] = filtrate; else delete S.presenze[data][opId];
+    });
+    if (!Object.keys(S.presenze[data]).length) delete S.presenze[data];
+  });
+
+  // 3. Aggiungi/aggiorna le attese (sulla chiave GLOBALE)
+  atteso.forEach((v, k) => {
+    const [data, gid, cantiereId] = k.split('|');
+    if (!S.presenze[data]) S.presenze[data] = {};
+    if (!S.presenze[data][gid]) S.presenze[data][gid] = [];
+    const righe = S.presenze[data][gid];
+    const idx = righe.findIndex(row => row.daRapportino && row.cantiereId === cantiereId);
+    if (idx >= 0) {
+      if (righe[idx].ore !== v.ore) { righe[idx].ore = v.ore; changed++; }
+    } else {
+      righe.push({ cantiereId, cantiereName: v.nome, tipo: 'ordinario', ore: v.ore, note: '', daRapportino: true });
+      changed++;
+    }
+  });
+
+  if (changed > 0) { save(); console.log(`syncPresenzeStorici: ${changed} modifiche (${rimosse} rimosse)`); }
   if (verbose) {
-    if (changed > 0) toast(`✅ ${changed} presenze allineate dai rapportini`);
+    if (changed > 0) toast(`✅ Presenze riallineate${rimosse>0?' — '+rimosse+' orfane rimosse':''}`);
     else toast('✔️ Presenze già allineate coi rapportini');
     if (nonRisolti > 0) toast(`⚠️ ${nonRisolti} righe con operaio non riconosciuto — controlla Impresa → Operai`);
     if (typeof renderPresenzeGiorno === 'function') renderPresenzeGiorno();
@@ -3423,10 +3455,12 @@ function syncPresenzeFromRapportino(rapportino, cantiere) {
   const cantiereName = cantiere.nome || '';
   const cantiereId = cantiere.id;
 
+  const _opMapR = _buildOpIdMap();
   (rapportino.oreOperai || []).forEach(x => {
     if (!x.opId || !x.ore) return;
-    if (!S.presenze[data][x.opId]) S.presenze[data][x.opId] = [];
-    const righe = S.presenze[data][x.opId];
+    const gidR = _opMapR[x.opId] || x.opId;
+    if (!S.presenze[data][gidR]) S.presenze[data][gidR] = [];
+    const righe = S.presenze[data][gidR];
     // Cerca riga già esistente per questo cantiere da rapportino
     const idx = righe.findIndex(r => r.daRapportino && r.cantiereId === cantiereId);
     if (idx >= 0) {
