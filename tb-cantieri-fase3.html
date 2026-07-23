@@ -1797,8 +1797,19 @@ function updateQtyEff(capId, voceId, val) {
   if(voce) { voce.qtyEff = parseFloat(val)||0; save(); updateCounts(); }
 }
 
+// Ordina i rapportini per DATA del lavoro (non per ordine di inserimento):
+// utile perché rapportini inseriti in ritardo o corretti restano al posto giusto.
+// A parità di data, il più inserito di recente va per primo.
+function _ordinaRapportini(rapportini) {
+  return [...(rapportini||[])].sort((a, b) => {
+    const d = String(b.data||'').localeCompare(String(a.data||''));
+    if (d !== 0) return d;
+    return (+b.created||0) - (+a.created||0);
+  });
+}
+
 function renderRapportini(c) {
-  const items = [...(c.rapportini||[])].reverse();
+  const items = _ordinaRapportini(c.rapportini);
   if(!items.length) return `<div class="empty"><div class="empty-ic">📋</div><div class="empty-txt">Nessun rapportino ancora.<br>Aggiungi il primo!</div></div>`;
   const stCol = {'Completato':'chip chip-green','In corso':'chip chip-amber','Sospeso':'chip chip-red','Pianificato':'chip chip-blue'};
   // Usa buildOperaiMap: S.operaiGlobali ha priorità sulle copie locali
@@ -2420,7 +2431,7 @@ function exportAllRapportini() {
   const c = getCantiere(); if(!c) return;
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-  const rapp = [...(c.rapportini||[])].reverse();
+  const rapp = _ordinaRapportini(c.rapportini);
   if(!rapp.length){ toast('Nessun rapportino da esportare'); return; }
   rapp.forEach((r,i)=>{
     if(i>0) doc.addPage();
@@ -2432,8 +2443,36 @@ function exportAllRapportini() {
     doc.setFontSize(10); doc.setFont(undefined,'normal');
     doc.text('Cantiere: '+c.nome, 14, y); y+=6;
     doc.text('Data: '+r.data+'  |  Direttore: '+(r.dir||'—')+'  |  Meteo: '+(r.meteo||''), 14, y); y+=6;
-    doc.text('Stato: '+(r.stato||'')+'  |  Operai presenti: '+(r.operai||0), 14, y); y+=8;
+    doc.text('Stato: '+(r.stato||''), 14, y); y+=8;
     doc.line(14,y,196,y); y+=5;
+
+    // OPERAI PRESENTI — nome, ore e (se presente) lavorazione specifica dell'operaio
+    const opMap = buildOperaiMap(c);
+    const righeOp = r.oreOperai || [];
+    doc.setFont(undefined,'bold');
+    doc.text('OPERAI PRESENTI ('+righeOp.length+')', 14, y); y+=5;
+    doc.setFont(undefined,'normal');
+    if (righeOp.length) {
+      righeOp.forEach(x => {
+        if (y > 265) { doc.addPage(); y = 20; }
+        const op = opMap[x.opId];
+        const nome = op ? op.nome : 'Operaio non trovato';
+        doc.setFont(undefined,'bold');
+        doc.text('• '+nome+'  —  '+(x.ore||0)+'h', 16, y); y+=5;
+        if (x.lav) {
+          doc.setFont(undefined,'normal'); doc.setTextColor(90,90,90);
+          const noteLines = doc.splitTextToSize(x.lav, 165);
+          doc.text(noteLines, 20, y); y += noteLines.length*4.5;
+          doc.setTextColor(0,0,0);
+        }
+      });
+    } else {
+      doc.setFont(undefined,'normal'); doc.text('—', 16, y); y+=5;
+    }
+    y += 4;
+    doc.line(14,y,196,y); y+=5;
+
+    if (y > 260) { doc.addPage(); y = 20; }
     doc.setFont(undefined,'bold'); doc.text('LAVORAZIONI ESEGUITE', 14, y); y+=5;
     doc.setFont(undefined,'normal');
     const lavLines = doc.splitTextToSize(r.lav||'—', 170);
