@@ -46,6 +46,7 @@ const GLOBALI = '__globali';
 // nota (_remoteCache). Le eliminazioni volontarie passano dalle liste
 // tombstone (rapportini_del / giornale_del / ordini_del).
 window._remoteCache = {};   // id cantiere -> ultimo doc remoto noto
+window._remotePresenzeCache = {}; // ultima istantanea presenze nota da Firestore
 window._fbInSync = false;   // true solo dopo un load remoto riuscito
 
 const ARRAY_PROTETTI = ['rapportini', 'giornale', 'ordini'];
@@ -56,6 +57,46 @@ function _unionById(loc, rem, tombstones) {
   (loc || []).forEach(x => { if (x && x.id && !dead.has(x.id)) map.set(x.id, x); }); // locale vince a parità di id
   return Array.from(map.values());
 }
+function _unionRigheManualiPresenza(loc, rem) {
+  const key = r => [r.cantiereId||'', r.tipo||'', r.ore||0, r.note||''].join('|');
+  const map = new Map();
+  (rem||[]).forEach(r => { if (!r.daRapportino) map.set(key(r), r); });
+  (loc||[]).forEach(r => { if (!r.daRapportino) map.set(key(r), r); }); // locale vince a parità
+  return Array.from(map.values());
+}
+function _ricostruisciPresenze(cantieriUniti, presenzeLocali, presenzeRemote) {
+  // Le righe MANUALI (ferie, malattia, permessi...) si uniscono tra locale e remoto.
+  // Le righe "daRapportino" NON si uniscono MAI: si rigenerano sempre da zero a partire
+  // dai rapportini già uniti. Così un dispositivo con una copia vecchia di 'presenze'
+  // non può resuscitare una riga generata da un rapportino nel frattempo eliminato o
+  // modificato altrove — la fonte di verità restano sempre i rapportini, non la cache.
+  const out = {};
+  const giorni = new Set([...Object.keys(presenzeLocali||{}), ...Object.keys(presenzeRemote||{})]);
+  giorni.forEach(data => {
+    const opsLoc = (presenzeLocali||{})[data] || {};
+    const opsRem = (presenzeRemote||{})[data] || {};
+    const opIds = new Set([...Object.keys(opsLoc), ...Object.keys(opsRem)]);
+    opIds.forEach(opId => {
+      const manuali = _unionRigheManualiPresenza(opsLoc[opId], opsRem[opId]);
+      if (manuali.length) { out[data] = out[data] || {}; out[data][opId] = manuali; }
+    });
+  });
+  const opMap = (typeof window._buildOpIdMap === 'function') ? window._buildOpIdMap() : {};
+  (cantieriUniti||[]).forEach(c => {
+    (c.rapportini||[]).forEach(r => {
+      if (!r || !r.data || !r.oreOperai) return;
+      r.oreOperai.forEach(x => {
+        if (!x.opId || !(+x.ore > 0)) return;
+        const gid = opMap[x.opId] || x.opId;
+        if (!out[r.data]) out[r.data] = {};
+        if (!out[r.data][gid]) out[r.data][gid] = [];
+        out[r.data][gid].push({ cantiereId: c.id, cantiereName: c.nome||'', tipo:'ordinario', ore:+x.ore, note:'', daRapportino:true });
+      });
+    });
+  });
+  return out;
+}
+
 function _mergeCantiereProtetto(c) {
   const rem = window._remoteCache[c.id];
   const out = { ...c };
@@ -90,13 +131,15 @@ window._fbSave = async (data) => {
       }, { merge: true })));
       cantieri.forEach(c => { window._remoteCache[c.id] = c; });
     }
+    const presenzeUnite = _ricostruisciPresenze(cantieri, data.presenze, window._remotePresenzeCache);
     await setDoc(doc(fbDb, COL, GLOBALI), {
       operaiGlobali: data.operaiGlobali || [],
       azienda: data.azienda || null,
-      presenze: data.presenze || {},
+      presenze: presenzeUnite,
       _updatedAt: Date.now(),
       _updatedBy: data._updatedBy || window._currentUser || '?'
     }, { merge: true });
+    window._remotePresenzeCache = presenzeUnite;
     return true;
   } catch(e) { console.warn('Firebase save error:', e); return false; }
 };
@@ -113,6 +156,7 @@ window._fbLoad = async () => {
       if (d.id !== GLOBALI && d.id !== '__contabile') cantieri.push({ id: d.id, ...d.data() });
     });
     cantieri.forEach(c => { window._remoteCache[c.id] = c; });
+    window._remotePresenzeCache = globali.presenze || {};
     window._fbInSync = true;   // load remoto riuscito: scritture consentite
     return { ...globali, cantieri };
   } catch(e) { console.warn('Firebase load error:', e); return null; }
@@ -786,6 +830,14 @@ function _cantiereSenzaFoto(cantieri) {
 }
 
 function save() {
+  // Ripulisce le presenze "da rapportino" locali PRIMA di inviarle: se questo dispositivo
+  // ha rapportini stantii (es. non ha ancora ricevuto un'eliminazione fatta altrove),
+  // non deve proporre righe fantasma come fossero dati validi. Guardia anti-ricorsione:
+  // syncPresenzeStorici chiama save() se trova modifiche da salvare.
+  if (!window._inSaveCleanup && typeof syncPresenzeStorici === 'function') {
+    window._inSaveCleanup = true;
+    try { syncPresenzeStorici(); } finally { window._inSaveCleanup = false; }
+  }
   const payload = { cantieri: S.cantieri, operaiGlobali: S.operaiGlobali, azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: Date.now() };
   try {
     localStorage.setItem(SK, JSON.stringify(payload));
