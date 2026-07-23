@@ -1022,6 +1022,13 @@ function renderCurrentScreen() {
 const $ = id => document.getElementById(id);
 const v = id => ($( id)||{}).value||'';
 const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// Converte una data ISO 'YYYY-MM-DD' in 'GG/MM/AAAA' per la visualizzazione.
+// Usare SOLO per il testo mostrato — mai per il value di un <input type="date">.
+function fmtDataIT(iso) {
+  if (!iso) return '—';
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+}
 const today = () => new Date().toISOString().slice(0,10);
 const fmtEur = n => '€ ' + (+(n||0)).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtN = n => (+(n||0)).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -1851,7 +1858,7 @@ function renderRapportini(c) {
       return `<div class="item-card">
         <div class="item-head">
           <div>
-            <div class="item-title">${esc(r.data)}</div>
+            <div class="item-title">${esc(fmtDataIT(r.data))}</div>
             <div class="item-meta">${esc(r.dir||'—')} · ${esc(r.meteo||'')}</div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center">
@@ -1923,7 +1930,7 @@ function renderOperai(c) {
 
       const ultimeRighe = righeOre.slice(0,5).map(r =>
         `<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--soft);padding:3px 0;border-bottom:1px solid var(--s1)">
-          <span>${r.data}</span>
+          <span>${fmtDataIT(r.data)}</span>
           <span style="color:var(--g2);font-weight:600">${r.ore}h × €${fmtN(cOr)}/h = ${fmtEur((+r.ore||0)*cOr)}</span>
         </div>`
       ).join('');
@@ -2040,7 +2047,7 @@ function renderGiornale(c) {
     return `<div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid ${conf.border};overflow:hidden">
       <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:${conf.bg};border-bottom:1px solid ${conf.border}">
         <div style="width:10px;height:10px;border-radius:50%;background:${conf.dot};flex-shrink:0"></div>
-        <div style="flex:1"><span style="font-size:11px;font-weight:700;color:${conf.color};text-transform:uppercase;letter-spacing:.4px">${conf.label}</span><span style="font-size:11px;color:var(--soft);margin-left:8px">${v.data}</span></div>
+        <div style="flex:1"><span style="font-size:11px;font-weight:700;color:${conf.color};text-transform:uppercase;letter-spacing:.4px">${conf.label}</span><span style="font-size:11px;color:var(--soft);margin-left:8px">${fmtDataIT(v.data)}</span></div>
         <span style="font-size:11px;font-weight:600;color:var(--soft);background:#fff;border-radius:99px;padding:2px 8px;border:1px solid ${conf.border}">${esc(v.utente||'—')}</span>
         <button onclick="eliminaVoceGiornale('${v.id}')" style="background:none;border:none;color:var(--s4);cursor:pointer;font-size:16px;padding:2px 4px">✕</button>
       </div>
@@ -2063,7 +2070,7 @@ function apriLightboxGiornale(id) {
   const v = (c.giornale||[]).find(x=>x.id===id); if (!v||!v.foto) return;
   const lb=$('lightbox'), img=$('lbImg'), info=$('lbInfo');
   img.src=v.foto; img.style.display='block';
-  info.textContent=`${v.data} · ${v.utente||''} · ${v.testo.slice(0,60)}`;
+  info.textContent=`${fmtDataIT(v.data)} · ${v.utente||''} · ${v.testo.slice(0,60)}`;
   lb.classList.add('show');
 }
 
@@ -2289,7 +2296,7 @@ function eliminaRapportino(rappId) {
   const c = getCantiere(); if(!c) return;
   const r = (c.rapportini||[]).find(x => x.id === rappId);
   if(!r) return;
-  if(!confirm(`Eliminare il rapportino del ${r.data}?\nL'operazione non è reversibile.`)) return;
+  if(!confirm(`Eliminare il rapportino del ${fmtDataIT(r.data)}?\nL'operazione non è reversibile.`)) return;
   c.rapportini = c.rapportini.filter(x => x.id !== rappId);
   c.rapportini_del = (c.rapportini_del || []).concat(rappId);
   save();
@@ -2442,7 +2449,7 @@ function exportAllRapportini() {
     doc.setTextColor(0,0,0); y=32;
     doc.setFontSize(10); doc.setFont(undefined,'normal');
     doc.text('Cantiere: '+c.nome, 14, y); y+=6;
-    doc.text('Data: '+r.data+'  |  Direttore: '+(r.dir||'—')+'  |  Meteo: '+(r.meteo||''), 14, y); y+=6;
+    doc.text('Data: '+fmtDataIT(r.data)+'  |  Direttore: '+(r.dir||'—')+'  |  Meteo: '+(r.meteo||''), 14, y); y+=6;
     doc.text('Stato: '+(r.stato||''), 14, y); y+=8;
     doc.line(14,y,196,y); y+=5;
 
@@ -2506,7 +2513,7 @@ function exportPresenze() {
     const sortedOre = [...(op.ore||[])].sort((a,b)=>a.data.localeCompare(b.data));
     sortedOre.forEach(r=>{
       if(y>185){ doc.addPage(); y=20; }
-      doc.text(`${r.data}`, 16, y);
+      doc.text(fmtDataIT(r.data), 16, y);
       doc.text(r.tipo||'Ordinarie', 50, y);
       doc.text(`${r.ore}h`, 90, y);
       doc.text(r.note||'', 110, y); y+=4;
@@ -3350,7 +3357,7 @@ function apriDettaglioOrdine(ordId){
   const c=getCantiere();if(!c)return;const ord=(c.ordini||[]).find(o=>o.id===ordId);if(!ord)return;
   _ordineId=ordId;
   const cap=(c.capitoli||[]).find(cap=>cap.id===ord.capId),info=$('ord-detail-info');
-  if(info)info.innerHTML=`<div style="font-weight:700;font-size:13px;margin-bottom:6px">📦 ${esc(ord.fornitore)}</div><div style="color:var(--soft);margin-bottom:4px">${esc(ord.desc)}</div><div style="display:flex;gap:12px;font-size:11px;flex-wrap:wrap"><span>📅 ${ord.data}</span>${ord.importoStimato?`<span>💰 ${fmtEur(ord.importoStimato)}</span>`:''} ${cap?`<span>🏗️ ${esc(cap.nome)}</span>`:''}</div>`;
+  if(info)info.innerHTML=`<div style="font-weight:700;font-size:13px;margin-bottom:6px">📦 ${esc(ord.fornitore)}</div><div style="color:var(--soft);margin-bottom:4px">${esc(ord.desc)}</div><div style="display:flex;gap:12px;font-size:11px;flex-wrap:wrap"><span>📅 ${fmtDataIT(ord.data)}</span>${ord.importoStimato?`<span>💰 ${fmtEur(ord.importoStimato)}</span>`:''} ${cap?`<span>🏗️ ${esc(cap.nome)}</span>`:''}</div>`;
   const sel=$('ord-stato-edit');if(sel)sel.value=ord.stato||'in_attesa';
   const ir=$('ord-importo-reale');if(ir)ir.value=ord.importoReale||'';
   const rd=$('ord-rif-doc');if(rd)rd.value=ord.rifDoc||'';
@@ -3387,7 +3394,7 @@ function renderOrdini(c){
   if(!ordini.length)return`<div style="padding:20px"><div class="empty"><div class="empty-ic">📦</div><div class="empty-txt">Nessun ordine.<br>Registra il primo ordine fornitore!</div></div><button onclick="openModal('mNuovoOrdine')" class="btn-prim" style="margin-top:12px">+ Nuovo ordine</button></div>`;
   const sBar=Object.entries(STATI_ORDINE).map(([k,s])=>{const n=(ordini.filter(o=>o.stato===k)).length;if(!n)return'';return`<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:${s.bg};border-radius:6px;border:1px solid ${s.border}"><span>${s.ic}</span><span style="font-size:10px;font-weight:600;color:${s.color}">${n} ${s.label}</span></div>`;}).join('');
   const rows=ordini.map(ord=>{const s=STATI_ORDINE[ord.stato]||STATI_ORDINE.in_attesa,cap=(c.capitoli||[]).find(cap=>cap.id===ord.capId),delta=ord.importoReale>0&&ord.importoStimato>0?ord.importoReale-ord.importoStimato:0;
-    return`<div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);overflow:hidden"><div style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer" onclick="apriDettaglioOrdine('${ord.id}')"><div style="width:36px;height:36px;border-radius:8px;background:${s.bg};border:1px solid ${s.border};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${s.ic}</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">${esc(ord.fornitore)}</div><div style="font-size:11px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(ord.desc)}</div><div style="display:flex;gap:8px;margin-top:2px;flex-wrap:wrap"><span style="font-size:10px;color:${s.color};font-weight:600">${s.label}</span>${cap?`<span style="font-size:10px;color:var(--soft)">· ${esc(cap.nome)}</span>`:''}<span style="font-size:10px;color:var(--soft)">· ${ord.data}</span></div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:700;color:var(--g1)">${fE(+ord.importoReale||+ord.importoStimato||0)}</div>${delta!==0?`<div style="font-size:10px;color:${delta>0?'var(--red)':'var(--g2)'}">${delta>0?'+':''}${fmtEur(delta)}</div>`:''}</div></div><div style="display:flex;gap:6px;padding:6px 14px 10px"><button onclick="_ordineId='${ord.id}';inviaOrdineFornitore()" style="flex:1;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:6px;padding:6px;font-size:10px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">📧 Invia</button><button onclick="apriDettaglioOrdine('${ord.id}')" style="flex:1;background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:6px;padding:6px;font-size:10px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">✏️ Aggiorna</button><button onclick="eliminaOrdine('${ord.id}')" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:6px;padding:6px 10px;font-size:10px;cursor:pointer;font-family:'Nunito',sans-serif">🗑</button></div></div>`;
+    return`<div style="background:#fff;border-radius:var(--r-sm);margin:0 10px 8px;border:1px solid var(--s2);overflow:hidden"><div style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer" onclick="apriDettaglioOrdine('${ord.id}')"><div style="width:36px;height:36px;border-radius:8px;background:${s.bg};border:1px solid ${s.border};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${s.ic}</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">${esc(ord.fornitore)}</div><div style="font-size:11px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(ord.desc)}</div><div style="display:flex;gap:8px;margin-top:2px;flex-wrap:wrap"><span style="font-size:10px;color:${s.color};font-weight:600">${s.label}</span>${cap?`<span style="font-size:10px;color:var(--soft)">· ${esc(cap.nome)}</span>`:''}<span style="font-size:10px;color:var(--soft)">· ${fmtDataIT(ord.data)}</span></div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:700;color:var(--g1)">${fE(+ord.importoReale||+ord.importoStimato||0)}</div>${delta!==0?`<div style="font-size:10px;color:${delta>0?'var(--red)':'var(--g2)'}">${delta>0?'+':''}${fmtEur(delta)}</div>`:''}</div></div><div style="display:flex;gap:6px;padding:6px 14px 10px"><button onclick="_ordineId='${ord.id}';inviaOrdineFornitore()" style="flex:1;background:var(--g6);color:var(--g1);border:1px solid var(--s3);border-radius:6px;padding:6px;font-size:10px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">📧 Invia</button><button onclick="apriDettaglioOrdine('${ord.id}')" style="flex:1;background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:6px;padding:6px;font-size:10px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">✏️ Aggiorna</button><button onclick="eliminaOrdine('${ord.id}')" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:6px;padding:6px 10px;font-size:10px;cursor:pointer;font-family:'Nunito',sans-serif">🗑</button></div></div>`;
   }).join('');
   return`<div><div style="margin:12px 10px;display:grid;grid-template-columns:1fr 1fr;gap:8px"><div style="background:var(--g6);border-radius:var(--r-sm);padding:10px;text-align:center"><div style="font-size:9px;color:var(--g2);font-weight:700;text-transform:uppercase;margin-bottom:3px">Stimato</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--g1)">${fmtEur(tStim)}</div></div><div style="background:var(--s1);border-radius:var(--r-sm);padding:10px;text-align:center"><div style="font-size:9px;color:var(--soft);font-weight:700;text-transform:uppercase;margin-bottom:3px">Reale</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700">${tReale?fmtEur(tReale):'—'}</div></div></div><div style="padding:0 10px 8px;display:flex;flex-wrap:wrap;gap:6px">${sBar}</div><div style="padding:4px 10px 6px;display:flex;align-items:center;justify-content:space-between"><div style="font-size:11px;font-weight:700;color:var(--soft);text-transform:uppercase">Ordini (${ordini.length})</div><button onclick="openModal('mNuovoOrdine')" style="background:var(--g1);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif">+ Nuovo</button></div>${rows}</div>`;
 }
