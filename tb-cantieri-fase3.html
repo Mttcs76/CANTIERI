@@ -2496,6 +2496,9 @@ function exportAllRapportini() {
 }
 
 function exportPresenze() {
+  // Le presenze vere vivono in S.presenze[data][opIdGlobale] (Presenze v2), filtrate
+  // per questo cantiere — non più nel vecchio campo c.operai[].ore, ormai legacy
+  // e sempre vuoto, che produceva un PDF con tutti i totali a zero.
   const c = getCantiere(); if(!c) return;
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
@@ -2503,21 +2506,48 @@ function exportPresenze() {
   doc.setFontSize(14); doc.setFont(undefined,'bold');
   doc.text('REGISTRO PRESENZE — '+c.nome.slice(0,50), 148, y, {align:'center'}); y+=10;
   doc.setFontSize(8); doc.setFont(undefined,'normal');
-  (c.operai||[]).forEach(op=>{
+
+  const operaiMap = buildOperaiMap(c);
+  const seen = new Set();
+  const roster = (c.operai||[])
+    .map(o => operaiMap[o.id] || o)
+    .filter(op => { if(!op || !op.id || seen.has(op.id)) return false; seen.add(op.id); return true; });
+
+  if (!roster.length) {
+    doc.setFontSize(11); doc.text('Nessun operaio assegnato a questo cantiere.', 148, y, {align:'center'});
+  }
+
+  roster.forEach(op => {
+    const righe = [];
+    Object.keys(S.presenze||{}).sort().forEach(data => {
+      const list = (S.presenze[data]||{})[op.id];
+      (Array.isArray(list) ? list : []).forEach(r => {
+        if (r.cantiereId === c.id) righe.push({ data, tipo: r.tipo||'ordinario', ore:+r.ore||0, note: r.note||'' });
+      });
+    });
+    const cOr = getCostoOrario(op);
+    const oreOp = righe.reduce((a,r)=>a+r.ore,0);
+
     if(y>185){ doc.addPage(); y=20; }
     doc.setFillColor(26,74,46); doc.rect(14,y-3,267,6,'F');
     doc.setTextColor(255,255,255); doc.setFont(undefined,'bold'); doc.setFontSize(8);
-    const oreOp=(op.ore||[]).reduce((a,r)=>a+(+r.ore||0),0);
-    doc.text(`${op.nome} — ${op.qualifica||''} — Tot: ${fmtN(oreOp)}h — Costo: ${fmtEur(oreOp*(+op.costo||0))}`, 16, y+1);
+    doc.text(`${op.nome} — ${op.qualifica||''} — Tot: ${fmtN(oreOp)}h — Costo: ${fmtEur(oreOp*cOr)}`, 16, y+1);
     doc.setTextColor(0,0,0); doc.setFont(undefined,'normal'); y+=7;
-    const sortedOre = [...(op.ore||[])].sort((a,b)=>a.data.localeCompare(b.data));
-    sortedOre.forEach(r=>{
-      if(y>185){ doc.addPage(); y=20; }
-      doc.text(fmtDataIT(r.data), 16, y);
-      doc.text(r.tipo||'Ordinarie', 50, y);
-      doc.text(`${r.ore}h`, 90, y);
-      doc.text(r.note||'', 110, y); y+=4;
-    });
+
+    if (!righe.length) {
+      doc.setTextColor(140,140,140);
+      doc.text('Nessuna presenza registrata su questo cantiere.', 16, y);
+      doc.setTextColor(0,0,0); y+=5;
+    } else {
+      righe.forEach(r=>{
+        if(y>185){ doc.addPage(); y=20; }
+        const tp = TIPI_PRESENZA[r.tipo] || { label: r.tipo };
+        doc.text(fmtDataIT(r.data), 16, y);
+        doc.text(tp.label, 50, y);
+        doc.text(`${r.ore}h`, 90, y);
+        doc.text(r.note||'', 110, y); y+=4;
+      });
+    }
     y+=4;
   });
   doc.save('Presenze_'+c.nome.replace(/[^a-zA-Z0-9]/g,'_')+'_'+today()+'.pdf');
