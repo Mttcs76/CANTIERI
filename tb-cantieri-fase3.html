@@ -118,20 +118,24 @@ window._fbSave = async (data) => {
     return false;
   }
   try {
-    // ── Rinfresca la cache remota IMMEDIATAMENTE PRIMA di fondere e scrivere ──
-    // window._remoteCache viene aggiornata solo al boot, dal listener su __globali
-    // o da un sync manuale: se il dispositivo resta aperto a lungo, può restare
-    // indietro rispetto a modifiche fatte nel frattempo da altri (es. un nuovo
-    // rapportino inserito da un altro telefono). Senza questo refresh, il merge
-    // protettivo unirebbe dati locali con una copia remota vecchia, scrivendo
-    // sopra — silenziosamente — le modifiche più recenti fatte altrove.
-    try {
-      const freshSnap = await getDocs(collection(fbDb, COL));
-      freshSnap.forEach(d => {
-        if (d.id !== GLOBALI && d.id !== '__contabile') window._remoteCache[d.id] = { id: d.id, ...d.data() };
-      });
-    } catch (eRefresh) {
-      console.warn('Refresh cache pre-salvataggio fallito, procedo con la cache esistente:', eRefresh);
+    // ── Rinfresca la cache remota PRIMA di scrivere, ma al massimo ogni 20s ──
+    // save() invia sempre l'intero elenco cantieri (non solo quello modificato),
+    // quindi rinfrescare ad ogni chiamata raddoppierebbe le letture Firestore su
+    // ogni salvataggio — è proprio questo eccesso ad aver esaurito la quota oggi.
+    // Un dispositivo che salva più volte di fila (es. rapportini in sequenza)
+    // rinfresca una sola volta ogni 20s; resta comunque protetto perché la
+    // fusione con tombstone si applica sempre, indipendentemente dal refresh.
+    const now = Date.now();
+    if (!window._lastCacheRefresh || now - window._lastCacheRefresh > 20000) {
+      try {
+        const freshSnap = await getDocs(collection(fbDb, COL));
+        freshSnap.forEach(d => {
+          if (d.id !== GLOBALI && d.id !== '__contabile') window._remoteCache[d.id] = { id: d.id, ...d.data() };
+        });
+        window._lastCacheRefresh = now;
+      } catch (eRefresh) {
+        console.warn('Refresh cache pre-salvataggio fallito, procedo con la cache esistente:', eRefresh);
+      }
     }
 
     // Salva prima i cantieri, poi __globali.
