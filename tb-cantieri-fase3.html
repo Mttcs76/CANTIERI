@@ -907,7 +907,8 @@ async function manualSync() {
     }
   } catch(e) {
     setFbStatus(false);
-    toast('❌ Errore sincronizzazione');
+    console.error('manualSync error:', e);
+    toast('❌ Errore: ' + (e && e.message ? e.message : String(e)));
   }
 }
 
@@ -962,7 +963,7 @@ async function initFirebase() {
   } catch(e) {
     console.warn('Firebase init error:', e);
     setFbStatus('warn');
-    toast('⚠️ Non sincronizzato — modifiche solo su questo dispositivo');
+    toast('⚠️ Non sincronizzato: ' + (e && e.message ? e.message : String(e)));
     // Riprova ogni 30s: al riaggancio fonde remoto+locale (il merge protettivo
     // in _fbSave garantisce comunque che nulla venga sovrascritto)
     const retry = setInterval(async () => {
@@ -980,7 +981,7 @@ async function initFirebase() {
           setTimeout(syncPresenzeStorici, 400);
           toast('☁️ Riconnesso — dati fusi e sincronizzati');
         }
-      } catch(e2) { /* riprova al prossimo giro */ }
+      } catch(e2) { console.warn('retry riconnessione fallito:', e2); }
     }, 30000);
   }
 
