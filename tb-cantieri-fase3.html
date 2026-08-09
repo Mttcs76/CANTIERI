@@ -138,10 +138,8 @@ window._fbSave = async (data) => {
       }
     }
 
-    // Salva prima i cantieri, poi __globali.
-    // _fbListen ascolta __globali: se lo scriviamo prima, il listener si
-    // attiva mentre i cantieri su Firestore non sono ancora aggiornati,
-    // causando un reload che sovrascrive i dati appena salvati in memoria.
+    // Salva prima i cantieri, poi __globali (ordine ancora rilevante: mantiene
+    // coerenti eventuali osservatori che leggono entrambi in sequenza).
     const cantieri = (data.cantieri || []).map(_mergeCantiereProtetto);
     if (cantieri.length) {
       await Promise.all(cantieri.map(c => setDoc(doc(fbDb, COL, c.id), {
@@ -181,11 +179,26 @@ window._fbLoad = async () => {
     return { ...globali, cantieri };
   } catch(e) { console.warn('Firebase load error:', e); return null; }
 };
-window._fbListen = (callback) => {
+window._fbListenCantieri = (callback) => {
   if (!fbDb) return;
-  onSnapshot(doc(fbDb, COL, GLOBALI), async () => {
-    const data = await window._fbLoad();
-    if (data) callback(data);
+  onSnapshot(collection(fbDb, COL), (snap) => {
+    const cantieri = [];
+    snap.forEach(d => {
+      if (d.id === GLOBALI || d.id === '__contabile') return;
+      const c = { id: d.id, ...d.data() };
+      cantieri.push(c);
+      window._remoteCache[d.id] = c;
+    });
+    callback(cantieri);
+  });
+};
+window._fbListenGlobali = (callback) => {
+  if (!fbDb) return;
+  onSnapshot(doc(fbDb, COL, GLOBALI), (snap) => {
+    if (!snap.exists()) return;
+    const data = snap.data();
+    window._remotePresenzeCache = data.presenze || {};
+    callback(data);
   });
 };
 window._fbSaveBackup = async (data, label) => {
@@ -989,24 +1002,35 @@ async function initFirebase() {
     }, 30000);
   }
 
-  if (window._fbListen) {
-    window._fbListen((remoteData) => {
-      if (_fbSyncing) return;
-      if (!remoteData || !remoteData.cantieri) return;
-      const remoteUpdated = remoteData.updated || 0;
-      const localUpdated = (() => { try { return JSON.parse(localStorage.getItem(SK)||'{}').updated||0; } catch(e){return 0;} })();
-      if (remoteUpdated > localUpdated + 500) {
-        S.cantieri = _normalizzaNomiCantieri(_fondiCantieriRemoti(remoteData.cantieri));
-        if (remoteData.operaiGlobali) S.operaiGlobali = remoteData.operaiGlobali;
-        if (remoteData.azienda) S.azienda = remoteData.azienda;
-        if (remoteData.presenze) S.presenze = remoteData.presenze;
-        localStorage.setItem(SK, JSON.stringify({
-          cantieri: S.cantieri, operaiGlobali: S.operaiGlobali,
-          azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: remoteUpdated
-        }));
-        renderCurrentScreen();
-        setFbStatus(true);
-      }
+  // Canale CANTIERI: aggiornamenti incrementali (solo i documenti realmente
+  // cambiati), fusi con gli array locali protetti — sostituisce il costoso
+  // giro "un salvataggio di chiunque -> tutti rileggono tutto".
+  if (window._fbListenCantieri) {
+    window._fbListenCantieri((remoteCantieri) => {
+      if (_fbSyncing || !remoteCantieri || !remoteCantieri.length) return;
+      S.cantieri = _normalizzaNomiCantieri(_fondiCantieriRemoti(remoteCantieri));
+      localStorage.setItem(SK, JSON.stringify({
+        cantieri: S.cantieri, operaiGlobali: S.operaiGlobali,
+        azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: Date.now()
+      }));
+      renderCurrentScreen();
+      setFbStatus(true);
+    });
+  }
+  // Canale GLOBALI: operai, azienda, presenze — cambia molto meno spesso dei
+  // cantieri, un solo documento, nessuna moltiplicazione di letture.
+  if (window._fbListenGlobali) {
+    window._fbListenGlobali((remoteData) => {
+      if (_fbSyncing || !remoteData) return;
+      if (remoteData.operaiGlobali) S.operaiGlobali = remoteData.operaiGlobali;
+      if (remoteData.azienda) S.azienda = remoteData.azienda;
+      if (remoteData.presenze) S.presenze = remoteData.presenze;
+      localStorage.setItem(SK, JSON.stringify({
+        cantieri: S.cantieri, operaiGlobali: S.operaiGlobali,
+        azienda: S.azienda, presenze: S.presenze||{}, uid: S.uid, updated: Date.now()
+      }));
+      if (S.tab === 'presenze' || S.tab === 'operai') renderCurrentScreen();
+      setFbStatus(true);
     });
   }
 }
